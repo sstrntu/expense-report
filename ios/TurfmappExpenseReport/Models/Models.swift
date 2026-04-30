@@ -100,6 +100,7 @@ struct Project: Identifiable, Hashable {
 }
 
 enum MemberRole: String, CaseIterable, Hashable {
+    case employee = "Employee"
     case submitter = "Submitter"
     case approver = "Approver"
     case manager = "Manager"
@@ -107,6 +108,8 @@ enum MemberRole: String, CaseIterable, Hashable {
 
     var label: String { rawValue }
 }
+
+
 struct Member: Identifiable, Hashable {
     let id: String
     let companyId: String
