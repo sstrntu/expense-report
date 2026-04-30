@@ -5,22 +5,27 @@ struct ActivityView: View {
     @State private var filter: String = "All"
     @State private var searchText = ""
     @State private var projectFilter = "All projects"
+    @State private var expenseToDelete: Expense? = nil
     var onOpen: (Expense) -> Void
 
-    private let filters = ["All", "Awaiting Approval", "Approved", "Awaiting Reimbursement", "Reimbursed", "Rejected"]
+    private let filters = ["All", "Awaiting Approval", "Approved", "Awaiting Reimbursement", "Reimbursed", "Rejected", "Archived"]
 
     private var filtered: [Expense] {
-        let statusFiltered: [Expense]
-        switch filter {
-        case "Awaiting Approval":      statusFiltered = app.currentExpenses.filter { $0.status == .pending }
-        case "Approved":               statusFiltered = app.currentExpenses.filter { $0.status == .approved }
-        case "Awaiting Reimbursement": statusFiltered = app.currentExpenses.filter { $0.status == .purchased }
-        case "Reimbursed":             statusFiltered = app.currentExpenses.filter { $0.status == .reimbursed }
-        case "Rejected":               statusFiltered = app.currentExpenses.filter { $0.status == .rejected }
-        default:                       statusFiltered = app.currentExpenses
+        let pool: [Expense]
+        if filter == "Archived" {
+            pool = app.currentArchivedExpenses
+        } else {
+            switch filter {
+            case "Awaiting Approval":      pool = app.currentExpenses.filter { $0.status == .pending }
+            case "Approved":               pool = app.currentExpenses.filter { $0.status == .approved }
+            case "Awaiting Reimbursement": pool = app.currentExpenses.filter { $0.status == .purchased }
+            case "Reimbursed":             pool = app.currentExpenses.filter { $0.status == .reimbursed }
+            case "Rejected":               pool = app.currentExpenses.filter { $0.status == .rejected }
+            default:                       pool = app.currentExpenses
+            }
         }
 
-        return statusFiltered.filter { expense in
+        return pool.filter { expense in
             let matchesSearch = searchText.isEmpty ||
                 expense.merchant.localizedCaseInsensitiveContains(searchText) ||
                 expense.category.localizedCaseInsensitiveContains(searchText) ||
@@ -58,12 +63,12 @@ struct ActivityView: View {
             if filtered.isEmpty {
                 GlassCard(padding: 24) {
                     VStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
+                        Image(systemName: filter == "Archived" ? "archivebox" : "magnifyingglass")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(.secondary)
-                        Text(app.currentExpenses.isEmpty ? "No expenses yet" : "No matching expenses")
+                        Text(filter == "Archived" ? "No archived expenses" : app.currentExpenses.isEmpty ? "No expenses yet" : "No matching expenses")
                             .font(.system(size: 14, weight: .semibold))
-                        Text(app.currentExpenses.isEmpty ? "New expenses will appear here after submission." : "Adjust search, project, or status filters.")
+                        Text(filter == "Archived" ? "Archive expenses to remove them from your main view." : app.currentExpenses.isEmpty ? "New expenses will appear here after submission." : "Adjust search, project, or status filters.")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -74,6 +79,14 @@ struct ActivityView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
+        .alert(item: $expenseToDelete) { expense in
+            Alert(
+                title: Text("Delete \"\(expense.merchant)\"?"),
+                message: Text("This cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) { app.deleteExpense(id: expense.id) },
+                secondaryButton: .cancel()
+            )
+        }
     }
 
     private var searchAndProjectFilters: some View {
@@ -125,6 +138,19 @@ struct ActivityView: View {
                         if idx > 0 { Divider().opacity(0.4) }
                         Button { onOpen(e) } label: { ExpenseRow(expense: e) }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button {
+                                    app.archiveExpense(id: e.id)
+                                } label: {
+                                    Label(e.isArchived ? "Unarchive" : "Archive",
+                                          systemImage: e.isArchived ? "tray.and.arrow.up" : "archivebox")
+                                }
+                                Button(role: .destructive) {
+                                    expenseToDelete = e
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                 }
             }

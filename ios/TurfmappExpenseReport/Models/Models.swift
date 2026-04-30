@@ -72,6 +72,7 @@ struct Expense: Identifiable, Hashable {
     var paymentReceipt: String? = nil
     let project: String
     let icon: String
+    var isArchived: Bool = false
 }
 
 struct ExpenseDraft: Identifiable, Hashable {
@@ -99,10 +100,11 @@ struct Project: Identifiable, Hashable {
 }
 
 enum MemberRole: String, CaseIterable, Hashable {
+    case employee = "Employee"
+    case manager = "Manager"
     case admin = "Admin"
-    case approver = "Approver"
-    case submitter = "Submitter"
-    case viewer = "Viewer"
+
+    var label: String { rawValue }
 }
 
 struct Member: Identifiable, Hashable {

@@ -5,10 +5,13 @@ struct DetailView: View {
     var role: AppRole
     var onBack: () -> Void
     var onAction: (ExpenseStatus, PaymentMethod?, String?) -> Void
+    var onArchive: () -> Void
+    var onDelete: () -> Void
 
     @State private var showPurchaseSheet   = false
     @State private var showReimbursedSheet = false
     @State private var showRejectSheet     = false
+    @State private var showDeleteConfirm   = false
     @State private var previewReceipt: ReceiptPreview? = nil
 
     var body: some View {
@@ -24,6 +27,28 @@ struct DetailView: View {
 
                 Text("Expense detail")
                     .font(.system(size: 15, weight: .semibold))
+
+                Spacer()
+
+                Menu {
+                    Button {
+                        onArchive()
+                    } label: {
+                        Label(expense.isArchived ? "Unarchive" : "Archive",
+                              systemImage: expense.isArchived ? "tray.and.arrow.up" : "archivebox")
+                    }
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(width: 34, height: 34)
+                }
+                .buttonStyle(.plain)
+                .glassSurface(corner: 999)
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
@@ -54,7 +79,7 @@ struct DetailView: View {
                     Divider().opacity(0.4)
                     FormFieldRow(label: "Project",      value: expense.project)
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Submitted by", value: "Sam Otero")
+                    FormFieldRow(label: "Submitted by", value: "Sira Sasitorn")
                     Divider().opacity(0.4)
                     FormFieldRow(label: "Receipt",      value: "receipt.pdf")
                     if let method = expense.paymentMethod {
@@ -100,6 +125,12 @@ struct DetailView: View {
             ReceiptPreviewSheet(receipt: receipt)
                 .presentationDetents([.medium])
         }
+        .confirmationDialog("Delete \"\(expense.merchant)\"?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { onDelete() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This cannot be undone.")
+        }
     }
 
     private var receiptPreviewCard: some View {
@@ -143,7 +174,7 @@ struct DetailView: View {
         GlassCard(padding: 14) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Timeline").font(.system(size: 13, weight: .semibold))
-                timelineRow("Submitted", "Sam Otero · \(expense.date)", complete: true, tint: Tokens.slate500)
+                timelineRow("Submitted", "Sira Sasitorn · \(expense.date)", complete: true, tint: Tokens.slate500)
                 timelineRow("Approved", "Manager review", complete: [.approved, .purchased, .reimbursed].contains(expense.status), tint: Tokens.approved)
                 timelineRow("Purchased", "Employee confirms purchase", complete: [.purchased, .reimbursed].contains(expense.status), tint: Tokens.purchased)
                 timelineRow("Reimbursed", "Finance marks payment sent", complete: expense.status == .reimbursed, tint: Tokens.reimbursed)
@@ -171,7 +202,7 @@ struct DetailView: View {
         GlassCard(padding: 14) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Notes").font(.system(size: 13, weight: .semibold))
-                noteRow("Sam", "Submitted for \(expense.project).", tint: Tokens.slate500)
+                noteRow("Sira", "Submitted for \(expense.project).", tint: Tokens.slate500)
                 if expense.status == .rejected {
                     noteRow("Manager", "Please add more context and a clearer business purpose.", tint: Tokens.rejected)
                 } else if expense.status == .approved || expense.status == .purchased || expense.status == .reimbursed {
@@ -195,7 +226,7 @@ struct DetailView: View {
     private var actionArea: some View {
         switch expense.status {
         case .pending:
-            if role == .manager {
+            if role != .employee {
                 HStack(spacing: 10) {
                     Button { showRejectSheet = true } label: {
                         Label("Reject", systemImage: "xmark")
@@ -245,7 +276,7 @@ struct DetailView: View {
             }
 
         case .purchased:
-            if role == .manager {
+            if role != .employee {
                 Button { showReimbursedSheet = true } label: {
                     Label("Mark as Reimbursed", systemImage: "checkmark.circle.fill")
                         .font(.system(size: 15, weight: .semibold))
@@ -332,9 +363,9 @@ struct ReceiptPreviewSheet: View {
                         Image(systemName: "doc.text.image.fill")
                             .font(.system(size: 42))
                             .foregroundStyle(receipt.tint)
-                        Text("Mock receipt preview")
+                        Text("Receipt preview")
                             .font(.system(size: 15, weight: .semibold))
-                        Text("Real release should show image/PDF preview, zoom, share, and retry if download fails.")
+                        Text("Inspect the uploaded proof here, with zoom, share, and retry actions in a full release.")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)

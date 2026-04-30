@@ -1,28 +1,33 @@
 import SwiftUI
 
 enum AppRole: String, CaseIterable, Identifiable {
-    case employee, manager
+    case employee, manager, admin
     var id: String { rawValue }
     var label: String { rawValue.capitalized }
 }
 
 final class AppState: ObservableObject {
     @Published var isAuthenticated: Bool = false
+    @Published var needsSetup: Bool = false
     @Published var profileComplete: Bool = false
     @Published var workspaceReady: Bool = false
-    @Published var userName: String = "Sam Otero"
-    @Published var userEmail: String = "sam@turfmapp.io"
+    @Published var userName: String = "Sira Sasitorn"
+    @Published var userEmail: String = "sira@turfmapp.com"
     @Published var role: AppRole = .employee
     @Published var company: Company = MockData.companies[0]
     @Published var expenses: [Expense] = MockData.expenses
     @Published var projects: [Project] = MockData.projects
     @Published var members: [Member] = MockData.members
     @Published var drafts: [ExpenseDraft] = []
-    @Published var debugMenuOpen: Bool = false
 
-    /// Expenses scoped to the currently selected workspace.
+    /// Expenses scoped to the currently selected workspace, excluding archived.
     var currentExpenses: [Expense] {
-        expenses.filter { $0.companyId == company.id }
+        expenses.filter { $0.companyId == company.id && !$0.isArchived }
+    }
+
+    /// Archived expenses scoped to the currently selected workspace.
+    var currentArchivedExpenses: [Expense] {
+        expenses.filter { $0.companyId == company.id && $0.isArchived }
     }
 
     /// Projects scoped to the currently selected workspace.
@@ -46,6 +51,15 @@ final class AppState: ObservableObject {
         if let receipt = paymentReceipt { expenses[idx].paymentReceipt = receipt }
     }
 
+    func archiveExpense(id: String) {
+        guard let idx = expenses.firstIndex(where: { $0.id == id }) else { return }
+        expenses[idx].isArchived.toggle()
+    }
+
+    func deleteExpense(id: String) {
+        expenses.removeAll { $0.id == id }
+    }
+
     func setProjectThreshold(id: String, to threshold: Double) {
         guard let idx = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[idx].autoApproveThreshold = threshold
@@ -56,24 +70,31 @@ final class AppState: ObservableObject {
         members[idx].role = role
     }
 
-    func signIn(email: String) {
+    func signIn(email: String, needsSetup: Bool = false, role: AppRole? = nil) {
         userEmail = email.isEmpty ? userEmail : email
         isAuthenticated = true
+        self.needsSetup = needsSetup
+        if !needsSetup {
+            profileComplete = true
+            workspaceReady = true
+            self.role = role ?? .employee
+        }
     }
 
     func signOut() {
         isAuthenticated = false
+        needsSetup = false
         profileComplete = false
         workspaceReady = false
         role = .employee
         company = MockData.companies[0]
     }
 
-    func completeProfile(name: String, email: String, role: AppRole) {
+    func completeProfile(name: String, email: String) {
         userName = name.isEmpty ? userName : name
         userEmail = email.isEmpty ? userEmail : email
-        self.role = role
         profileComplete = true
+        role = .employee
     }
 
     func addProject(name: String, budget: Double, owner: String, visibility: String, threshold: Double) {

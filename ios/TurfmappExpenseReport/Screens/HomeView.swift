@@ -11,7 +11,7 @@ struct HomeView: View {
 
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Good morning, Sam").font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
+                Text("Good morning, Sira").font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
                 Text("This month").font(.system(size: 26, weight: .bold))
             }
             .padding(.horizontal, 4)

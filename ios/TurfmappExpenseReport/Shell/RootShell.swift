@@ -10,11 +10,11 @@ struct RootShell: View {
             AuthView()
                 .environmentObject(app)
                 .appBackground()
-        } else if !app.profileComplete {
+        } else if app.needsSetup && !app.profileComplete {
             ProfileSetupView()
                 .environmentObject(app)
                 .appBackground()
-        } else if !app.workspaceReady {
+        } else if app.needsSetup && !app.workspaceReady {
             WorkspaceSetupView()
                 .environmentObject(app)
                 .appBackground()
@@ -55,13 +55,6 @@ struct RootShell: View {
             selectedTab = .home
             navStack = []
         }
-        // Debug menu — shake to open on device, or use the sheet below
-        .sheet(isPresented: $app.debugMenuOpen) {
-            DebugMenuSheet()
-                .environmentObject(app)
-                .presentationDetents([.medium])
-        }
-        .onShake { app.debugMenuOpen.toggle() }
     }
 
     @ViewBuilder
@@ -77,7 +70,7 @@ struct RootShell: View {
     private var tabView: some View {
         switch selectedTab {
         case .home:
-            if app.role == .manager {
+            if app.role != .employee {
                 ManagerOverviewView { selectedTab = .review }
                     .environmentObject(app)
             } else {
@@ -123,6 +116,14 @@ struct RootShell: View {
                        onBack: { navStack.removeLast() },
                        onAction: { status, method, receipt in
                            app.updateStatus(id: e.id, to: status, paymentMethod: method, paymentReceipt: receipt)
+                           navStack.removeLast()
+                       },
+                       onArchive: {
+                           app.archiveExpense(id: e.id)
+                           navStack.removeLast()
+                       },
+                       onDelete: {
+                           app.deleteExpense(id: e.id)
                            navStack.removeLast()
                        })
         case .manageProjects:
@@ -192,7 +193,7 @@ struct RootShell: View {
             Spacer()
 
             // Notification bell
-            Button { app.debugMenuOpen.toggle() } label: {
+            Button { navStack.append(.notifications) } label: {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: "bell.fill")
                         .font(.system(size: 16)).foregroundStyle(Color.primary)
@@ -239,101 +240,77 @@ enum NavRoute: Hashable {
     case legal
 }
 
-// MARK: – Debug menu (role + workspace switcher)
-
-struct DebugMenuSheet: View {
-    @EnvironmentObject var app: AppState
-    @Environment(\.dismiss) var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Role") {
-                    Picker("Role", selection: $app.role) {
-                        ForEach(AppRole.allCases) { r in
-                            Text(r.label).tag(r)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                Section("Workspace") {
-                    ForEach(MockData.companies, id: \.id) { c in
-                        HStack {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(c.color).frame(width: 22, height: 22)
-                                .overlay(Text(c.abbr).font(.system(size: 8, weight: .bold)).foregroundStyle(.white))
-                            Text(c.name)
-                            Spacer()
-                            if app.company == c {
-                                Image(systemName: "checkmark").foregroundStyle(Tokens.slate500)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { app.company = c }
-                    }
-                }
-            }
-            .navigationTitle("Debug / Preview")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}
-
-// MARK: – Shake gesture (opens debug menu on device)
-
-extension View {
-    func onShake(action: @escaping () -> Void) -> some View {
-        self.modifier(ShakeModifier(action: action))
-    }
-}
-
-struct ShakeModifier: ViewModifier {
-    let action: () -> Void
-    func body(content: Content) -> some View {
-        content.onReceive(NotificationCenter.default.publisher(for: .deviceDidShakeNotification)) { _ in
-            action()
-        }
-    }
-}
-
-extension NSNotification.Name {
-    static let deviceDidShakeNotification = NSNotification.Name("DeviceDidShake")
-}
-
 // MARK: – Release entry flows
 
 struct AuthView: View {
     @EnvironmentObject var app: AppState
-    @State private var email = "sam@turfmapp.io"
+    @State private var email = "sira@turfmapp.com"
     @State private var password = ""
     @State private var mode: AuthMode = .login
     @State private var showReset = false
     @State private var showVerification = false
+    @State private var previewCompany: Company = MockData.companies[0]
+    @State private var previewRole: AppRole = .employee
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Spacer(minLength: 40)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(mode == .login ? "Sign in" : "Create account")
+                Text(mode.title)
                     .font(.system(size: 34, weight: .bold))
                 Text("Track approvals, purchases, and reimbursements across your workspace.")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
 
+            Picker("Mode", selection: $mode) {
+                ForEach(AuthMode.allCases, id: \.self) { item in
+                    Text(item.title).tag(item)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: mode) { _, _ in
+                showReset = false
+                showVerification = false
+            }
+
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
                     authField("Email", text: $email, keyboard: .emailAddress)
-                    Divider().opacity(0.4)
-                    secureField("Password", text: $password)
+                    if mode != .preview {
+                        Divider().opacity(0.4)
+                        secureField("Password", text: $password)
+                    }
                 }
+            }
+
+            if mode == .preview {
+                GlassCard(padding: 16) {
+                    VStack(spacing: 0) {
+                        Picker("Workspace", selection: $previewCompany) {
+                            ForEach(MockData.companies, id: \.self) { company in
+                                Text(company.name).tag(company)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .padding(.vertical, 10)
+
+                        Divider().opacity(0.4)
+
+                        Picker("Role", selection: $previewRole) {
+                            ForEach(AppRole.allCases) { role in
+                                Text(role.label).tag(role)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.top, 12)
+                    }
+                }
+
+                infoBanner(icon: "play.circle.fill", tint: Tokens.slate500,
+                           title: "Demo access",
+                           message: "Opens the app with a selected workspace and role.")
             }
 
             if showReset {
@@ -350,24 +327,30 @@ struct AuthView: View {
 
             Button {
                 if mode == .signup { showVerification = true }
-                app.signIn(email: email)
+                if mode == .preview {
+                    app.company = previewCompany
+                    app.signIn(email: email, needsSetup: false, role: previewRole)
+                } else {
+                    app.signIn(email: email, needsSetup: mode == .signup)
+                }
             } label: {
-                Text(mode == .login ? "Sign in" : "Create account").primaryActionLabel()
+                Text(mode.actionTitle).primaryActionLabel()
             }
             .buttonStyle(.plain)
 
             HStack {
-                Button(mode == .login ? "Forgot password?" : "Already have an account?") {
-                    if mode == .login {
-                        showReset = true
-                    } else {
-                        mode = .login
-                    }
+                if mode == .login {
+                    Button("Forgot password?") { showReset = true }
+                } else {
+                    Button("Back to sign in") { mode = .login }
                 }
                 Spacer()
-                Button(mode == .login ? "Create account" : "Use sign in") {
-                    mode = mode == .login ? .signup : .login
-                    showReset = false
+                if mode != .preview {
+                    Button(mode == .login ? "Create account" : "Use sign in") {
+                        mode = mode == .login ? .signup : .login
+                        showReset = false
+                        showVerification = false
+                    }
                 }
             }
             .font(.system(size: 13, weight: .semibold))
@@ -396,7 +379,7 @@ struct AuthView: View {
         HStack {
             Text(label).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
             Spacer()
-            SecureField("Required", text: text)
+            SecureField("Password", text: text)
                 .font(.system(size: 14, weight: .medium))
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 210)
@@ -406,14 +389,31 @@ struct AuthView: View {
 }
 
 enum AuthMode {
-    case login, signup
+    case login, signup, preview
+
+    static var allCases: [AuthMode] { [.login, .signup, .preview] }
+
+    var title: String {
+        switch self {
+        case .login: return "Sign in"
+        case .signup: return "Create account"
+        case .preview: return "Demo"
+        }
+    }
+
+    var actionTitle: String {
+        switch self {
+        case .login: return "Sign in"
+        case .signup: return "Create account"
+        case .preview: return "Enter demo"
+        }
+    }
 }
 
 struct ProfileSetupView: View {
     @EnvironmentObject var app: AppState
-    @State private var name = "Sam Otero"
-    @State private var email = "sam@turfmapp.io"
-    @State private var role: AppRole = .employee
+    @State private var name = "Sira Sasitorn"
+    @State private var email = "sira@turfmapp.com"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -431,18 +431,8 @@ struct ProfileSetupView: View {
                 }
             }
 
-            GlassCard(padding: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Default role").font(.system(size: 13, weight: .semibold))
-                    Picker("Role", selection: $role) {
-                        ForEach(AppRole.allCases) { r in Text(r.label).tag(r) }
-                    }
-                    .pickerStyle(.segmented)
-                }
-            }
-
             Button {
-                app.completeProfile(name: name, email: email, role: role)
+                app.completeProfile(name: name, email: email)
             } label: {
                 Text("Continue").primaryActionLabel()
             }
@@ -505,7 +495,7 @@ struct WorkspaceSetupView: View {
             }
 
             infoBanner(icon: "person.2.badge.gearshape.fill", tint: Tokens.slate500,
-                       title: "Invite pending state covered",
+                       title: "Invite required",
                        message: "If an invite is not accepted yet, this screen keeps the user out of the workspace.")
 
             Button {

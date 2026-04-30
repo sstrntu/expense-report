@@ -36,17 +36,17 @@ enum MockData {
         ApprovalItem(id: "a1", user: "Alex Lee",   merchant: "Delta Airlines", amount: 612.40, project: "Turfmapp",       submitted: "2h ago",    avatar: Color(hex: 0x6B7185)),
         ApprovalItem(id: "a2", user: "Priya Shah", merchant: "Hilton SF",      amount: 348.00, project: "Groundwork10",   submitted: "4h ago",    avatar: Color(hex: 0x4A6FA5)),
         ApprovalItem(id: "a3", user: "Jordan K.",  merchant: "Adobe Creative", amount: 79.99,  project: "Baan Saen Saep", submitted: "Yesterday", avatar: Color(hex: 0xC97B4A)),
-        ApprovalItem(id: "a4", user: "Sam Otero",  merchant: "Lyft",           amount: 24.10,  project: "Ladderice",      submitted: "Yesterday", avatar: Color(hex: 0x7E5BA8)),
+        ApprovalItem(id: "a4", user: "Sira Sasitorn",  merchant: "Lyft",           amount: 24.10,  project: "Ladderice",      submitted: "Yesterday", avatar: Color(hex: 0x7E5BA8)),
     ]
 
     static let members: [Member] = [
-        Member(id: "m1", companyId: "turfmapp",     name: "Alex Lee",   email: "alex@turfmapp.io",       role: .submitter, avatarColor: Color(hex: 0x6B7185)),
-        Member(id: "m2", companyId: "turfmapp",     name: "Priya Shah", email: "priya@turfmapp.io",      role: .approver,  avatarColor: Color(hex: 0x4A6FA5)),
+        Member(id: "m1", companyId: "turfmapp",     name: "Alex Lee",   email: "alex@turfmapp.io",       role: .employee, avatarColor: Color(hex: 0x6B7185)),
+        Member(id: "m2", companyId: "turfmapp",     name: "Priya Shah", email: "priya@turfmapp.io",      role: .manager,  avatarColor: Color(hex: 0x4A6FA5)),
         Member(id: "m3", companyId: "groundwork",   name: "Mark Dowd",  email: "mark@groundwork10.com",  role: .admin,     avatarColor: Color(hex: 0x4A6FA5)),
-        Member(id: "m4", companyId: "groundwork",   name: "Sam Otero",  email: "sam@groundwork10.com",   role: .submitter, avatarColor: Color(hex: 0x7E5BA8)),
+        Member(id: "m4", companyId: "groundwork",   name: "Sira Sasitorn",  email: "sira@groundwork10.com",   role: .employee, avatarColor: Color(hex: 0x7E5BA8)),
         Member(id: "m5", companyId: "baansaensaep", name: "Pim S.",     email: "pim@baansaensaep.com",   role: .admin,     avatarColor: Color(hex: 0xC97B4A)),
-        Member(id: "m6", companyId: "baansaensaep", name: "Mei Chen",   email: "mei@baansaensaep.com",   role: .viewer,    avatarColor: Color(hex: 0x5EA06C)),
-        Member(id: "m7", companyId: "ladderice",    name: "Diego A.",   email: "diego@ladderice.com",    role: .approver,  avatarColor: Color(hex: 0x7E5BA8)),
-        Member(id: "m8", companyId: "ladderice",    name: "Jordan K.",  email: "jordan@ladderice.com",   role: .submitter, avatarColor: Color(hex: 0x6B7185)),
+        Member(id: "m6", companyId: "baansaensaep", name: "Mei Chen",   email: "mei@baansaensaep.com",   role: .employee, avatarColor: Color(hex: 0x5EA06C)),
+        Member(id: "m7", companyId: "ladderice",    name: "Diego A.",   email: "diego@ladderice.com",    role: .manager,  avatarColor: Color(hex: 0x7E5BA8)),
+        Member(id: "m8", companyId: "ladderice",    name: "Jordan K.",  email: "jordan@ladderice.com",   role: .employee, avatarColor: Color(hex: 0x6B7185)),
     ]
 }
