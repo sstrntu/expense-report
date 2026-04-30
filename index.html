@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Turfmapp Expense Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+  <style>
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { height: 100%; }
+    body {
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background:
+        radial-gradient(ellipse 80% 60% at 80% 20%, rgba(135,142,159,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 20% 80%, rgba(184,160,232,0.12) 0%, transparent 60%),
+        #1A1D26;
+      color: #E8EAF0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    button { font-family: inherit; }
+    *::-webkit-scrollbar { width: 0; height: 0; }
+
+    :root { --phone-scale: 1; --phone-w: 390px; --phone-h: 844px; }
+    .phone-wrap {
+      width:  calc(var(--phone-w) * var(--phone-scale));
+      height: calc(var(--phone-h) * var(--phone-scale));
+      position: relative; flex-shrink: 0;
+    }
+    .phone-inner {
+      transform: scale(var(--phone-scale));
+      transform-origin: top left;
+      width: var(--phone-w); height: var(--phone-h);
+    }
+    @media (max-height: 920px) { :root { --phone-scale: 0.92; } }
+    @media (max-height: 860px) { :root { --phone-scale: 0.82; } }
+    @media (max-height: 780px) { :root { --phone-scale: 0.74; } }
+    @media (max-height: 700px) { :root { --phone-scale: 0.66; } }
+    @media (max-height: 620px) { :root { --phone-scale: 0.58; } }
+    @media (max-height: 560px) { :root { --phone-scale: 0.52; } .stage { padding: 12px !important; gap: 32px !important; } }
+    @media (max-height: 500px) { :root { --phone-scale: 0.46; } }
+    @media (max-width: 880px) {
+      .stage { flex-direction: column !important; gap: 16px !important; padding: 16px 12px !important; min-height: 100vh; }
+      .controls { width: 100% !important; max-width: 480px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo, Fragment } = React;
+
+/* ───────────────── THEMES ───────────────── */
+const THEMES = {
+  light: {
+    name: 'light', statusBarDark: false,
+    bg: 'linear-gradient(180deg, #EEF1F8 0%, #E4E8F2 100%)',
+    blob1: 'rgba(135,142,159,0.45)', blob2: 'rgba(184,160,232,0.38)',
+    text: '#1A1D26', textSec: 'rgba(26,29,38,0.62)', textMuted: 'rgba(26,29,38,0.42)',
+    glassBg: 'rgba(255,255,255,0.55)', glassBorder: 'rgba(255,255,255,0.65)',
+    glassInset: 'inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(255,255,255,0.25)',
+    cardShadow: '0 8px 24px rgba(15,18,30,0.08), 0 2px 6px rgba(15,18,30,0.06)',
+    accent: '#6B7185', accentText: '#fff',
+    barBg: 'rgba(26,29,38,0.08)', divider: 'rgba(26,29,38,0.08)',
+    chipBg: 'rgba(255,255,255,0.7)', chipBorder: 'rgba(26,29,38,0.08)',
+  },
+  dark: {
+    name: 'dark', statusBarDark: true,
+    bg: 'linear-gradient(180deg, #1F2230 0%, #15171F 100%)',
+    blob1: 'rgba(135,142,159,0.30)', blob2: 'rgba(184,160,232,0.22)',
+    text: '#F1F3F8', textSec: 'rgba(241,243,248,0.62)', textMuted: 'rgba(241,243,248,0.40)',
+    glassBg: 'rgba(255,255,255,0.06)', glassBorder: 'rgba(255,255,255,0.10)',
+    glassInset: 'inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.20)',
+    cardShadow: '0 12px 30px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.25)',
+    accent: '#A8B0C4', accentText: '#1A1D26',
+    barBg: 'rgba(255,255,255,0.08)', divider: 'rgba(255,255,255,0.08)',
+    chipBg: 'rgba(255,255,255,0.07)', chipBorder: 'rgba(255,255,255,0.10)',
+  },
+};
+
+/* ───────────────── DATA ───────────────── */
+const COMPANIES = [
+  { id: 'turfmapp', name: 'Turfmapp', abbr: 'TM', color: '#878E9F' },
+  { id: 'groundwork', name: 'Groundwork10', abbr: 'G10', color: '#4A6FA5' },
+  { id: 'baansaensaep', name: 'Baan Saen Saep', abbr: 'BS', color: '#C97B4A' },
+  { id: 'ladderice', name: 'Ladderice', abbr: 'LI', color: '#7E5BA8' },
+];
+
+const EXPENSES = [
+  { id: 'e1', merchant: 'Whole Foods Market', category: 'Meals', amount: 47.23, date: 'Today, 12:48 PM', status: 'pending', project: 'Turfmapp', icon: '🍱' },
+  { id: 'e2', merchant: 'Uber', category: 'Travel', amount: 18.50, date: 'Today, 9:12 AM', status: 'approved', project: 'Turfmapp', icon: '🚕' },
+  { id: 'e3', merchant: 'Apple Store', category: 'Software', amount: 199.00, date: 'Yesterday', status: 'approved', project: 'Groundwork10', icon: '💻' },
+  { id: 'e4', merchant: 'Delta Airlines', category: 'Travel', amount: 612.40, date: 'Mar 18', status: 'pending', project: 'Turfmapp', icon: '✈️' },
+  { id: 'e5', merchant: 'WeWork', category: 'Office', amount: 89.00, date: 'Mar 14', status: 'approved', project: 'Ladderice', icon: '🏢' },
+  { id: 'e6', merchant: 'Sweetgreen', category: 'Meals', amount: 22.18, date: 'Mar 12', status: 'rejected', project: 'Turfmapp', icon: '🥗' },
+];
+
+const PROJECTS = [
+  { id: 'p1', name: 'Turfmapp Q2 Launch', spent: 12480, budget: 25000, owner: 'You', color: '#878E9F', visibility: 'team' },
+  { id: 'p2', name: 'Groundwork10 Pilot', spent: 4220, budget: 8000, owner: 'Mark Dowd', color: '#4A6FA5', visibility: 'private' },
+  { id: 'p3', name: 'Baan Saen Saep Rebrand', spent: 7150, budget: 12000, owner: 'Pim S.', color: '#C97B4A', visibility: 'team' },
+  { id: 'p4', name: 'Ladderice DevOps', spent: 1840, budget: 6000, owner: 'Diego A.', color: '#7E5BA8', visibility: 'org' },
+];
+
+const APPROVALS = [
+  { id: 'a1', user: 'Alex Lee', merchant: 'Delta Airlines', amount: 612.40, project: 'Turfmapp', submitted: '2h ago', avatar: '#6B7185' },
+  { id: 'a2', user: 'Priya Shah', merchant: 'Hilton SF', amount: 348.00, project: 'Groundwork10', submitted: '4h ago', avatar: '#4A6FA5' },
+  { id: 'a3', user: 'Jordan K.', merchant: 'Adobe Creative', amount: 79.99, project: 'Baan Saen Saep', submitted: 'Yesterday', avatar: '#C97B4A' },
+  { id: 'a4', user: 'Sam Otero', merchant: 'Lyft', amount: 24.10, project: 'Ladderice', submitted: 'Yesterday', avatar: '#7E5BA8' },
+];
+
+const MEMBERS = [
+  { id: 'm1', name: 'Alex Lee', email: 'alex@turfmapp.io', role: 'Submitter', avatar: '#6B7185' },
+  { id: 'm2', name: 'Priya Shah', email: 'priya@turfmapp.io', role: 'Approver', avatar: '#4A6FA5' },
+  { id: 'm3', name: 'Jordan K.', email: 'jordan@turfmapp.io', role: 'Submitter', avatar: '#C97B4A' },
+  { id: 'm4', name: 'Sam Otero', email: 'sam@turfmapp.io', role: 'Viewer', avatar: '#7E5BA8' },
+  { id: 'm5', name: 'Mei Chen', email: 'mei@turfmapp.io', role: 'Admin', avatar: '#5A8C6E' },
+];
+
+/* ───────────────── ICONS ───────────────── */
+const Icon = ({ name, size = 22, color = 'currentColor', stroke = 1.8 }) => {
+  const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: stroke, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  switch (name) {
+    case 'home':       return <svg {...p}><path d="M3 11l9-8 9 8M5 9v11a1 1 0 001 1h4v-7h4v7h4a1 1 0 001-1V9"/></svg>;
+    case 'chart':      return <svg {...p}><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg>;
+    case 'plus':       return <svg {...p}><path d="M12 5v14M5 12h14"/></svg>;
+    case 'list':       return <svg {...p}><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>;
+    case 'user':       return <svg {...p}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>;
+    case 'inbox':      return <svg {...p}><path d="M22 12h-6l-2 3h-4l-2-3H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>;
+    case 'bell':       return <svg {...p}><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>;
+    case 'camera':     return <svg {...p}><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>;
+    case 'sparkles':   return <svg {...p}><path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7zM19 14l.9 2.4 2.1.9-2.1.9-.9 2.4-.9-2.4-2.1-.9 2.1-.9z"/></svg>;
+    case 'check':      return <svg {...p}><path d="M20 6L9 17l-5-5"/></svg>;
+    case 'x':          return <svg {...p}><path d="M18 6L6 18M6 6l12 12"/></svg>;
+    case 'chevron':    return <svg {...p}><path d="M9 18l6-6-6-6"/></svg>;
+    case 'chevronL':   return <svg {...p}><path d="M15 18l-6-6 6-6"/></svg>;
+    case 'arrowUp':    return <svg {...p}><path d="M12 19V5M5 12l7-7 7 7"/></svg>;
+    case 'arrowDown':  return <svg {...p}><path d="M12 5v14M19 12l-7 7-7-7"/></svg>;
+    case 'shield':     return <svg {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+    case 'folder':     return <svg {...p}><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>;
+    case 'wallet':     return <svg {...p}><path d="M21 12V7H5a2 2 0 01-2-2 2 2 0 012-2h14v4M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 100 4h4v-4z"/></svg>;
+    case 'search':     return <svg {...p}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>;
+    case 'cog':        return <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>;
+    case 'clock':      return <svg {...p}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
+    case 'logout':     return <svg {...p}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>;
+    default: return null;
+  }
+};
+
+/* ───────────────── PRIMITIVES ───────────────── */
+function GlassCard({ t, children, style = {}, padding = 16 }) {
+  return (
+    <div style={{
+      position: 'relative', borderRadius: 22, padding,
+      background: t.glassBg,
+      backdropFilter: 'blur(28px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+      border: `0.5px solid ${t.glassBorder}`,
+      boxShadow: `${t.cardShadow}, ${t.glassInset}`,
+      ...style,
+    }}>{children}</div>
+  );
+}
+
+function Pill({ t, children, tone = 'neutral', style = {} }) {
+  const tones = {
+    neutral:  { bg: t.chipBg, fg: t.textSec, bd: t.chipBorder },
+    approved: { bg: 'rgba(94,160,108,0.18)', fg: '#5EA06C', bd: 'rgba(94,160,108,0.30)' },
+    pending:  { bg: 'rgba(220,160,80,0.18)', fg: '#DCA050', bd: 'rgba(220,160,80,0.30)' },
+    rejected: { bg: 'rgba(214,108,108,0.18)', fg: '#D66C6C', bd: 'rgba(214,108,108,0.30)' },
+    accent:   { bg: 'rgba(168,176,196,0.20)', fg: t.text,    bd: 'rgba(168,176,196,0.35)' },
+  };
+  const c = tones[tone];
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '3px 9px', borderRadius: 999,
+      background: c.bg, color: c.fg,
+      border: `0.5px solid ${c.bd}`,
+      fontSize: 11, fontWeight: 600, letterSpacing: '-0.01em',
+      ...style,
+    }}>{children}</span>
+  );
+}
+
+function Avatar({ color = '#878E9F', size = 36, label = '' }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: 999,
+      background: `linear-gradient(135deg, ${color} 0%, ${color}CC 100%)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#fff', fontSize: size * 0.36, fontWeight: 600,
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)', flexShrink: 0,
+    }}>{label}</div>
+  );
+}
+
+function Sparkline({ data, w = 280, h = 60, color = '#A8B0C4' }) {
+  const max = Math.max(...data), min = Math.min(...data);
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((v - min) / (max - min || 1)) * (h - 8) - 4;
+    return [x, y];
+  });
+  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0]},${p[1]}`).join(' ');
+  const area = `${path} L${w},${h} L0,${h} Z`;
+  return (
+    <svg width={w} height={h} style={{ display: 'block' }}>
+      <defs>
+        <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#spark)" />
+      <path d={path} stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function Donut({ segments, size = 132, thickness = 18 }) {
+  const r = (size - thickness) / 2;
+  const c = 2 * Math.PI * r;
+  const total = segments.reduce((s, x) => s + x.value, 0);
+  let off = 0;
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      {segments.map((s, i) => {
+        const len = (s.value / total) * c;
+        const dash = `${len} ${c - len}`;
+        const el = <circle key={i} cx={size/2} cy={size/2} r={r} fill="none" stroke={s.color} strokeWidth={thickness} strokeDasharray={dash} strokeDashoffset={-off} />;
+        off += len;
+        return el;
+      })}
+    </svg>
+  );
+}
+
+function Bars({ data, t, h = 100 }) {
+  const max = Math.max(...data.map(d => d.value));
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: h }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div style={{
+            width: '100%', height: `${(d.value / max) * (h - 18)}px`,
+            background: `linear-gradient(180deg, ${t.accent} 0%, ${t.accent}99 100%)`,
+            borderRadius: 6, minHeight: 4,
+          }}/>
+          <div style={{ fontSize: 9.5, color: t.textMuted, fontWeight: 500 }}>{d.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ───────────────── iOS FRAME ───────────────── */
+function IOSStatusBar({ dark = false }) {
+  const c = dark ? '#fff' : '#000';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '17px 32px 0', position: 'relative', zIndex: 20,
+      fontFamily: '-apple-system, "SF Pro", system-ui',
+    }}>
+      <span style={{ fontSize: 16, fontWeight: 600, color: c, letterSpacing: -0.2 }}>9:41</span>
+      <div style={{ width: 100 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="0.6" fill={c}/><rect x="4.5" y="4" width="3" height="7" rx="0.6" fill={c}/><rect x="9" y="2" width="3" height="9" rx="0.6" fill={c}/><rect x="13.5" y="0" width="3" height="11" rx="0.6" fill={c}/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11"><rect x="0.5" y="0.5" width="20" height="10" rx="3" stroke={c} strokeOpacity="0.4" fill="none"/><rect x="2" y="2" width="17" height="7" rx="1.5" fill={c}/><path d="M22 4v3c0.6-0.2 1-0.7 1-1.5S22.6 4.2 22 4z" fill={c} fillOpacity="0.4"/></svg>
+      </div>
+    </div>
+  );
+}
+
+function IOSDevice({ children, width = 390, height = 844, dark = false }) {
+  return (
+    <div style={{
+      width, height, borderRadius: 50, overflow: 'hidden',
+      position: 'relative', background: dark ? '#000' : '#F2F2F7',
+      boxShadow: '0 50px 100px rgba(0,0,0,0.35), 0 0 0 12px #1a1a1a, 0 0 0 13px rgba(255,255,255,0.04)',
+    }}>
+      <div style={{
+        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+        width: 124, height: 36, borderRadius: 22, background: '#000', zIndex: 50,
+      }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30 }}>
+        <IOSStatusBar dark={dark} />
+      </div>
+      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+        {children}
+      </div>
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
+        height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+        paddingBottom: 8, pointerEvents: 'none',
+      }}>
+        <div style={{ width: 134, height: 5, borderRadius: 100, background: dark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.3)' }}/>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────── SCREENS ───────────────── */
+function HomeScreen({ t, role, company, onOpen, onTab }) {
+  const totalPending = EXPENSES.filter(e => e.status === 'pending').reduce((s, e) => s + e.amount, 0);
+  const totalApproved = EXPENSES.filter(e => e.status === 'approved').reduce((s, e) => s + e.amount, 0);
+  const recent = EXPENSES.slice(0, 4);
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: t.textSec, fontWeight: 500 }}>Good morning, Sam</div>
+        <div style={{ fontSize: 26, fontWeight: 700, color: t.text, letterSpacing: '-0.025em' }}>This month</div>
+      </div>
+
+      <GlassCard t={t} padding={18} style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Reimbursable</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: t.text, letterSpacing: '-0.03em', marginTop: 2 }}>${(totalPending + totalApproved).toFixed(2)}</div>
+          </div>
+          <Pill t={t} tone="approved"><Icon name="arrowUp" size={11} stroke={2.4}/>+12%</Pill>
+        </div>
+        <Sparkline data={[42, 48, 39, 65, 58, 72, 68, 81, 74, 88, 82, 96]} w={320} h={50} color={t.accent}/>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, color: t.textMuted, fontWeight: 500 }}>Pending</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: t.text }}>${totalPending.toFixed(2)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: t.textMuted, fontWeight: 500 }}>Approved</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: t.text }}>${totalApproved.toFixed(2)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: t.textMuted, fontWeight: 500 }}>Rejected</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: t.text }}>$22.18</div>
+          </div>
+        </div>
+      </GlassCard>
+
+      <button onClick={() => onTab('add')} style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+        padding: 16, borderRadius: 18, border: 'none', cursor: 'pointer',
+        background: t.glassBg, backdropFilter: 'blur(22px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+        border: `0.5px solid ${t.glassBorder}`, marginBottom: 12,
+        boxShadow: t.glassInset, fontFamily: 'inherit', textAlign: 'left',
+      }}>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: t.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon name="camera" size={20} color={t.accentText} stroke={2}/>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Scan a receipt</div>
+          <div style={{ fontSize: 11.5, color: t.textSec, marginTop: 1 }}>AI auto-fills merchant, amount, category</div>
+        </div>
+        <Icon name="chevron" size={18} color={t.textMuted}/>
+      </button>
+
+      <GlassCard t={t} padding={14} style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 9, background: 'linear-gradient(135deg, #B8A0E8 0%, #878E9F 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon name="sparkles" size={15} color="#fff" stroke={2.2}/>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 2 }}>AI Insight</div>
+            <div style={{ fontSize: 12, color: t.textSec, lineHeight: 1.45 }}>Your meals spend is 23% above your team average. Consider grouping meetings to share meal expenses.</div>
+          </div>
+        </div>
+      </GlassCard>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, marginTop: 6, padding: '0 4px' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>Recent activity</div>
+        <button onClick={() => onTab('activity')} style={{ background: 'transparent', border: 'none', color: t.textSec, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>See all</button>
+      </div>
+
+      <GlassCard t={t} padding={0}>
+        {recent.map((e, i) => (
+          <button key={e.id} onClick={() => onOpen(e)} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+            background: 'transparent', border: 'none', borderTop: i ? `0.5px solid ${t.divider}` : 'none',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: t.barBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{e.icon}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.merchant}</div>
+              <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{e.category} · {e.date}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>${e.amount.toFixed(2)}</div>
+              <Pill t={t} tone={e.status} style={{ marginTop: 3, fontSize: 10 }}>{e.status}</Pill>
+            </div>
+          </button>
+        ))}
+      </GlassCard>
+
+      <div style={{ fontSize: 13, fontWeight: 600, color: t.text, margin: '18px 4px 8px' }}>Project budgets</div>
+      <GlassCard t={t} padding={14}>
+        {PROJECTS.slice(0, 3).map((p, i) => {
+          const pct = (p.spent / p.budget) * 100;
+          return (
+            <div key={p.id} style={{ marginTop: i ? 14 : 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 500, color: t.text }}>{p.name}</div>
+                <div style={{ fontSize: 11.5, color: t.textSec }}>${(p.spent/1000).toFixed(1)}k / ${(p.budget/1000).toFixed(0)}k</div>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: t.barBg, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: p.color, borderRadius: 3 }}/>
+              </div>
+            </div>
+          );
+        })}
+      </GlassCard>
+    </div>
+  );
+}
+
+function DashboardScreen({ t }) {
+  const cats = [
+    { label: 'Travel', value: 1842, color: '#878E9F' },
+    { label: 'Meals', value: 940, color: '#B8A0E8' },
+    { label: 'Software', value: 612, color: '#5EA06C' },
+    { label: 'Office', value: 380, color: '#DCA050' },
+    { label: 'Other', value: 220, color: '#6B7185' },
+  ];
+  const total = cats.reduce((s, c) => s + c.value, 0);
+  const months = [
+    { label: 'Nov', value: 2400 }, { label: 'Dec', value: 3100 },
+    { label: 'Jan', value: 2200 }, { label: 'Feb', value: 3600 },
+    { label: 'Mar', value: 3940 }, { label: 'Apr', value: 4002 },
+  ];
+  const merchants = [
+    { name: 'Delta Airlines', amount: 1124, count: 4 },
+    { name: 'Uber', amount: 312, count: 28 },
+    { name: 'Hilton SF', amount: 696, count: 2 },
+    { name: 'Sweetgreen', amount: 198, count: 9 },
+  ];
+
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: t.textSec, fontWeight: 500 }}>Last 30 days</div>
+        <div style={{ fontSize: 26, fontWeight: 700, color: t.text, letterSpacing: '-0.025em' }}>Analytics</div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+        <GlassCard t={t} padding={14}>
+          <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total spend</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: t.text, marginTop: 2, letterSpacing: '-0.02em' }}>${(total/1000).toFixed(2)}k</div>
+          <div style={{ fontSize: 11, color: '#5EA06C', fontWeight: 600, marginTop: 2 }}>+8.2% vs prev</div>
+        </GlassCard>
+        <GlassCard t={t} padding={14}>
+          <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Avg per claim</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: t.text, marginTop: 2, letterSpacing: '-0.02em' }}>$87.40</div>
+          <div style={{ fontSize: 11, color: '#D66C6C', fontWeight: 600, marginTop: 2 }}>−4.1% vs prev</div>
+        </GlassCard>
+      </div>
+
+      <GlassCard t={t} padding={16} style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 12 }}>By category</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <div style={{ position: 'relative', width: 132, height: 132 }}>
+            <Donut segments={cats}/>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ fontSize: 10, color: t.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>${(total/1000).toFixed(2)}k</div>
+            </div>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {cats.map(c => (
+              <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: c.color }}/>
+                <div style={{ fontSize: 11.5, color: t.text, flex: 1 }}>{c.label}</div>
+                <div style={{ fontSize: 11.5, color: t.textSec, fontWeight: 500 }}>{Math.round((c.value/total)*100)}%</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </GlassCard>
+
+      <GlassCard t={t} padding={16} style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>Monthly spend</div>
+          <Pill t={t} tone="accent">6 mo</Pill>
+        </div>
+        <Bars data={months} t={t} h={110}/>
+      </GlassCard>
+
+      <GlassCard t={t} padding={0}>
+        <div style={{ padding: '14px 16px 8px', fontSize: 13, fontWeight: 600, color: t.text }}>Top merchants</div>
+        {merchants.map((m, i) => (
+          <div key={m.name} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px',
+            borderTop: `0.5px solid ${t.divider}`,
+          }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: t.barBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: t.textSec }}>{i+1}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{m.name}</div>
+              <div style={{ fontSize: 11, color: t.textMuted, marginTop: 1 }}>{m.count} transactions</div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>${m.amount}</div>
+          </div>
+        ))}
+      </GlassCard>
+    </div>
+  );
+}
+
+function ActivityScreen({ t, onOpen }) {
+  const groups = [
+    { label: 'Today', items: EXPENSES.slice(0, 2) },
+    { label: 'This week', items: EXPENSES.slice(2, 5) },
+    { label: 'Earlier', items: EXPENSES.slice(5) },
+  ];
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ fontSize: 26, fontWeight: 700, color: t.text, letterSpacing: '-0.025em', marginBottom: 12 }}>Activity</div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto' }}>
+        {['All', 'Pending', 'Approved', 'Rejected'].map((f, i) => (
+          <button key={f} style={{
+            padding: '7px 14px', borderRadius: 999, border: `0.5px solid ${t.glassBorder}`,
+            background: i === 0 ? t.accent : t.glassBg, color: i === 0 ? t.accentText : t.text,
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+          }}>{f}</button>
+        ))}
+      </div>
+
+      {groups.map(g => (
+        <div key={g.label} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0 4px 6px' }}>{g.label}</div>
+          <GlassCard t={t} padding={0}>
+            {g.items.map((e, i) => (
+              <button key={e.id} onClick={() => onOpen(e)} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                background: 'transparent', border: 'none', borderTop: i ? `0.5px solid ${t.divider}` : 'none',
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: t.barBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{e.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{e.merchant}</div>
+                  <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{e.project} · {e.category}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>${e.amount.toFixed(2)}</div>
+                  <Pill t={t} tone={e.status} style={{ marginTop: 3, fontSize: 10 }}>{e.status}</Pill>
+                </div>
+              </button>
+            ))}
+          </GlassCard>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SubmitScreen({ t, onClose, onSubmit }) {
+  const [step, setStep] = useState('scan');
+  useEffect(() => {
+    if (step === 'scanning') {
+      const tm = setTimeout(() => setStep('form'), 1700);
+      return () => clearTimeout(tm);
+    }
+  }, [step]);
+
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ fontSize: 26, fontWeight: 700, color: t.text, letterSpacing: '-0.025em' }}>New expense</div>
+        <button onClick={onClose} style={{ background: t.chipBg, border: `0.5px solid ${t.chipBorder}`, borderRadius: 999, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Icon name="x" size={16} color={t.text}/>
+        </button>
+      </div>
+
+      {step === 'scan' && (
+        <>
+          <GlassCard t={t} padding={0} style={{ aspectRatio: '3/4', marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(135,142,159,0.20), rgba(184,160,232,0.15))' }}/>
+            <div style={{ position: 'absolute', inset: 24, border: `2px dashed ${t.textMuted}`, borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Icon name="camera" size={42} color={t.textSec} stroke={1.4}/>
+              <div style={{ fontSize: 13, color: t.textSec, fontWeight: 500 }}>Center receipt in frame</div>
+            </div>
+          </GlassCard>
+          <button onClick={() => setStep('scanning')} style={{
+            width: '100%', padding: 16, borderRadius: 16, border: 'none',
+            background: t.accent, color: t.accentText, fontSize: 15, fontWeight: 600,
+            cursor: 'pointer', boxShadow: t.cardShadow, marginBottom: 8,
+          }}>Capture receipt</button>
+          <button onClick={() => setStep('form')} style={{
+            width: '100%', padding: 14, borderRadius: 16, border: `0.5px solid ${t.glassBorder}`,
+            background: t.glassBg, color: t.text, fontSize: 14, fontWeight: 500,
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', cursor: 'pointer',
+          }}>Enter manually</button>
+        </>
+      )}
+
+      {step === 'scanning' && (
+        <GlassCard t={t} padding={32} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #B8A0E8, #878E9F)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'pulse 1.4s ease-in-out infinite' }}>
+            <Icon name="sparkles" size={26} color="#fff"/>
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: t.text }}>Reading receipt…</div>
+          <div style={{ fontSize: 12, color: t.textSec, textAlign: 'center', maxWidth: 220, lineHeight: 1.4 }}>Extracting merchant, amount, date, and category</div>
+          <style>{`@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.7}}`}</style>
+        </GlassCard>
+      )}
+
+      {step === 'form' && (
+        <>
+          <GlassCard t={t} padding={16} style={{ marginBottom: 10 }}>
+            <FormRow t={t} label="Merchant" value="Whole Foods Market" ai/>
+            <FormRow t={t} label="Amount" value="$47.23" ai/>
+            <FormRow t={t} label="Date" value="Today, 12:48 PM"/>
+            <FormRow t={t} label="Category" value="Meals" ai/>
+            <FormRow t={t} label="Project" value="Turfmapp Q2 Launch"/>
+            <FormRow t={t} label="Notes" value="Team lunch — design review" last/>
+          </GlassCard>
+          <button onClick={onSubmit} style={{
+            width: '100%', padding: 16, borderRadius: 16, border: 'none',
+            background: t.accent, color: t.accentText, fontSize: 15, fontWeight: 600,
+            cursor: 'pointer', boxShadow: t.cardShadow,
+          }}>Submit for approval</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function FormRow({ t, label, value, ai = false, last = false }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '11px 0', borderBottom: last ? 'none' : `0.5px solid ${t.divider}`,
+    }}>
+      <div style={{ fontSize: 12, color: t.textSec, fontWeight: 500 }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {ai && <Pill t={t} tone="accent" style={{ fontSize: 9 }}><Icon name="sparkles" size={9} stroke={2.4}/>AI</Pill>}
+        <div style={{ fontSize: 13.5, fontWeight: 500, color: t.text }}>{value}</div>
+        <Icon name="chevron" size={14} color={t.textMuted}/>
+      </div>
+    </div>
+  );
+}
+
+function DetailScreen({ t, expense, role, onBack, onAction }) {
+  if (!expense) return null;
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <button onClick={onBack} style={{ background: t.chipBg, border: `0.5px solid ${t.chipBorder}`, borderRadius: 999, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Icon name="chevronL" size={16} color={t.text}/>
+        </button>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.text }}>Expense detail</div>
+      </div>
+
+      <GlassCard t={t} padding={20} style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div style={{ width: 50, height: 50, borderRadius: 14, background: t.barBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>{expense.icon}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: t.text }}>{expense.merchant}</div>
+            <div style={{ fontSize: 12, color: t.textMuted }}>{expense.date}</div>
+          </div>
+          <Pill t={t} tone={expense.status}>{expense.status}</Pill>
+        </div>
+        <div style={{ fontSize: 36, fontWeight: 700, color: t.text, letterSpacing: '-0.03em' }}>${expense.amount.toFixed(2)}</div>
+      </GlassCard>
+
+      <GlassCard t={t} padding={16} style={{ marginBottom: 12 }}>
+        <FormRow t={t} label="Category" value={expense.category}/>
+        <FormRow t={t} label="Project" value={expense.project}/>
+        <FormRow t={t} label="Submitted by" value="Sam Otero"/>
+        <FormRow t={t} label="Receipt" value="receipt.pdf" last/>
+      </GlassCard>
+
+      {role === 'manager' && expense.status === 'pending' && (
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => onAction('reject')} style={{
+            flex: 1, padding: 15, borderRadius: 14, border: `0.5px solid rgba(214,108,108,0.4)`,
+            background: 'rgba(214,108,108,0.12)', color: '#D66C6C', fontSize: 14, fontWeight: 600,
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}><Icon name="x" size={16} stroke={2.4}/>Reject</button>
+          <button onClick={() => onAction('approve')} style={{
+            flex: 1, padding: 15, borderRadius: 14, border: 'none',
+            background: '#5EA06C', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: t.cardShadow,
+          }}><Icon name="check" size={16} stroke={2.4}/>Approve</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ManagerOverviewScreen({ t, onTab }) {
+  const pendingCount = APPROVALS.length;
+  const pendingTotal = APPROVALS.reduce((s, a) => s + a.amount, 0);
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: t.textSec, fontWeight: 500 }}>Manager view</div>
+        <div style={{ fontSize: 26, fontWeight: 700, color: t.text, letterSpacing: '-0.025em' }}>Overview</div>
+      </div>
+
+      <GlassCard t={t} padding={18} style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Awaiting your approval</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: t.text, letterSpacing: '-0.03em', marginTop: 2 }}>{pendingCount}</div>
+            <div style={{ fontSize: 13, color: t.textSec, marginTop: 2 }}>${pendingTotal.toFixed(2)} total</div>
+          </div>
+          <Pill t={t} tone="pending"><Icon name="clock" size={11} stroke={2.4}/>2 over 24h</Pill>
+        </div>
+        <button onClick={() => onTab('review')} style={{
+          width: '100%', padding: 12, borderRadius: 12, border: 'none',
+          background: t.accent, color: t.accentText, fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 8,
+        }}>Review queue</button>
+      </GlassCard>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+        <GlassCard t={t} padding={14}>
+          <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Team spend MTD</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: t.text, marginTop: 2 }}>$18.4k</div>
+          <div style={{ fontSize: 11, color: '#5EA06C', fontWeight: 600, marginTop: 2 }}>+12% vs LM</div>
+        </GlassCard>
+        <GlassCard t={t} padding={14}>
+          <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Avg approval</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: t.text, marginTop: 2 }}>4.2h</div>
+          <div style={{ fontSize: 11, color: '#5EA06C', fontWeight: 600, marginTop: 2 }}>−18% faster</div>
+        </GlassCard>
+      </div>
+
+      <div style={{ fontSize: 13, fontWeight: 600, color: t.text, margin: '6px 4px 8px' }}>Project budgets</div>
+      <GlassCard t={t} padding={14}>
+        {PROJECTS.map((p, i) => {
+          const pct = (p.spent / p.budget) * 100;
+          return (
+            <div key={p.id} style={{ marginTop: i ? 14 : 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 500, color: t.text }}>{p.name}</div>
+                <div style={{ fontSize: 11.5, color: pct > 80 ? '#DCA050' : t.textSec }}>{Math.round(pct)}%</div>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: t.barBg, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: p.color, borderRadius: 3 }}/>
+              </div>
+            </div>
+          );
+        })}
+      </GlassCard>
+    </div>
+  );
+}
+
+function ReviewScreen({ t, onOpen }) {
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ fontSize: 26, fontWeight: 700, color: t.text, letterSpacing: '-0.025em', marginBottom: 4 }}>Review</div>
+      <div style={{ fontSize: 13, color: t.textSec, marginBottom: 14 }}>{APPROVALS.length} expenses awaiting approval</div>
+
+      <GlassCard t={t} padding={0}>
+        {APPROVALS.map((a, i) => (
+          <button key={a.id} onClick={() => onOpen({ id: a.id, merchant: a.merchant, amount: a.amount, category: 'Travel', date: a.submitted, status: 'pending', project: a.project, icon: '✈️' })} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px',
+            background: 'transparent', border: 'none', borderTop: i ? `0.5px solid ${t.divider}` : 'none',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          }}>
+            <Avatar color={a.avatar} size={40} label={a.user.split(' ').map(n=>n[0]).join('')}/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{a.user}</div>
+              <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{a.merchant} · {a.submitted}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: t.text }}>${a.amount.toFixed(2)}</div>
+              <div style={{ fontSize: 10.5, color: t.textMuted, marginTop: 1 }}>{a.project}</div>
+            </div>
+          </button>
+        ))}
+      </GlassCard>
+    </div>
+  );
+}
+
+function ManageProjectsScreen({ t, onBack }) {
+  const [showCreate, setShowCreate] = useState(false);
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <button onClick={onBack} style={{ background: t.chipBg, border: `0.5px solid ${t.chipBorder}`, borderRadius: 999, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Icon name="chevronL" size={16} color={t.text}/>
+        </button>
+        <div style={{ fontSize: 18, fontWeight: 700, color: t.text, flex: 1 }}>Manage projects</div>
+        <button onClick={() => setShowCreate(true)} style={{ background: t.accent, color: t.accentText, border: 'none', borderRadius: 999, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Icon name="plus" size={18} stroke={2.4}/>
+        </button>
+      </div>
+
+      {showCreate && (
+        <GlassCard t={t} padding={16} style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>New project</div>
+            <button onClick={() => setShowCreate(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: t.textMuted }}>
+              <Icon name="x" size={16}/>
+            </button>
+          </div>
+          <FormRow t={t} label="Name" value="Untitled project"/>
+          <FormRow t={t} label="Budget" value="$0"/>
+          <FormRow t={t} label="Owner" value="You"/>
+          <div style={{ padding: '12px 0 6px', fontSize: 12, color: t.textSec, fontWeight: 500 }}>Visibility</div>
+          {['Private', 'Team', 'Org-wide'].map((v, i) => (
+            <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', borderTop: i ? `0.5px solid ${t.divider}` : 'none' }}>
+              <div style={{ width: 18, height: 18, borderRadius: 999, border: `1.5px solid ${t.glassBorder}`, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {i === 1 && <div style={{ width: 9, height: 9, borderRadius: 999, background: t.accent }}/>}
+              </div>
+              <div style={{ fontSize: 13, color: t.text }}>{v}</div>
+            </label>
+          ))}
+          <button style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: t.accent, color: t.accentText, fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 10 }}>Create project</button>
+        </GlassCard>
+      )}
+
+      <GlassCard t={t} padding={0}>
+        {PROJECTS.map((p, i) => {
+          const pct = (p.spent / p.budget) * 100;
+          return (
+            <div key={p.id} style={{ padding: 14, borderTop: i ? `0.5px solid ${t.divider}` : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{ width: 8, height: 32, borderRadius: 4, background: p.color }}/>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 1 }}>{p.owner} · {p.visibility}</div>
+                </div>
+                <Icon name="chevron" size={16} color={t.textMuted}/>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: t.textSec, marginBottom: 4 }}>
+                <span>${(p.spent/1000).toFixed(1)}k spent</span>
+                <span>${(p.budget/1000).toFixed(0)}k budget</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: t.barBg, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: p.color, borderRadius: 3 }}/>
+              </div>
+            </div>
+          );
+        })}
+      </GlassCard>
+    </div>
+  );
+}
+
+function PermissionsScreen({ t, onBack }) {
+  const [members, setMembers] = useState(MEMBERS);
+  const [editing, setEditing] = useState(null);
+  const counts = members.reduce((acc, m) => ({ ...acc, [m.role]: (acc[m.role] || 0) + 1 }), {});
+  const roles = ['Admin', 'Approver', 'Submitter', 'Viewer'];
+
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <button onClick={onBack} style={{ background: t.chipBg, border: `0.5px solid ${t.chipBorder}`, borderRadius: 999, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Icon name="chevronL" size={16} color={t.text}/>
+        </button>
+        <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>Permissions</div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 14 }}>
+        {roles.map(r => (
+          <GlassCard key={r} t={t} padding={10} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>{counts[r] || 0}</div>
+            <div style={{ fontSize: 10, color: t.textMuted, fontWeight: 500, marginTop: 1 }}>{r}</div>
+          </GlassCard>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 13, fontWeight: 600, color: t.text, margin: '4px 4px 8px' }}>Members</div>
+      <GlassCard t={t} padding={0} style={{ marginBottom: 14 }}>
+        {members.map((m, i) => (
+          <div key={m.id} style={{ borderTop: i ? `0.5px solid ${t.divider}` : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12 }}>
+              <Avatar color={m.avatar} size={36} label={m.name.split(' ').map(n=>n[0]).join('')}/>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{m.name}</div>
+                <div style={{ fontSize: 11, color: t.textMuted, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
+              </div>
+              <button onClick={() => setEditing(editing === m.id ? null : m.id)} style={{
+                padding: '5px 11px', borderRadius: 999, border: `0.5px solid ${t.chipBorder}`,
+                background: t.chipBg, color: t.text, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              }}>{m.role}</button>
+            </div>
+            {editing === m.id && (
+              <div style={{ padding: '0 12px 12px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {roles.map(r => (
+                  <button key={r} onClick={() => { setMembers(members.map(x => x.id === m.id ? { ...x, role: r } : x)); setEditing(null); }} style={{
+                    padding: '6px 10px', borderRadius: 999,
+                    border: `0.5px solid ${m.role === r ? t.accent : t.chipBorder}`,
+                    background: m.role === r ? t.accent : 'transparent',
+                    color: m.role === r ? t.accentText : t.text,
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  }}>{r}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </GlassCard>
+
+      <div style={{ fontSize: 13, fontWeight: 600, color: t.text, margin: '4px 4px 8px' }}>Approval policy</div>
+      <GlassCard t={t} padding={16}>
+        <FormRow t={t} label="Auto-approve under" value="$25"/>
+        <FormRow t={t} label="Receipt required over" value="$75"/>
+        <ToggleRow t={t} label="Two-step approval" sub="Over $1,000" defaultOn last/>
+      </GlassCard>
+    </div>
+  );
+}
+
+function ToggleRow({ t, label, sub, defaultOn = false, last = false }) {
+  const [on, setOn] = useState(defaultOn);
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '11px 0', borderBottom: last ? 'none' : `0.5px solid ${t.divider}`,
+    }}>
+      <div>
+        <div style={{ fontSize: 13, color: t.text, fontWeight: 500 }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>{sub}</div>}
+      </div>
+      <button onClick={() => setOn(!on)} style={{
+        width: 46, height: 28, borderRadius: 999, border: 'none', cursor: 'pointer',
+        background: on ? '#5EA06C' : t.barBg, position: 'relative', transition: 'background 0.2s',
+      }}>
+        <div style={{
+          position: 'absolute', top: 2, left: on ? 20 : 2,
+          width: 24, height: 24, borderRadius: 999, background: '#fff',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.2s',
+        }}/>
+      </button>
+    </div>
+  );
+}
+
+function ProfileScreen({ t, role, onNav }) {
+  return (
+    <div style={{ padding: '8px 16px 100px' }}>
+      <div style={{ fontSize: 26, fontWeight: 700, color: t.text, letterSpacing: '-0.025em', marginBottom: 14 }}>You</div>
+
+      <GlassCard t={t} padding={18} style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <Avatar color="#878E9F" size={56} label="SO"/>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: t.text }}>Sam Otero</div>
+          <div style={{ fontSize: 12, color: t.textSec, marginTop: 2 }}>{role === 'manager' ? 'Workspace admin' : 'Member'} · sam@turfmapp.io</div>
+        </div>
+        <Icon name="chevron" size={18} color={t.textMuted}/>
+      </GlassCard>
+
+      {role === 'manager' && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 4px 6px' }}>Workspace admin</div>
+          <GlassCard t={t} padding={0} style={{ marginBottom: 14 }}>
+            <NavRow t={t} icon="folder" label="Manage projects" sub="4 projects · $51k budget" onClick={() => onNav('manageProjects')}/>
+            <NavRow t={t} icon="shield" label="Permissions" sub="5 members · 4 roles" onClick={() => onNav('permissions')} last/>
+          </GlassCard>
+        </>
+      )}
+
+      <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 4px 6px' }}>Account</div>
+      <GlassCard t={t} padding={0} style={{ marginBottom: 14 }}>
+        <NavRow t={t} icon="wallet" label="Payment methods" sub="2 cards"/>
+        <NavRow t={t} icon="bell" label="Notifications"/>
+        <NavRow t={t} icon="cog" label="Settings" last/>
+      </GlassCard>
+
+      <GlassCard t={t} padding={0}>
+        <NavRow t={t} icon="logout" label="Sign out" tone="danger" last chevron={false}/>
+      </GlassCard>
+    </div>
+  );
+}
+
+function NavRow({ t, icon, label, sub, onClick, last = false, tone, chevron = true }) {
+  return (
+    <button onClick={onClick} style={{
+      width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: 14,
+      background: 'transparent', border: 'none', borderTop: 'none',
+      borderBottom: last ? 'none' : `0.5px solid ${t.divider}`,
+      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+    }}>
+      <div style={{ width: 32, height: 32, borderRadius: 9, background: t.barBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={17} color={tone === 'danger' ? '#D66C6C' : t.textSec}/>
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 500, color: tone === 'danger' ? '#D66C6C' : t.text }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: t.textMuted, marginTop: 1 }}>{sub}</div>}
+      </div>
+      {chevron && <Icon name="chevron" size={16} color={t.textMuted}/>}
+    </button>
+  );
+}
+
+/* ───────────────── PHONE APP SHELL ───────────────── */
+function PhoneApp({ t, role, company, onSwitchCompany }) {
+  const [tab, setTab] = useState('home');
+  const [stack, setStack] = useState([]);
+  const [scrollY, setScrollY] = useState(0);
+  const scrollRef = useRef(null);
+
+  const employeeTabs = [
+    { id: 'home',     icon: 'home',  label: 'Home' },
+    { id: 'dashboard',icon: 'chart', label: 'Dashboard' },
+    { id: 'add',      icon: 'plus',  label: '', center: true },
+    { id: 'activity', icon: 'list',  label: 'Activity' },
+    { id: 'profile',  icon: 'user',  label: 'You' },
+  ];
+  const managerTabs = [
+    { id: 'home',     icon: 'home',  label: 'Overview' },
+    { id: 'dashboard',icon: 'chart', label: 'Dashboard' },
+    { id: 'add',      icon: 'plus',  label: '', center: true },
+    { id: 'review',   icon: 'inbox', label: 'Review' },
+    { id: 'profile',  icon: 'user',  label: 'You' },
+  ];
+  const tabs = role === 'manager' ? managerTabs : employeeTabs;
+
+  useEffect(() => { setStack([]); setTab('home'); }, [role]);
+
+  const onScroll = (e) => setScrollY(e.target.scrollTop);
+  const headerOpacity = Math.min(scrollY / 40, 1);
+  const top = stack[stack.length - 1];
+
+  const goTo = (route) => setStack([...stack, route]);
+  const back = () => setStack(stack.slice(0, -1));
+  const open = (e) => goTo({ type: 'detail', expense: e });
+
+  const renderScreen = () => {
+    if (top?.type === 'detail') return <DetailScreen t={t} expense={top.expense} role={role} onBack={back} onAction={back}/>;
+    if (top?.type === 'manageProjects') return <ManageProjectsScreen t={t} onBack={back}/>;
+    if (top?.type === 'permissions') return <PermissionsScreen t={t} onBack={back}/>;
+    if (tab === 'add') return <SubmitScreen t={t} onClose={() => setTab('home')} onSubmit={() => setTab('activity')}/>;
+    if (tab === 'home' && role === 'manager') return <ManagerOverviewScreen t={t} onTab={setTab}/>;
+    if (tab === 'home') return <HomeScreen t={t} role={role} company={company} onOpen={open} onTab={setTab}/>;
+    if (tab === 'dashboard') return <DashboardScreen t={t}/>;
+    if (tab === 'activity') return <ActivityScreen t={t} onOpen={open}/>;
+    if (tab === 'review') return <ReviewScreen t={t} onOpen={open}/>;
+    if (tab === 'profile') return <ProfileScreen t={t} role={role} onNav={(r) => goTo({ type: r })}/>;
+    return null;
+  };
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', position: 'relative',
+      background: t.bg, overflow: 'hidden', color: t.text,
+    }}>
+      {/* decorative blobs behind glass */}
+      <div style={{ position: 'absolute', top: -60, right: -40, width: 280, height: 280, borderRadius: 999, background: t.blob1, filter: 'blur(60px)', pointerEvents: 'none' }}/>
+      <div style={{ position: 'absolute', bottom: 100, left: -60, width: 240, height: 240, borderRadius: 999, background: t.blob2, filter: 'blur(60px)', pointerEvents: 'none' }}/>
+
+      {/* Top bar (overlay, scroll-aware glass) */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 25, paddingTop: 47 }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: t.glassBg, opacity: headerOpacity,
+          backdropFilter: `blur(${22 * headerOpacity}px) saturate(180%)`,
+          WebkitBackdropFilter: `blur(${22 * headerOpacity}px) saturate(180%)`,
+          borderBottom: `0.5px solid ${t.glassBorder}`, transition: 'opacity 0.15s',
+        }}/>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', height: 50 }}>
+          <button onClick={() => {
+            const idx = COMPANIES.findIndex(c => c.id === company.id);
+            onSwitchCompany(COMPANIES[(idx + 1) % COMPANIES.length]);
+          }} style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px 6px 6px',
+            borderRadius: 999, border: `0.5px solid ${t.glassBorder}`,
+            background: t.glassBg, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: company.color, color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{company.abbr}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{company.name}</div>
+            <Icon name="chevron" size={13} color={t.textMuted}/>
+          </button>
+          <button style={{
+            width: 38, height: 38, borderRadius: 999,
+            border: `0.5px solid ${t.glassBorder}`, background: t.glassBg,
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            position: 'relative',
+          }}>
+            <Icon name="bell" size={17} color={t.text} stroke={1.8}/>
+            <div style={{ position: 'absolute', top: 8, right: 9, width: 8, height: 8, borderRadius: 999, background: '#D66C6C', border: '1.5px solid #fff' }}/>
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div ref={scrollRef} onScroll={onScroll} style={{
+        position: 'absolute', inset: 0, overflowY: 'auto', paddingTop: 100,
+      }}>
+        {renderScreen()}
+      </div>
+
+      {/* Bottom tab bar — iOS 26 liquid glass */}
+      {!top && tab !== 'add' && (
+        <div style={{
+          position: 'absolute', left: 16, right: 16, bottom: 28, zIndex: 40,
+          height: 64, borderRadius: 32, overflow: 'hidden',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.08)',
+        }}>
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 32,
+            backdropFilter: 'blur(28px) saturate(190%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+            background: t.name === 'dark' ? 'rgba(28,30,40,0.55)' : 'rgba(255,255,255,0.55)',
+          }}/>
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 32,
+            boxShadow: t.name === 'dark'
+              ? 'inset 1.5px 1.5px 1px rgba(255,255,255,0.18), inset -1px -1px 1px rgba(255,255,255,0.05), inset 0 0 0 0.5px rgba(255,255,255,0.10)'
+              : 'inset 1.5px 1.5px 1px rgba(255,255,255,0.85), inset -1px -1px 1px rgba(255,255,255,0.4), inset 0 0 0 0.5px rgba(0,0,0,0.05)',
+            pointerEvents: 'none',
+          }}/>
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderRadius: '32px 32px 0 0',
+            background: t.name === 'dark'
+              ? 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 100%)'
+              : 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 100%)',
+            pointerEvents: 'none',
+          }}/>
+          <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+            {tabs.map(tb => {
+              const active = tab === tb.id;
+              if (tb.center) {
+                return (
+                  <button key={tb.id} onClick={() => setTab('add')} style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'transparent', border: 'none', cursor: 'pointer', height: '100%',
+                  }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 14,
+                      background: t.accent, color: t.accentText,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.12), 0 4px 14px rgba(0,0,0,0.18)',
+                    }}>
+                      <Icon name="plus" size={22} stroke={2.4}/>
+                    </div>
+                  </button>
+                );
+              }
+              return (
+                <button key={tb.id} onClick={() => setTab(tb.id)} style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', gap: 3, height: '100%',
+                  background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative',
+                }}>
+                  {active && <div style={{ position: 'absolute', top: 8, width: 4, height: 4, borderRadius: 999, background: t.accent, boxShadow: `0 0 8px ${t.accent}` }}/>}
+                  <Icon name={tb.icon} size={21} color={active ? t.text : t.textMuted} stroke={active ? 2 : 1.8}/>
+                  <div style={{ fontSize: 9.5, fontWeight: 600, color: active ? t.text : t.textMuted, letterSpacing: '-0.01em' }}>{tb.label}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────────────── STAGE (controls + iPhone) ───────────────── */
+function Stage() {
+  const [theme, setTheme] = useState('light');
+  const [role, setRole] = useState('employee');
+  const [company, setCompany] = useState(COMPANIES[0]);
+  const t = THEMES[theme];
+
+  return (
+    <div className="stage" style={{
+      width: '100vw', minHeight: '100vh', display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      gap: 64, padding: 32,
+    }}>
+      <div className="controls" style={{ width: 280, display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: '#878E9F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Turfmapp Expense Report</div>
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(232,234,240,0.55)', lineHeight: 1.5 }}>iOS prototype — mode controls live outside the device.</div>
+        </div>
+
+        <ControlGroup label="Role">
+          <Segmented value={role} options={[{ id: 'employee', label: 'Employee' }, { id: 'manager', label: 'Manager' }]} onChange={setRole}/>
+        </ControlGroup>
+
+        <ControlGroup label="Appearance">
+          <Segmented value={theme} options={[{ id: 'light', label: '☀ Light' }, { id: 'dark', label: '☾ Dark' }]} onChange={setTheme}/>
+        </ControlGroup>
+
+        <ControlGroup label="Workspace">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {COMPANIES.map(c => (
+              <button key={c.id} onClick={() => setCompany(c)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12,
+                background: company.id === c.id ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
+                border: `0.5px solid ${company.id === c.id ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)'}`,
+                color: '#E8EAF0', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              }}>
+                <div style={{ width: 24, height: 24, borderRadius: 7, background: c.color, color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{c.abbr}</div>
+                <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{c.name}</span>
+                {company.id === c.id && <span style={{ width: 6, height: 6, borderRadius: 99, background: '#A8B0C4' }}/>}
+              </button>
+            ))}
+          </div>
+        </ControlGroup>
+
+        <div style={{ fontSize: 11, color: 'rgba(232,234,240,0.4)', lineHeight: 1.6, padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '0.5px solid rgba(255,255,255,0.06)' }}>
+          <strong style={{ color: 'rgba(232,234,240,0.7)', fontWeight: 600 }}>Try:</strong> tap "+" to scan a receipt · open any expense · switch to Manager to see Review queue · Manager → You → Workspace admin
+        </div>
+      </div>
+
+      <div className="phone-wrap">
+        <div className="phone-inner">
+          <IOSDevice width={390} height={844} dark={t.statusBarDark}>
+            <PhoneApp t={t} role={role} company={company} onSwitchCompany={setCompany}/>
+          </IOSDevice>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ControlGroup({ label, children }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(232,234,240,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function Segmented({ value, options, onChange }) {
+  return (
+    <div style={{ display: 'flex', padding: 3, borderRadius: 11, background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+      {options.map(o => {
+        const active = value === o.id;
+        return (
+          <button key={o.id} onClick={() => onChange(o.id)} style={{
+            flex: 1, padding: '7px 10px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+            background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+            color: active ? '#fff' : 'rgba(232,234,240,0.55)', borderRadius: 8,
+            fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+            boxShadow: active ? '0 1px 3px rgba(0,0,0,0.18), inset 0 0 0 0.5px rgba(255,255,255,0.1)' : 'none',
+          }}>{o.label}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<Stage/>);
+  </script>
+</body>
+</html>
