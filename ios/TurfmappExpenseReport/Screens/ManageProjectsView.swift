@@ -134,7 +134,7 @@ struct ManageProjectsView: View {
                 }
                 .padding(.bottom, 10)
 
-                createField("Name", text: $projectName, placeholder: "Untitled project")
+                createField("Name", text: $projectName, placeholder: "Project name")
                 Divider().opacity(0.4)
                 createField("Budget", text: $projectBudget, placeholder: "25000", prefix: "$")
                 Divider().opacity(0.4)
@@ -309,8 +309,8 @@ struct ProjectDetailSheet: View {
                 .padding(.horizontal, 20)
 
             infoBanner(icon: "archivebox.fill", tint: Tokens.pending,
-                       title: "Archive state covered",
-                       message: "A production project detail should support archive/delete confirmation before hiding a project.")
+                       title: "Archive actions",
+                       message: "Project detail should support archive and delete confirmation before hiding a project.")
                 .padding(.horizontal, 20)
 
             Spacer()

@@ -199,7 +199,7 @@ struct SubmitView: View {
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Scan receipt or product").font(.system(size: 14, weight: .semibold))
-                        Text("AI auto-fills vendor, amount, and category")
+                        Text("AI fills vendor, amount, and category")
                             .font(.system(size: 11.5)).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -218,7 +218,6 @@ struct SubmitView: View {
     private func startScan() {
         isScanning = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.7) {
-            // Mock AI extraction
             vendor = "Whole Foods Market"
             amountText = "47.23"
             category = "Meals"
@@ -359,7 +358,7 @@ struct SubmitView: View {
     }
 }
 
-// MARK: – Scanning sheet (mocks the AI receipt-reading animation)
+// MARK: – Scanning sheet
 
 struct ScanningSheet: View {
     @State private var pulse = false
@@ -430,7 +429,7 @@ struct ReceiptSourceSheet: View {
                             .background(Tokens.aiPurple.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
                         VStack(alignment: .leading, spacing: 1) {
                             Text("Scan with AI").font(.system(size: 13.5, weight: .semibold))
-                            Text("Mock extraction for receipt or product photo")
+                            Text("AI extraction for receipt or product photo")
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         Spacer()

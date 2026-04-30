@@ -16,7 +16,7 @@ struct ProfileView: View {
                     Avatar(color: app.company.color, size: 56, label: initials(app.userName))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(app.userName).font(.system(size: 17, weight: .bold))
-                        Text((role == .manager ? "Workspace admin" : "Member") + " · \(app.userEmail)")
+                        Text((role == .employee ? "Member" : "Workspace admin") + " · \(app.userEmail)")
                             .font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -25,7 +25,7 @@ struct ProfileView: View {
                 }
             }
 
-            if role == .manager {
+            if role != .employee {
                 sectionHeader("Workspace admin")
                 GlassCard(padding: 0) {
                     VStack(spacing: 0) {
@@ -33,7 +33,7 @@ struct ProfileView: View {
                                sub: "\(app.currentProjects.count) projects · \(money(app.currentProjects.reduce(0) { $0 + $1.budget })) budget") { onNav("manageProjects") }
                         Divider().opacity(0.4)
                         navRow(icon: "shield.fill",  label: "Permissions",
-                               sub: "\(app.currentMembers.count) members · 4 roles")        { onNav("permissions") }
+                               sub: "\(app.currentMembers.count) members · 3 roles")        { onNav("permissions") }
                     }
                 }
             }
@@ -65,14 +65,27 @@ struct ProfileView: View {
                 }
             }
 
-            sectionHeader("Role scope")
-            GlassCard(padding: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    roleScopeRow("Employee", "Submit expenses, save drafts, track own reimbursement", active: role == .employee)
-                    Divider().opacity(0.4)
-                    roleScopeRow("Manager", "Review queue, approve/reject, manage projects and policies", active: role == .manager)
-                    Divider().opacity(0.4)
-                    roleScopeRow("Finance/Admin", "Reimburse, export reports, manage members and audit records", active: false)
+            if role == .employee {
+                GlassCard(padding: 14) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "person.fill")
+                            .foregroundStyle(Tokens.slate500)
+                            .font(.system(size: 14, weight: .semibold))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Employee access").font(.system(size: 12.5, weight: .semibold))
+                            Text("Permissions are assigned by a manager or admin.")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } else {
+                sectionHeader("Access")
+                GlassCard(padding: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        roleScopeRow("Manager", "Review queue, approve/reject, manage projects and policies", active: role == .manager)
+                        Divider().opacity(0.4)
+                        roleScopeRow("Admin", "Invite members, remove users, manage policies and reports", active: role == .admin)
+                    }
                 }
             }
 
@@ -146,21 +159,37 @@ struct NotificationsView: View {
     @EnvironmentObject var app: AppState
     var onBack: () -> Void
     @State private var selectedNotification: AppNotification? = nil
+    @State private var filter: NotificationFilter = .all
 
     private var notifications: [AppNotification] {
         [
-            AppNotification(title: "Approval requested", subtitle: "Delta Airlines needs manager review", tint: Tokens.pending, action: "Open expense"),
-            AppNotification(title: "Expense approved", subtitle: "Uber is ready for purchase confirmation", tint: Tokens.approved, action: "Confirm purchase"),
-            AppNotification(title: "Reimbursement sent", subtitle: "WeWork was marked reimbursed", tint: Tokens.reimbursed, action: "View proof"),
-            AppNotification(title: "Workspace invite", subtitle: "Finance team invite is pending", tint: app.company.color, action: "Review invite")
+            AppNotification(title: "Approval requested", subtitle: "Delta Airlines needs manager review", tint: Tokens.pending, action: "Open expense", kind: .approval, time: "2m ago", unread: true),
+            AppNotification(title: "Expense approved", subtitle: "Uber is ready for purchase confirmation", tint: Tokens.approved, action: "Confirm purchase", kind: .expense, time: "11m ago", unread: true),
+            AppNotification(title: "Reimbursement sent", subtitle: "WeWork was marked reimbursed", tint: Tokens.reimbursed, action: "View proof", kind: .payment, time: "Yesterday", unread: false),
+            AppNotification(title: "Workspace invite", subtitle: "Finance team invite is pending", tint: app.company.color, action: "Review invite", kind: .admin, time: "Yesterday", unread: false)
         ]
+    }
+
+    private var filteredNotifications: [AppNotification] {
+        notifications.filter { filter == .all || $0.kind == filter.kind }
+    }
+
+    private var unreadCount: Int {
+        notifications.filter { $0.unread }.count
     }
 
     var body: some View {
         settingsContainer(title: "Notifications", onBack: onBack) {
+            HStack(spacing: 8) {
+                filterChip("All", selected: filter == .all) { filter = .all }
+                filterChip("Approvals", selected: filter == .approvals) { filter = .approvals }
+                filterChip("Payments", selected: filter == .payments) { filter = .payments }
+                filterChip("Admin", selected: filter == .admin) { filter = .admin }
+            }
+
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    ForEach(Array(notifications.enumerated()), id: \.element.id) { idx, item in
+                    ForEach(Array(filteredNotifications.enumerated()), id: \.element.id) { idx, item in
                         if idx > 0 { Divider().opacity(0.4) }
                         notificationRow(item)
                     }
@@ -168,12 +197,20 @@ struct NotificationsView: View {
             }
 
             infoBanner(icon: "bell.badge.fill", tint: app.company.color,
-                       title: "Notification inbox",
-                       message: "Covers approval requests, rejection updates, purchase confirmations, and reimbursement events.")
+                       title: "\(unreadCount) unread notifications",
+                       message: "Covers approval requests, rejection updates, purchase confirmations, reimbursement events, and workspace invites.")
+
+            GlassCard(padding: 0) {
+                VStack(spacing: 0) {
+                    actionRow("Notification preferences", "Push, email, and in-app settings")
+                    Divider().opacity(0.4)
+                    actionRow("Approval alerts", "Manager and admin notifications")
+                }
+            }
         }
         .sheet(item: $selectedNotification) { item in
             NotificationDetailSheet(notification: item)
-                .presentationDetents([.height(320)])
+                .presentationDetents([.height(360)])
         }
     }
 
@@ -182,17 +219,54 @@ struct NotificationsView: View {
             selectedNotification = item
         } label: {
             HStack(spacing: 12) {
-                Circle().fill(item.tint).frame(width: 10, height: 10)
+                Circle().fill(item.unread ? item.tint : item.tint.opacity(0.45)).frame(width: 10, height: 10)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title).font(.system(size: 13.5, weight: .semibold))
+                    HStack(spacing: 6) {
+                        Text(item.title).font(.system(size: 13.5, weight: .semibold))
+                        Text(item.kind.label)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(item.tint)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(item.tint.opacity(0.10), in: Capsule())
+                    }
                     Text(item.subtitle).font(.system(size: 11.5)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text("Now").font(.system(size: 10.5, weight: .medium)).foregroundStyle(.tertiary)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(item.time).font(.system(size: 10.5, weight: .medium)).foregroundStyle(.tertiary)
+                    if item.unread {
+                        Text("New").font(.system(size: 9, weight: .semibold)).foregroundStyle(Tokens.pending)
+                    }
+                }
             }
             .padding(.horizontal, 14).padding(.vertical, 13)
         }
         .buttonStyle(.plain)
+    }
+
+    private func filterChip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(selected ? .white : .primary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(selected ? Tokens.slate500 : Color.primary.opacity(0.06), in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func actionRow(_ title: String, _ subtitle: String) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.system(size: 13.5, weight: .medium))
+                Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
     }
 }
 
@@ -202,6 +276,35 @@ struct AppNotification: Identifiable {
     let subtitle: String
     let tint: Color
     let action: String
+    let kind: NotificationKind
+    let time: String
+    let unread: Bool
+}
+
+enum NotificationFilter {
+    case all, approvals, payments, admin
+
+    var kind: NotificationKind? {
+        switch self {
+        case .all: return nil
+        case .approvals: return .approval
+        case .payments: return .payment
+        case .admin: return .admin
+        }
+    }
+}
+
+enum NotificationKind {
+    case approval, expense, payment, admin
+
+    var label: String {
+        switch self {
+        case .approval: return "Approval"
+        case .expense: return "Expense"
+        case .payment: return "Payment"
+        case .admin: return "Admin"
+        }
+    }
 }
 
 struct NotificationDetailSheet: View {

@@ -6,11 +6,16 @@ struct PermissionsView: View {
     @State private var showInvite = false
     @State private var memberToRemove: Member? = nil
     @State private var showRemoveConfirm = false
-    @State private var pendingInvites = [PendingInvite(email: "finance@turfmapp.io", role: .approver)]
+    @State private var pendingInvites = ["finance@turfmapp.io"]
     var onBack: () -> Void
 
     private let roles = MemberRole.allCases
     private var members: [Member] { app.currentMembers }
+    private var canEditRoles: Bool { app.role == .manager || app.role == .admin }
+    private var canInviteOrRemove: Bool { app.role == .admin }
+    private var editableRoles: [MemberRole] {
+        app.role == .admin ? [.employee, .manager, .admin] : [.employee, .manager]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -23,14 +28,16 @@ struct PermissionsView: View {
                 .buttonStyle(.plain).glassSurface(corner: 999)
                 Text("Permissions").font(.system(size: 18, weight: .bold))
                 Spacer()
-                Button { showInvite = true } label: {
-                    Image(systemName: "person.badge.plus")
-                        .font(.system(size: 14, weight: .bold))
-                        .frame(width: 34, height: 34)
-                        .foregroundStyle(.white)
+                if canInviteOrRemove {
+                    Button { showInvite = true } label: {
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 14, weight: .bold))
+                            .frame(width: 34, height: 34)
+                            .foregroundStyle(.white)
+                    }
+                    .buttonStyle(.plain)
+                    .background(Tokens.slate500, in: Circle())
                 }
-                .buttonStyle(.plain)
-                .background(Tokens.slate500, in: Circle())
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
@@ -41,7 +48,7 @@ struct PermissionsView: View {
                     GlassCard(padding: 10) {
                         VStack(spacing: 1) {
                             Text("\(counts[r]?.count ?? 0)").font(.system(size: 18, weight: .bold))
-                            Text(r.rawValue).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+                            Text(r.label).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -59,11 +66,11 @@ struct PermissionsView: View {
                 }
             }
 
-            if !pendingInvites.isEmpty {
+            if canInviteOrRemove && !pendingInvites.isEmpty {
                 Text("Pending invites").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
                 GlassCard(padding: 0) {
                     VStack(spacing: 0) {
-                        ForEach(Array(pendingInvites.enumerated()), id: \.element.id) { idx, invite in
+                        ForEach(Array(pendingInvites.enumerated()), id: \.offset) { idx, email in
                             if idx > 0 { Divider().opacity(0.4) }
                             HStack(spacing: 12) {
                                 Image(systemName: "envelope.badge.fill")
@@ -71,11 +78,11 @@ struct PermissionsView: View {
                                     .frame(width: 32, height: 32)
                                     .background(Tokens.pending.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(invite.email).font(.system(size: 13.5, weight: .medium))
-                                    Text("Invite sent · \(invite.role.rawValue)").font(.system(size: 11)).foregroundStyle(.secondary)
+                                    Text(email).font(.system(size: 13.5, weight: .medium))
+                                    Text("Invite sent · Employee access").font(.system(size: 11)).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Button("Cancel") { pendingInvites.removeAll { $0.id == invite.id } }
+                                Button("Cancel") { pendingInvites.removeAll { $0 == email } }
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(Tokens.rejected)
                             }
@@ -104,8 +111,8 @@ struct PermissionsView: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
         .sheet(isPresented: $showInvite) {
-            InviteMemberSheet { email, role in
-                pendingInvites.insert(PendingInvite(email: email, role: role), at: 0)
+            InviteMemberSheet { email in
+                pendingInvites.insert(email, at: 0)
             }
             .presentationDetents([.medium])
         }
@@ -126,36 +133,46 @@ struct PermissionsView: View {
                     Text(m.email).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer()
-                Button {
-                    editingID = editingID == m.id ? nil : m.id
-                } label: {
-                    Text(m.role.rawValue)
+                if canEditRoles {
+                    Button {
+                        editingID = editingID == m.id ? nil : m.id
+                    } label: {
+                        Text(m.role.label)
+                            .font(.system(size: 11, weight: .semibold))
+                            .padding(.horizontal, 11).padding(.vertical, 5)
+                            .background(Color.primary.opacity(0.07), in: Capsule())
+                            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.1)))
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text(m.role.label)
                         .font(.system(size: 11, weight: .semibold))
                         .padding(.horizontal, 11).padding(.vertical, 5)
                         .background(Color.primary.opacity(0.07), in: Capsule())
                         .overlay(Capsule().strokeBorder(Color.primary.opacity(0.1)))
                 }
-                .buttonStyle(.plain)
-                Button {
-                    memberToRemove = m
-                    showRemoveConfirm = true
-                } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .foregroundStyle(Tokens.rejected)
+                if canInviteOrRemove {
+                    Button {
+                        memberToRemove = m
+                        showRemoveConfirm = true
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundStyle(Tokens.rejected)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 12).padding(.vertical, 12)
 
-            if editingID == m.id {
+            if editingID == m.id, canEditRoles {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        ForEach(roles, id: \.self) { r in
+                        ForEach(editableRoles, id: \.self) { r in
                             Button {
                                 app.setMemberRole(id: m.id, to: r)
                                 editingID = nil
                             } label: {
-                                Text(r.rawValue)
+                                Text(r.label)
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(m.role == r ? .white : .primary)
                                     .padding(.horizontal, 10).padding(.vertical, 6)
@@ -175,17 +192,10 @@ struct PermissionsView: View {
     }
 }
 
-struct PendingInvite: Identifiable, Hashable {
-    let id = UUID()
-    let email: String
-    let role: MemberRole
-}
-
 struct InviteMemberSheet: View {
-    var onInvite: (String, MemberRole) -> Void
+    var onInvite: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
-    @State private var role: MemberRole = .submitter
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -205,14 +215,6 @@ struct InviteMemberSheet: View {
                             .frame(maxWidth: 210)
                     }
                     .padding(.vertical, 11)
-                    Divider().opacity(0.4)
-                    Picker("Role", selection: $role) {
-                        ForEach(MemberRole.allCases, id: \.self) { role in
-                            Text(role.rawValue).tag(role)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.top, 12)
                 }
             }
             .padding(.horizontal, 20)
@@ -225,7 +227,7 @@ struct InviteMemberSheet: View {
             Spacer()
 
             Button {
-                onInvite(email.isEmpty ? "new.member@company.com" : email, role)
+                onInvite(email.isEmpty ? "new.member@company.com" : email)
                 dismiss()
             } label: {
                 Text("Send invite").primaryActionLabel()

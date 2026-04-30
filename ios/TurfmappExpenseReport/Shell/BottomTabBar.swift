@@ -16,7 +16,7 @@ struct BottomTabBar: View {
     let role: AppRole
 
     private var tabs: [TabItem] {
-        if role == .manager {
+        if role != .employee {
             return [
                 TabItem(id: .home,      icon: "house.fill",     label: "Overview"),
                 TabItem(id: .dashboard, icon: "chart.bar.fill",  label: "Dashboard"),
