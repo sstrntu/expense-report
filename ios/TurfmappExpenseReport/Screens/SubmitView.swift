@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct SubmitView: View {
     @EnvironmentObject var app: AppState
@@ -390,50 +391,71 @@ struct ScanningSheet: View {
     }
 }
 
+struct CameraPicker: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    var onPicked: () -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let vc = UIImagePickerController()
+        vc.sourceType = .camera
+        vc.delegate = context.coordinator
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraPicker
+        init(_ parent: CameraPicker) { self.parent = parent }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            parent.isPresented = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { self.parent.onPicked() }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.isPresented = false
+        }
+    }
+}
+
 struct ReceiptSourceSheet: View {
     var onScan: () -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var cameraAllowed = false
-    @State private var photosAllowed = false
+    @State private var showCamera = false
+    @State private var photosItem: PhotosPickerItem?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Add receipt or product photo")
                 .font(.system(size: 20, weight: .bold))
-                .padding(.horizontal, 20).padding(.top, 24)
-
-            Text("Use AI extraction when camera or photo access is available. Manual upload remains available as a fallback.")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 16)
 
             VStack(spacing: 0) {
-                permissionRow(title: "Camera", subtitle: cameraAllowed ? "Allowed" : "Tap to allow camera access",
-                              icon: "camera.fill", active: cameraAllowed) {
-                    cameraAllowed.toggle()
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button { showCamera = true } label: {
+                        sourceRow(icon: "camera.fill", tint: Tokens.slate500,
+                                  title: "Take Photo",
+                                  subtitle: "Capture your receipt with the camera")
+                    }
+                    .buttonStyle(.plain)
+                    Divider().opacity(0.4).padding(.leading, 56)
                 }
-                Divider().opacity(0.4)
-                permissionRow(title: "Photo Library", subtitle: photosAllowed ? "Allowed" : "Tap to allow photo access",
-                              icon: "photo.fill", active: photosAllowed) {
-                    photosAllowed.toggle()
-                }
-                Divider().opacity(0.4)
-                Button {
-                    dismiss()
-                    onScan()
-                } label: {
+
+                PhotosPicker(selection: $photosItem, matching: .images) {
                     HStack(spacing: 12) {
-                        Image(systemName: "sparkles")
-                            .foregroundStyle(Tokens.aiPurple)
+                        Image(systemName: "photo.fill")
+                            .foregroundStyle(.white)
                             .frame(width: 30, height: 30)
-                            .background(Tokens.aiPurple.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+                            .background(Tokens.aiPurple, in: RoundedRectangle(cornerRadius: 9))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Scan with AI").font(.system(size: 13.5, weight: .semibold))
-                            Text("AI extraction for receipt or product photo")
-                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text("Choose from Library").font(.system(size: 13.5, weight: .semibold))
+                            Text("Pick an existing receipt photo").font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
                     }
                     .padding(.horizontal, 14).padding(.vertical, 12)
                 }
@@ -442,33 +464,33 @@ struct ReceiptSourceSheet: View {
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             .padding(.horizontal, 20)
 
-            infoBanner(icon: "paperclip", tint: Tokens.slate500,
-                       title: "Manual fallback",
-                       message: "If permissions are denied, users can still attach a receipt file before submitting.")
-                .padding(.horizontal, 20)
-
             Spacer()
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPicker(isPresented: $showCamera) { onScan() }
+                .ignoresSafeArea()
+        }
+        .onChange(of: photosItem) { _, item in
+            guard item != nil else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onScan() }
         }
     }
 
-    private func permissionRow(title: String, subtitle: String, icon: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .foregroundStyle(active ? Tokens.approved : .secondary)
-                    .frame(width: 30, height: 30)
-                    .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.system(size: 13.5, weight: .medium))
-                    Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: active ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(active ? Tokens.approved : Color.secondary.opacity(0.5))
+    private func sourceRow(icon: String, tint: Color, title: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(tint, in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.system(size: 13.5, weight: .semibold))
+                Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 14).padding(.vertical, 12)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 14).padding(.vertical, 12)
     }
 }
 

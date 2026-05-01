@@ -16,6 +16,10 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan receipts to automatically extract expense details.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Select receipt photos for expense tracking.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

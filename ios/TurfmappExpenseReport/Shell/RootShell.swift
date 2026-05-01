@@ -4,6 +4,7 @@ struct RootShell: View {
     @StateObject private var app = AppState()
     @State private var selectedTab: TabID = .home
     @State private var navStack: [NavRoute] = []
+    @State private var showNotifications = false
 
     var body: some View {
         if !app.isAuthenticated {
@@ -54,6 +55,20 @@ struct RootShell: View {
         .onChange(of: app.role) { _, _ in
             selectedTab = .home
             navStack = []
+        }
+        .overlay {
+            if showNotifications {
+                NotificationsView {
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) { showNotifications = false }
+                }
+                .environmentObject(app)
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.02, anchor: UnitPoint(x: 0.9, y: 0.06))
+                        .combined(with: .opacity),
+                    removal: .scale(scale: 0.02, anchor: UnitPoint(x: 0.9, y: 0.06))
+                        .combined(with: .opacity)
+                ))
+            }
         }
     }
 
@@ -193,7 +208,9 @@ struct RootShell: View {
             Spacer()
 
             // Notification bell
-            Button { navStack.append(.notifications) } label: {
+            Button {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { showNotifications = true }
+            } label: {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: "bell.fill")
                         .font(.system(size: 16)).foregroundStyle(Color.primary)
