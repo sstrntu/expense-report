@@ -1,0 +1,8 @@
+// Copy this file to AppConfig.local.xcconfig for local builds if you later wire
+// Info.plist values to build settings.
+//
+// These are mobile-safe Supabase values only. Never put OPENAI_API_KEY,
+// SUPABASE_SECRET_KEY, or SUPABASE_SERVICE_ROLE_KEY in the iOS app.
+
+SUPABASE_URL = https:/$()/YOUR_PROJECT_REF.supabase.co
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_your_key_here

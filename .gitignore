@@ -19,3 +19,8 @@ Carthage/Build/
 # Local environment
 .env
 .env.*
+!*.env.example
+supabase/functions/.env
+supabase/functions/.env.*
+!supabase/functions/.env.example
+ios/TurfmappExpenseReport/Config/*.local.xcconfig

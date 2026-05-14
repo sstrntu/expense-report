@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootShell: View {
     @StateObject private var app = AppState()
+    @StateObject private var repositoryApp = RepositoryAppState()
     @State private var selectedTab: TabID = .home
     @State private var navStack: [NavRoute] = []
     @State private var showNotifications = false
@@ -18,9 +19,11 @@ struct RootShell: View {
         } else if app.needsSetup && !app.workspaceReady {
             WorkspaceSetupView()
                 .environmentObject(app)
+                .environmentObject(repositoryApp)
                 .appBackground()
         } else {
             appShell
+                .environmentObject(repositoryApp)
         }
     }
 
@@ -56,6 +59,9 @@ struct RootShell: View {
             selectedTab = .home
             navStack = []
         }
+        .task {
+            await repositoryApp.bootstrap()
+        }
         .overlay {
             if showNotifications {
                 NotificationsView {
@@ -90,7 +96,7 @@ struct RootShell: View {
                     .environmentObject(app)
             } else {
                 HomeView(selectedTab: $selectedTab) { e in
-                    navStack.append(.detail(e))
+                    navStack.append(.domainDetail(e))
                 }
                 .environmentObject(app)
             }
@@ -101,10 +107,10 @@ struct RootShell: View {
             SubmitView(onClose: { selectedTab = .home }, onSubmit: { selectedTab = .activity })
                 .environmentObject(app)
         case .activity:
-            ActivityView { e in navStack.append(.detail(e)) }
+            ActivityView { e in navStack.append(.domainDetail(e)) }
                 .environmentObject(app)
         case .review:
-            ReviewView { e in navStack.append(.detail(e)) }
+            ReviewView { e in navStack.append(.domainDetail(e)) }
                 .environmentObject(app)
         case .profile:
             ProfileView(role: app.role, onSignOut: app.signOut) { key in
@@ -130,17 +136,105 @@ struct RootShell: View {
             DetailView(expense: e, role: app.role,
                        onBack: { navStack.removeLast() },
                        onAction: { status, method, receipt in
+                           syncRepositoryAction(expense: e, status: status, method: method, receipt: receipt)
                            app.updateStatus(id: e.id, to: status, paymentMethod: method, paymentReceipt: receipt)
                            navStack.removeLast()
                        },
                        onArchive: {
+                           Task { await repositoryApp.archiveExpense(id: e.id) }
                            app.archiveExpense(id: e.id)
                            navStack.removeLast()
                        },
                        onDelete: {
+                           Task { await repositoryApp.deleteExpense(id: e.id) }
                            app.deleteExpense(id: e.id)
                            navStack.removeLast()
                        })
+        case .domainDetail(let e):
+            DomainDetailView(
+                expense: e,
+                projects: repositoryApp.projects,
+                events: repositoryApp.eventsByExpenseId[e.id] ?? [],
+                role: app.role,
+                onBack: { navStack.removeLast() },
+                onApprove: {
+                    Task { await repositoryApp.approveExpense(id: e.id) }
+                    app.updateStatus(id: e.id, to: .approved)
+                    navStack.removeLast()
+                },
+                onReject: { reason in
+                    Task { await repositoryApp.rejectExpense(id: e.id, reason: reason) }
+                    app.updateStatus(id: e.id, to: .rejected)
+                    navStack.removeLast()
+                },
+                onResubmit: {
+                    Task { await repositoryApp.resubmitExpense(id: e.id) }
+                    app.updateStatus(id: e.id, to: .pending)
+                    navStack.removeLast()
+                },
+                onCancel: {
+                    Task { await repositoryApp.cancelExpense(id: e.id, reason: "Cancelled by submitter.") }
+                    app.updateStatus(id: e.id, to: .rejected)
+                    navStack.removeLast()
+                },
+                onConfirmPurchase: { finalAmount, receipt in
+                    Task {
+                        let attachment = await uploadActionAttachment(
+                            expenseId: e.id,
+                            fileName: receipt,
+                            kind: .purchaseReceipt
+                        )
+                        await repositoryApp.confirmPurchase(
+                            id: e.id,
+                            input: PurchaseConfirmationInput(
+                                finalAmount: finalAmount,
+                                purchaseDate: Date(),
+                                receiptAttachmentId: attachment?.id,
+                                note: receipt
+                            )
+                        )
+                    }
+                    app.updateStatus(id: e.id, to: .purchased, paymentReceipt: receipt)
+                    navStack.removeLast()
+                },
+                onMarkReimbursed: { method, receipt in
+                    Task {
+                        let attachment = await uploadActionAttachment(
+                            expenseId: e.id,
+                            fileName: receipt,
+                            kind: .reimbursementProof
+                        )
+                        await repositoryApp.markReimbursed(
+                            id: e.id,
+                            input: ReimbursementInput(
+                                amount: e.amount,
+                                paymentMethod: method.repositoryMethod,
+                                paidAt: Date(),
+                                reference: receipt,
+                                proofAttachmentId: attachment?.id
+                            )
+                        )
+                    }
+                    app.updateStatus(id: e.id, to: .reimbursed, paymentMethod: method, paymentReceipt: receipt)
+                    navStack.removeLast()
+                },
+                onArchive: {
+                    Task {
+                        if e.isArchived {
+                            await repositoryApp.unarchiveExpense(id: e.id)
+                        } else {
+                            await repositoryApp.archiveExpense(id: e.id)
+                        }
+                    }
+                    app.archiveExpense(id: e.id)
+                    navStack.removeLast()
+                },
+                onDelete: {
+                    Task { await repositoryApp.deleteExpense(id: e.id) }
+                    app.deleteExpense(id: e.id)
+                    navStack.removeLast()
+                }
+            )
         case .manageProjects:
             ManageProjectsView { navStack.removeLast() }
                 .environmentObject(app)
@@ -170,16 +264,31 @@ struct RootShell: View {
     }
 
     private var topBar: some View {
-        HStack {
+        let selectedWorkspace = repositoryApp.selectedWorkspace
+
+        return HStack {
             // Workspace picker — opens a dropdown menu
             Menu {
-                ForEach(MockData.companies, id: \.id) { c in
+                ForEach(repositoryApp.workspaces, id: \.id) { workspace in
                     Button {
-                        app.company = c
+                        Task {
+                            await repositoryApp.selectWorkspace(id: workspace.id)
+                            await MainActor.run {
+                                app.company = workspace.legacyCompany
+                                app.role = workspace.currentUserRole.appRole
+                                selectedTab = .home
+                                navStack = []
+                            }
+                        }
                     } label: {
                         HStack {
-                            Text(c.name)
-                            if app.company == c {
+                            VStack(alignment: .leading) {
+                                Text(workspace.name)
+                                Text(workspace.currentUserRole.rawValue.capitalized)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if selectedWorkspace?.id == workspace.id {
                                 Image(systemName: "checkmark")
                             }
                         }
@@ -188,14 +297,14 @@ struct RootShell: View {
             } label: {
                 HStack(spacing: 8) {
                     RoundedRectangle(cornerRadius: 7)
-                        .fill(app.company.color)
+                        .fill(selectedWorkspace?.brandColor ?? app.company.color)
                         .frame(width: 26, height: 26)
                         .overlay(
-                            Text(app.company.abbr)
+                            Text(selectedWorkspace?.abbr ?? app.company.abbr)
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundStyle(.white)
                         )
-                    Text(app.company.name)
+                    Text(selectedWorkspace?.name ?? app.company.name)
                         .font(.system(size: 13, weight: .semibold))
                     Image(systemName: "chevron.down")
                         .font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
@@ -229,6 +338,53 @@ struct RootShell: View {
         .background(.ultraThinMaterial.opacity(0))
     }
 
+    private func syncRepositoryAction(expense: Expense, status: ExpenseStatus, method: PaymentMethod?, receipt: String?) {
+        Task {
+            switch status {
+            case .approved:
+                await repositoryApp.approveExpense(id: expense.id)
+            case .rejected:
+                await repositoryApp.rejectExpense(id: expense.id, reason: "Rejected from expense detail.")
+            case .purchased:
+                await repositoryApp.confirmPurchase(
+                    id: expense.id,
+                    input: PurchaseConfirmationInput(
+                        finalAmount: MoneyAmount(minorUnits: Int((expense.amount * 100).rounded()), currency: "USD"),
+                        purchaseDate: Date(),
+                        receiptAttachmentId: nil,
+                        note: receipt
+                    )
+                )
+            case .reimbursed:
+                await repositoryApp.markReimbursed(
+                    id: expense.id,
+                    input: ReimbursementInput(
+                        amount: MoneyAmount(minorUnits: Int((expense.amount * 100).rounded()), currency: "USD"),
+                        paymentMethod: method?.repositoryMethod ?? .other,
+                        paidAt: Date(),
+                        reference: receipt,
+                        proofAttachmentId: nil
+                    )
+                )
+            case .pending:
+                break
+            }
+        }
+    }
+
+    private func uploadActionAttachment(expenseId: String, fileName: String?, kind: ExpenseAttachment.Kind) async -> ExpenseAttachment? {
+        guard let fileName, !fileName.isEmpty else { return nil }
+        return await repositoryApp.uploadAttachment(
+            expenseId: expenseId,
+            upload: PendingReceiptUpload(
+                kind: kind,
+                fileName: fileName,
+                contentType: "application/pdf",
+                data: Data("mock-attachment".utf8)
+            )
+        )
+    }
+
     private var appBg: some View {
         ZStack {
             LinearGradient(colors: [Color(hex: 0xEEF1F8), Color(hex: 0xE4E8F2)],
@@ -241,10 +397,23 @@ struct RootShell: View {
     }
 }
 
+private extension PaymentMethod {
+    var repositoryMethod: ReimbursementPaymentMethod {
+        switch self {
+        case .transfer: return .bankTransfer
+        case .qr: return .qrCode
+        case .cash: return .cash
+        case .card: return .card
+        case .cheque: return .cheque
+        }
+    }
+}
+
 // MARK: – Navigation routes
 
 enum NavRoute: Hashable {
     case detail(Expense)
+    case domainDetail(DomainExpense)
     case manageProjects
     case permissions
     case notifications
@@ -475,8 +644,9 @@ struct ProfileSetupView: View {
 
 struct WorkspaceSetupView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     @State private var workspaceName = "Turfmapp"
-    @State private var inviteCode = ""
+    @State private var inviteCode = "invite_finance_turfmapp"
     @State private var mode: WorkspaceMode = .create
 
     var body: some View {
@@ -506,9 +676,15 @@ struct WorkspaceSetupView: View {
                     VStack(spacing: 0) {
                         setupField("Invite code", text: $inviteCode)
                         Divider().opacity(0.4)
-                        FormFieldRow(label: "Status", value: inviteCode.isEmpty ? "Waiting for invite" : "Invite found", showChevron: false)
+                        FormFieldRow(label: "Status", value: inviteCode.isEmpty ? "Waiting for invite" : "Ready to join", showChevron: false)
                     }
                 }
+            }
+
+            if let lastError = repositoryApp.lastError {
+                infoBanner(icon: "exclamationmark.shield.fill", tint: Tokens.rejected,
+                           title: "Workspace setup failed",
+                           message: lastError)
             }
 
             infoBanner(icon: "person.2.badge.gearshape.fill", tint: Tokens.slate500,
@@ -516,15 +692,31 @@ struct WorkspaceSetupView: View {
                        message: "If an invite is not accepted yet, this screen keeps the user out of the workspace.")
 
             Button {
-                app.workspaceReady = true
+                Task {
+                    switch mode {
+                    case .create:
+                        await repositoryApp.createWorkspace(name: workspaceName, defaultCurrency: "USD")
+                    case .join:
+                        await repositoryApp.acceptInvite(id: inviteCode.trimmingCharacters(in: .whitespacesAndNewlines))
+                    }
+                    if let workspace = repositoryApp.selectedWorkspace {
+                        app.company = workspace.legacyCompany
+                        app.role = workspace.currentUserRole.appRole
+                        app.workspaceReady = true
+                    }
+                }
             } label: {
                 Text(mode == .create ? "Create workspace" : "Join workspace").primaryActionLabel()
             }
             .buttonStyle(.plain)
+            .disabled(mode == .join && inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             Spacer()
         }
         .padding(.horizontal, 22)
+        .task {
+            await repositoryApp.bootstrap()
+        }
     }
 
     private func setupField(_ label: String, text: Binding<String>) -> some View {

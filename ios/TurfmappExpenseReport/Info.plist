@@ -20,6 +20,12 @@
 	<string>Scan receipts to automatically extract expense details.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Select receipt photos for expense tracking.</string>
+	<key>SUPABASE_PUBLISHABLE_KEY</key>
+	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3eGhndnV5YXhnYXZvbW10cXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMjA1OTcsImV4cCI6MjA3MTc5NjU5N30.n7i3AMpdRRBWA5AhNMdzO5qf_34w4Fo13adUBWsoevg</string>
+	<key>SUPABASE_RECEIPT_SCAN_FUNCTION</key>
+	<string>scan-receipt</string>
+	<key>SUPABASE_URL</key>
+	<string>https://pwxhgvuyaxgavommtqpr.supabase.co</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

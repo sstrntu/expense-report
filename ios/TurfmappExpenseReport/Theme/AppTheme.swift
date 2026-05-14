@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AppRole: String, CaseIterable, Identifiable {
-    case employee, manager, admin
+    case employee, manager, finance, admin
     var id: String { rawValue }
     var label: String { rawValue.capitalized }
 }
@@ -97,7 +97,8 @@ final class AppState: ObservableObject {
         role = .employee
     }
 
-    func addProject(name: String, budget: Double, owner: String, visibility: String, threshold: Double) {
+    @discardableResult
+    func addProject(name: String, budget: Double, owner: String, visibility: String, threshold: Double) -> Project {
         let project = Project(
             id: "p\(UUID().uuidString.prefix(6))",
             companyId: company.id,
@@ -110,13 +111,20 @@ final class AppState: ObservableObject {
             autoApproveThreshold: threshold
         )
         projects.insert(project, at: 0)
+        return project
     }
 
     /// Adds a new expense and auto-routes its initial status based on the project's threshold.
     /// Over threshold → `.pending` (needs approval). Under or equal → `.purchased` (skip approval, awaiting reimbursement).
-    func addExpense(merchant: String, amount: Double, category: String,
+    func addExpense(kind: ExpenseKind = .preApproval, merchant: String, amount: Double, category: String,
                     project: Project, purpose: String, icon: String) {
-        let initialStatus: ExpenseStatus = amount > project.autoApproveThreshold ? .pending : .purchased
+        let initialStatus: ExpenseStatus
+        switch kind {
+        case .preApproval:
+            initialStatus = amount > project.autoApproveThreshold ? .pending : .approved
+        case .reimbursementClaim:
+            initialStatus = amount > project.autoApproveThreshold ? .pending : .purchased
+        }
         let id = "e\(UUID().uuidString.prefix(6))"
         let expense = Expense(
             id: id, companyId: project.companyId, merchant: merchant, category: category, amount: amount,

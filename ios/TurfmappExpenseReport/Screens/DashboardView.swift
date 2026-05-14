@@ -2,11 +2,12 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     @State private var drilldown: DashboardDrilldown? = nil
 
     private var cats: [DonutChart.Segment] {
-        let totals = Dictionary(grouping: app.currentExpenses, by: \.category)
-            .mapValues { $0.reduce(0) { $0 + $1.amount } }
+        let totals = Dictionary(grouping: repositoryApp.expenses, by: \.categoryLabel)
+            .mapValues { $0.reduce(0) { $0 + $1.amount.decimalValue } }
 
         return totals
             .sorted { $0.value > $1.value }
@@ -16,21 +17,27 @@ struct DashboardView: View {
     }
 
     private var months: [BarsChart.Bar] {
-        let total = max(app.currentExpenses.reduce(0) { $0 + $1.amount }, 1)
-        return [
-            .init(label: "Nov", value: total * 0.42),
-            .init(label: "Dec", value: total * 0.58),
-            .init(label: "Jan", value: total * 0.47),
-            .init(label: "Feb", value: total * 0.70),
-            .init(label: "Mar", value: total * 0.82),
-            .init(label: "Apr", value: total),
-        ]
+        let calendar = Calendar.current
+        let now = Date()
+        return (0..<6).reversed().map { offset in
+            let date = calendar.date(byAdding: .month, value: -offset, to: now) ?? now
+            let components = calendar.dateComponents([.year, .month], from: date)
+            let value = repositoryApp.expenses
+                .filter { expense in
+                    let expenseDate = expense.purchaseDate ?? expense.submittedAt ?? expense.createdAt
+                    let expenseComponents = calendar.dateComponents([.year, .month], from: expenseDate)
+                    return expenseComponents.year == components.year && expenseComponents.month == components.month
+                }
+                .reduce(0) { $0 + $1.amount.decimalValue }
+            let label = DateFormatter().shortMonthSymbols[max((components.month ?? 1) - 1, 0)]
+            return BarsChart.Bar(label: label, value: value)
+        }
     }
 
     private var merchants: [(String, Double, Int)] {
-        Dictionary(grouping: app.currentExpenses, by: \.merchant)
+        Dictionary(grouping: repositoryApp.expenses, by: \.merchant)
             .map { merchant, expenses in
-                (merchant, expenses.reduce(0) { $0 + $1.amount }, expenses.count)
+                (merchant, expenses.reduce(0) { $0 + $1.amount.decimalValue }, expenses.count)
             }
             .sorted { $0.1 > $1.1 }
             .prefix(4)
@@ -40,7 +47,7 @@ struct DashboardView: View {
     var body: some View {
         let segments = cats
         let total = segments.reduce(0) { $0 + $1.value }
-        let average = app.currentExpenses.isEmpty ? 0 : total / Double(app.currentExpenses.count)
+        let average = repositoryApp.expenses.isEmpty ? 0 : total / Double(repositoryApp.expenses.count)
 
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -51,7 +58,7 @@ struct DashboardView: View {
 
             HStack(spacing: 10) {
                 kpiCard(label: "TOTAL SPEND", value: String(format: "$%.2fk", total / 1000), delta: "+8.2%", positive: true)
-                kpiCard(label: "AVG PER CLAIM", value: money(average), delta: "\(app.currentExpenses.count) claims", positive: true)
+                kpiCard(label: "AVG PER CLAIM", value: money(average), delta: "\(repositoryApp.expenses.count) claims", positive: true)
             }
 
             categoryCard(segments: segments, total: total)
@@ -106,7 +113,8 @@ struct DashboardView: View {
                                 drilldown = DashboardDrilldown(
                                     title: c.label,
                                     subtitle: "Category drilldown",
-                                    expenses: app.currentExpenses.filter { $0.category == c.label }
+                                    expenses: repositoryApp.expenses.filter { $0.categoryLabel == c.label },
+                                    projects: repositoryApp.projects
                                 )
                             } label: {
                                 HStack(spacing: 8) {
@@ -138,7 +146,8 @@ struct DashboardView: View {
                         drilldown = DashboardDrilldown(
                             title: m.0,
                             subtitle: "Merchant drilldown",
-                            expenses: app.currentExpenses.filter { $0.merchant == m.0 }
+                            expenses: repositoryApp.expenses.filter { $0.merchant == m.0 },
+                            projects: repositoryApp.projects
                         )
                     } label: {
                         HStack(spacing: 12) {
@@ -176,7 +185,8 @@ struct DashboardDrilldown: Identifiable {
     let id = UUID()
     let title: String
     let subtitle: String
-    let expenses: [Expense]
+    let expenses: [DomainExpense]
+    let projects: [DomainProject]
 }
 
 struct DashboardDrilldownSheet: View {
@@ -202,7 +212,7 @@ struct DashboardDrilldownSheet: View {
             VStack(spacing: 0) {
                 ForEach(Array(item.expenses.enumerated()), id: \.element.id) { idx, expense in
                     if idx > 0 { Divider().opacity(0.4) }
-                    ExpenseRow(expense: expense)
+                    DomainExpenseRow(expense: expense, projects: item.projects)
                 }
             }
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))

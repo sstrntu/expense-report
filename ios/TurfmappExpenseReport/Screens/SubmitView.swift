@@ -3,6 +3,7 @@ import PhotosUI
 
 struct SubmitView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var onClose: () -> Void
     var onSubmit: () -> Void
 
@@ -11,16 +12,29 @@ struct SubmitView: View {
     @State private var purpose: String    = ""
     @State private var category: String   = "Meals"
     @State private var selectedProjectId: String?
+    @State private var expenseKind: ExpenseKind = .preApproval
+    @State private var purchaseDate = Date()
+    @State private var neededByDate = Date()
 
     @State private var isScanning = false
     @State private var hasScanned = false
+    @State private var scanStatus: ReceiptScanStatus = .notStarted
+    @State private var receiptFileName: String? = nil
     @State private var showReceiptOptions = false
     @State private var showDiscardConfirm = false
+    @State private var isSubmitting = false
+    @State private var isSavingDraft = false
+    @State private var duplicateReceiptWarning = false
     @State private var aiFields: Set<String> = []
+    @State private var scanFields: [LocalScanField] = []
 
     private let categories = ["Meals", "Travel", "Software", "Office", "Other"]
 
-    private var amount: Double { Double(amountText) ?? 0 }
+    private var trimmedVendor: String { vendor.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var trimmedPurpose: String { purpose.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var amount: Double {
+        Double(amountText.replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+    }
     private var selectedProject: Project? {
         if let id = selectedProjectId { return app.currentProjects.first { $0.id == id } }
         return app.currentProjects.first
@@ -30,15 +44,30 @@ struct SubmitView: View {
         return amount > 0 && amount <= p.autoApproveThreshold
     }
     private var canSubmit: Bool {
-        !vendor.isEmpty && amount > 0 && !purpose.isEmpty && selectedProject != nil
+        validationMessages.isEmpty
+    }
+    private var hasAnyInput: Bool {
+        !trimmedVendor.isEmpty || !amountText.isEmpty || !trimmedPurpose.isEmpty
+    }
+    private var validationMessages: [String] {
+        var messages: [String] = []
+        if trimmedVendor.isEmpty { messages.append("Vendor is required.") }
+        if amount <= 0 { messages.append("Amount must be greater than $0.") }
+        if selectedProject == nil { messages.append("Project is required.") }
+        if trimmedPurpose.isEmpty { messages.append("Business purpose is required.") }
+        if expenseKind == .reimbursementClaim, purchaseDate > Date() {
+            messages.append("Purchase date cannot be in the future.")
+        }
+        return messages
     }
 
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("New Expense").font(.system(size: 26, weight: .bold))
-                    Text("Small expenses are auto-approved")
+                    Text(expenseKind == .preApproval ? "New Approval" : "New Reimbursement")
+                        .font(.system(size: 26, weight: .bold))
+                    Text(expenseKind == .preApproval ? "Ask before buying" : "Get reimbursed for a purchase")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -59,7 +88,13 @@ struct SubmitView: View {
 
             draftsCard
 
+            expenseTypePicker
+
             scanCard
+
+            if !scanFields.isEmpty {
+                scanReviewCard
+            }
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
@@ -67,7 +102,7 @@ struct SubmitView: View {
                     Divider().opacity(0.4)
                     amountRow
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Date", value: "Today", showChevron: false)
+                    workflowDateRow
                     Divider().opacity(0.4)
                     pickerRow(label: "Category", value: category, options: categories) {
                         category = $0
@@ -80,31 +115,49 @@ struct SubmitView: View {
                 }
             }
 
+            if hasAnyInput && !validationMessages.isEmpty {
+                validationCard
+            }
+
+            if let lastError = repositoryApp.lastError {
+                infoBanner(
+                    icon: "exclamationmark.shield.fill",
+                    tint: Tokens.rejected,
+                    title: "Cannot submit expense",
+                    message: lastError
+                )
+            }
+
+            if duplicateReceiptWarning {
+                infoBanner(
+                    icon: "doc.on.doc.fill",
+                    tint: Tokens.pending,
+                    title: "Possible duplicate receipt",
+                    message: "This file name was already attached in this draft. Keep it only if it is a different image."
+                )
+            }
+
             if amount > 0, let p = selectedProject {
                 routingBanner(project: p)
             }
 
             Button {
-                guard let p = selectedProject else { return }
-                app.addExpense(merchant: vendor, amount: amount, category: category,
-                               project: p, purpose: purpose, icon: iconFor(category))
-                onSubmit()
+                submitExpense()
             } label: {
-                Text(submitLabel).primaryActionLabel()
+                Text(isSubmitting ? "Submitting..." : submitLabel).primaryActionLabel()
             }
             .buttonStyle(.plain)
-            .opacity(canSubmit ? 1 : 0.5)
-            .disabled(!canSubmit)
+            .opacity(canSubmit && !isSubmitting ? 1 : 0.5)
+            .disabled(!canSubmit || isSubmitting)
 
             Button {
-                app.saveDraft(merchant: vendor, amount: amount, category: category, project: selectedProject)
-                onClose()
+                saveDraft()
             } label: {
-                Text("Save Draft").secondaryActionLabel()
+                Text(isSavingDraft ? "Saving..." : "Save Draft").secondaryActionLabel()
             }
             .buttonStyle(.plain)
-            .opacity(vendor.isEmpty && amountText.isEmpty && purpose.isEmpty ? 0.5 : 1)
-            .disabled(vendor.isEmpty && amountText.isEmpty && purpose.isEmpty)
+            .opacity((vendor.isEmpty && amountText.isEmpty && purpose.isEmpty) || isSavingDraft ? 0.5 : 1)
+            .disabled((vendor.isEmpty && amountText.isEmpty && purpose.isEmpty) || isSavingDraft)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
@@ -114,9 +167,9 @@ struct SubmitView: View {
                 .interactiveDismissDisabled()
         }
         .sheet(isPresented: $showReceiptOptions) {
-            ReceiptSourceSheet {
+            ReceiptSourceSheet { fileName in
                 showReceiptOptions = false
-                startScan()
+                startScan(fileName: fileName)
             }
             .presentationDetents([.medium])
         }
@@ -129,6 +182,16 @@ struct SubmitView: View {
     }
 
     // MARK: – AI scan card
+
+    private var expenseTypePicker: some View {
+        GlassCard(padding: 12) {
+            Picker("Expense type", selection: $expenseKind) {
+                Text("Pre-approval").tag(ExpenseKind.preApproval)
+                Text("Claim reimbursement").tag(ExpenseKind.reimbursementClaim)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
 
     @ViewBuilder
     private var draftsCard: some View {
@@ -172,16 +235,51 @@ struct SubmitView: View {
 
     @ViewBuilder
     private var scanCard: some View {
-        if hasScanned {
+        if scanStatus == .uploading || scanStatus == .processing {
+            HStack(spacing: 10) {
+                ProgressView().tint(Tokens.aiPurple)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(scanStatus == .uploading ? "Uploading receipt" : "Scanning receipt")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(receiptFileName ?? "receipt.jpg")
+                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(12)
+            .background(Tokens.aiPurple.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Tokens.aiPurple.opacity(0.25), lineWidth: 0.5))
+        } else if scanStatus == .failed {
+            VStack(spacing: 10) {
+                infoBanner(
+                    icon: "exclamationmark.triangle.fill",
+                    tint: Tokens.rejected,
+                    title: "Scan failed",
+                    message: "Enter the receipt fields manually or try another photo."
+                )
+                Button { showReceiptOptions = true } label: {
+                    Label("Try Another Photo", systemImage: "camera.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Tokens.aiPurple)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .background(Tokens.aiPurple.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+            }
+        } else if hasScanned {
             HStack(spacing: 10) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Tokens.aiPurple)
-                Text("Receipt scanned — review the auto-filled fields below")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Receipt scanned")
+                        .font(.system(size: 12.5, weight: .semibold))
+                    Text("Review extracted fields before submitting")
+                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                }
                 Spacer()
-                Button("Rescan") { startScan() }
+                Button("Rescan") { showReceiptOptions = true }
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Tokens.aiPurple)
             }
@@ -200,7 +298,7 @@ struct SubmitView: View {
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Scan receipt or product").font(.system(size: 14, weight: .semibold))
-                        Text("AI fills vendor, amount, and category")
+                        Text(expenseKind == .preApproval ? "Attach context or quote" : "AI fills vendor, amount, and category")
                             .font(.system(size: 11.5)).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -216,21 +314,97 @@ struct SubmitView: View {
         }
     }
 
-    private func startScan() {
+    private var scanReviewCard: some View {
+        GlassCard(padding: 0) {
+            VStack(spacing: 0) {
+                Text("AI field review")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 4)
+                ForEach($scanFields) { $field in
+                    Divider().opacity(0.4)
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(field.label).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                            HStack(spacing: 5) {
+                                StatusPill(text: field.confidence.rawValue.capitalized, tint: field.confidence.tint, leadingIcon: field.confidence.icon)
+                                if field.wasEdited {
+                                    StatusPill(text: "Manual", tint: Tokens.pending, leadingIcon: "pencil")
+                                }
+                            }
+                        }
+                        Spacer()
+                        TextField(field.label, text: $field.value)
+                            .font(.system(size: 13.5, weight: .medium))
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 170)
+                            .onChange(of: field.value) { _, newValue in
+                                applyScanField(field.id, value: newValue)
+                                field.wasEdited = true
+                            }
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 11)
+                }
+            }
+        }
+    }
+
+    private func startScan(fileName: String) {
+        duplicateReceiptWarning = receiptFileName == fileName && (hasScanned || scanStatus == .failed)
+        receiptFileName = fileName
+        scanStatus = .uploading
         isScanning = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
+            scanStatus = .processing
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.7) {
+            if fileName.contains("failed") {
+                scanFields = []
+                hasScanned = false
+                scanStatus = .failed
+                isScanning = false
+                return
+            }
             vendor = "Whole Foods Market"
             amountText = "47.23"
             category = "Meals"
+            purchaseDate = Date()
             aiFields = ["Vendor", "Amount", "Category"]
+            scanFields = [
+                LocalScanField(id: "merchant", label: "Vendor", value: "Whole Foods Market", confidence: .high),
+                LocalScanField(id: "amount", label: "Amount", value: "47.23", confidence: .high),
+                LocalScanField(id: "category", label: "Category", value: "Meals", confidence: .medium)
+            ]
             hasScanned = true
+            scanStatus = .needsReview
             isScanning = false
+        }
+    }
+
+    private func applyScanField(_ id: String, value: String) {
+        switch id {
+        case "merchant":
+            vendor = value
+            aiFields.remove("Vendor")
+        case "amount":
+            amountText = value
+            aiFields.remove("Amount")
+        case "category":
+            category = value
+            aiFields.remove("Category")
+        default:
+            break
         }
     }
 
     private var submitLabel: String {
         guard amount > 0 else { return "Submit" }
-        return willAutoApprove ? "Submit Expense" : "Submit for Approval"
+        switch expenseKind {
+        case .preApproval:
+            return willAutoApprove ? "Submit Pre-approval" : "Submit for Approval"
+        case .reimbursementClaim:
+            return willAutoApprove ? "Submit Claim" : "Submit Claim for Review"
+        }
     }
 
     // MARK: – Form rows
@@ -251,6 +425,32 @@ struct SubmitView: View {
                 .onChange(of: amountText) { _, _ in aiFields.remove("Amount") }
         }
         .padding(.vertical, 11)
+    }
+
+    private var workflowDateRow: some View {
+        HStack {
+            Text(expenseKind == .preApproval ? "Needed by" : "Purchase date")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+            Spacer()
+            DatePicker(
+                expenseKind == .preApproval ? "Needed by" : "Purchase date",
+                selection: expenseKind == .preApproval ? $neededByDate : $purchaseDate,
+                displayedComponents: .date
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+        }
+        .padding(.vertical, 8)
+    }
+
+    private var validationCard: some View {
+        infoBanner(
+            icon: "exclamationmark.circle.fill",
+            tint: Tokens.pending,
+            title: "Complete required fields",
+            message: validationMessages.joined(separator: " ")
+        )
     }
 
     private var projectRow: some View {
@@ -328,10 +528,17 @@ struct SubmitView: View {
     private func routingBanner(project: Project) -> some View {
         let tint = willAutoApprove ? Tokens.approved : Tokens.pending
         let icon = willAutoApprove ? "bolt.fill" : "person.crop.circle.badge.clock"
-        let title = willAutoApprove ? "Auto-approved" : "Requires manager approval"
-        let detail = willAutoApprove
-            ? "Under \(money(project.autoApproveThreshold)) limit for \(project.name). Submit and attach the receipt."
-            : "Over \(money(project.autoApproveThreshold)) limit for \(project.name). Wait for approval before purchasing."
+        let title = willAutoApprove ? autoRouteTitle : "Requires manager approval"
+        let detail: String
+        if willAutoApprove {
+            detail = expenseKind == .preApproval
+                ? "Under \(money(project.autoApproveThreshold)) limit for \(project.name). You can buy after submission."
+                : "Under \(money(project.autoApproveThreshold)) limit for \(project.name). Finance can process reimbursement."
+        } else {
+            detail = expenseKind == .preApproval
+                ? "Over \(money(project.autoApproveThreshold)) limit for \(project.name). Wait for approval before purchasing."
+                : "Over \(money(project.autoApproveThreshold)) limit for \(project.name). Manager review is required before reimbursement."
+        }
         return HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 16))
@@ -346,6 +553,65 @@ struct SubmitView: View {
         .padding(14)
         .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(tint.opacity(0.25), lineWidth: 0.5))
+    }
+
+    private var autoRouteTitle: String {
+        expenseKind == .preApproval ? "Auto-approved pre-approval" : "Routes to finance"
+    }
+
+    private func submitExpense() {
+        guard let p = selectedProject else { return }
+        isSubmitting = true
+
+        Task {
+            let upload = receiptFileName.map {
+                PendingReceiptUpload(kind: .submittedReceipt, fileName: $0, contentType: "image/jpeg", data: Data("mock-receipt".utf8))
+            }
+            let didSubmit = await repositoryApp.createAndSubmitExpense(repositoryInput(project: p), receipt: upload)
+
+            await MainActor.run {
+                isSubmitting = false
+                if didSubmit {
+                    app.addExpense(kind: expenseKind, merchant: trimmedVendor, amount: amount, category: category,
+                                   project: p, purpose: trimmedPurpose, icon: iconFor(category))
+                    onSubmit()
+                }
+            }
+        }
+    }
+
+    private func saveDraft() {
+        isSavingDraft = true
+        let project = selectedProject
+
+        Task {
+            var didSaveRepositoryDraft = project == nil
+            if let project {
+                didSaveRepositoryDraft = await repositoryApp.createDraft(repositoryInput(project: project))
+            }
+
+            await MainActor.run {
+                isSavingDraft = false
+                if didSaveRepositoryDraft {
+                    app.saveDraft(merchant: vendor, amount: amount, category: category, project: project)
+                    onClose()
+                }
+            }
+        }
+    }
+
+    private func repositoryInput(project: Project) -> ExpenseDraftInput {
+        ExpenseDraftInput(
+            workspaceId: project.companyId,
+            projectId: project.id,
+            kind: expenseKind,
+            merchant: trimmedVendor.isEmpty ? "Untitled expense" : trimmedVendor,
+            amount: MoneyAmount(minorUnits: Int((amount * 100).rounded()), currency: "USD"),
+            categoryId: category.lowercased(),
+            businessPurpose: trimmedPurpose,
+            purchaseDate: expenseKind == .reimbursementClaim ? purchaseDate : nil,
+            neededByDate: expenseKind == .preApproval ? neededByDate : nil
+        )
     }
 
     private func iconFor(_ category: String) -> String {
@@ -422,7 +688,7 @@ struct CameraPicker: UIViewControllerRepresentable {
 }
 
 struct ReceiptSourceSheet: View {
-    var onScan: () -> Void
+    var onScan: (String) -> Void
     @State private var showCamera = false
     @State private var photosItem: PhotosPickerItem?
 
@@ -460,6 +726,15 @@ struct ReceiptSourceSheet: View {
                     .padding(.horizontal, 14).padding(.vertical, 12)
                 }
                 .buttonStyle(.plain)
+
+                Divider().opacity(0.4).padding(.leading, 56)
+
+                Button { onScan("failed_receipt.jpg") } label: {
+                    sourceRow(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
+                              title: "Use Unreadable Sample",
+                              subtitle: "Preview failed scan and manual entry fallback")
+                }
+                .buttonStyle(.plain)
             }
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             .padding(.horizontal, 20)
@@ -467,12 +742,12 @@ struct ReceiptSourceSheet: View {
             Spacer()
         }
         .fullScreenCover(isPresented: $showCamera) {
-            CameraPicker(isPresented: $showCamera) { onScan() }
+            CameraPicker(isPresented: $showCamera) { onScan("camera_receipt.jpg") }
                 .ignoresSafeArea()
         }
         .onChange(of: photosItem) { _, item in
             guard item != nil else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onScan() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onScan("library_receipt.jpg") }
         }
     }
 
@@ -491,6 +766,34 @@ struct ReceiptSourceSheet: View {
                 .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 14).padding(.vertical, 12)
+    }
+}
+
+struct LocalScanField: Identifiable, Hashable {
+    let id: String
+    let label: String
+    var value: String
+    var confidence: ScanFieldConfidence
+    var wasEdited: Bool = false
+}
+
+private extension ScanFieldConfidence {
+    var tint: Color {
+        switch self {
+        case .high: return Tokens.approved
+        case .medium: return Tokens.pending
+        case .low: return Tokens.rejected
+        case .manual: return Tokens.slate500
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .high: return "checkmark"
+        case .medium: return "exclamationmark"
+        case .low: return "xmark"
+        case .manual: return "pencil"
+        }
     }
 }
 

@@ -2,16 +2,23 @@ import SwiftUI
 
 struct ManagerOverviewView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var onGoToReview: () -> Void
 
     private var pendingTotal: Double {
-        app.currentExpenses.filter { $0.status == .pending }.reduce(0) { $0 + $1.amount }
+        repositoryApp.managerQueue.reduce(0) { $0 + $1.amount.decimalValue }
+    }
+    private var financeTotal: Double {
+        repositoryApp.financeQueue.reduce(0) { $0 + $1.amount.decimalValue }
     }
 
     var body: some View {
+        let pendingCount = repositoryApp.managerQueue.count
+        let financeCount = repositoryApp.financeQueue.count
+
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Manager view")
+                Text(app.role == .finance ? "Finance view" : "Manager view")
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
                 Text("Overview").font(.system(size: 26, weight: .bold))
             }
@@ -23,7 +30,7 @@ struct ManagerOverviewView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("AWAITING YOUR APPROVAL")
                                 .font(.system(size: 11, weight: .semibold)).tracking(0.6).foregroundStyle(.secondary)
-                            Text("\(app.currentExpenses.filter { $0.status == .pending }.count)")
+                            Text("\(pendingCount)")
                                 .font(.system(size: 36, weight: .bold))
                             Text("\(money(pendingTotal)) total")
                                 .font(.system(size: 13)).foregroundStyle(.secondary)
@@ -32,7 +39,7 @@ struct ManagerOverviewView: View {
                         StatusPill(text: "2 over 24h", tint: Tokens.pending, leadingIcon: "clock")
                     }
                     Button(action: onGoToReview) {
-                        Text("Review queue").primaryActionLabel()
+                        Text("Open review queue").primaryActionLabel()
                     }
                     .buttonStyle(.plain)
                     .padding(.top, 4)
@@ -40,8 +47,8 @@ struct ManagerOverviewView: View {
             }
 
             HStack(spacing: 10) {
+                kpiCard(label: "FINANCE QUEUE", value: "\(financeCount)", delta: money(financeTotal), positive: true)
                 kpiCard(label: "TEAM SPEND MTD", value: "$18.4k",  delta: "+12% vs LM",   positive: true)
-                kpiCard(label: "AVG APPROVAL",   value: "4.2h",    delta: "−18% faster",  positive: true)
             }
 
             Text("Project budgets")

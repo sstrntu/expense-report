@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var role: AppRole
     var onSignOut: () -> Void
     var onNav: (String) -> Void
@@ -13,10 +14,10 @@ struct ProfileView: View {
 
             GlassCard(padding: 18) {
                 HStack(spacing: 14) {
-                    Avatar(color: app.company.color, size: 56, label: initials(app.userName))
+                    Avatar(color: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color, size: 56, label: initials(app.userName))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(app.userName).font(.system(size: 17, weight: .bold))
-                        Text((role == .employee ? "Member" : "Workspace admin") + " · \(app.userEmail)")
+                        Text(roleSubtitle + " · \(app.userEmail)")
                             .font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -30,10 +31,10 @@ struct ProfileView: View {
                 GlassCard(padding: 0) {
                     VStack(spacing: 0) {
                         navRow(icon: "folder.fill",  label: "Manage projects",
-                               sub: "\(app.currentProjects.count) projects · \(money(app.currentProjects.reduce(0) { $0 + $1.budget })) budget") { onNav("manageProjects") }
+                               sub: "\(repositoryApp.projects.count) projects · \(money(repositoryApp.projects.reduce(0) { $0 + $1.budget.decimalValue })) budget") { onNav("manageProjects") }
                         Divider().opacity(0.4)
                         navRow(icon: "shield.fill",  label: "Permissions",
-                               sub: "\(app.currentMembers.count) members · 3 roles")        { onNav("permissions") }
+                               sub: "\(repositoryApp.members.count) members · 4 roles")        { onNav("permissions") }
                     }
                 }
             }
@@ -115,6 +116,15 @@ struct ProfileView: View {
         return value.isEmpty ? "U" : value
     }
 
+    private var roleSubtitle: String {
+        switch role {
+        case .employee: return "Member"
+        case .manager: return "Manager"
+        case .finance: return "Finance"
+        case .admin: return "Workspace admin"
+        }
+    }
+
     private func sectionHeader(_ title: String) -> some View {
         Text(title.uppercased())
             .font(.system(size: 11, weight: .semibold)).tracking(0.6)
@@ -157,6 +167,7 @@ struct ProfileView: View {
 
 struct NotificationsView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
     @State private var selectedNotification: AppNotification? = nil
     @State private var filter: NotificationFilter = .all
@@ -166,7 +177,7 @@ struct NotificationsView: View {
             AppNotification(title: "Approval requested", subtitle: "Delta Airlines needs manager review", tint: Tokens.pending, action: "Open expense", kind: .approval, time: "2m ago", unread: true),
             AppNotification(title: "Expense approved", subtitle: "Uber is ready for purchase confirmation", tint: Tokens.approved, action: "Confirm purchase", kind: .expense, time: "11m ago", unread: true),
             AppNotification(title: "Reimbursement sent", subtitle: "WeWork was marked reimbursed", tint: Tokens.reimbursed, action: "View proof", kind: .payment, time: "Yesterday", unread: false),
-            AppNotification(title: "Workspace invite", subtitle: "Finance team invite is pending", tint: app.company.color, action: "Review invite", kind: .admin, time: "Yesterday", unread: false)
+            AppNotification(title: "Workspace invite", subtitle: "Finance team invite is pending", tint: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color, action: "Review invite", kind: .admin, time: "Yesterday", unread: false)
         ]
     }
 
@@ -196,7 +207,7 @@ struct NotificationsView: View {
                 }
             }
 
-            infoBanner(icon: "bell.badge.fill", tint: app.company.color,
+            infoBanner(icon: "bell.badge.fill", tint: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color,
                        title: "\(unreadCount) unread notifications",
                        message: "Covers approval requests, rejection updates, purchase confirmations, reimbursement events, and workspace invites.")
 
@@ -339,6 +350,7 @@ struct NotificationDetailSheet: View {
 
 struct AccountSettingsView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
     @State private var name = ""
     @State private var email = ""
@@ -347,7 +359,7 @@ struct AccountSettingsView: View {
         settingsContainer(title: "Account", onBack: onBack) {
             GlassCard(padding: 18) {
                 HStack(spacing: 14) {
-                    Avatar(color: app.company.color, size: 54, label: initials(app.userName))
+                    Avatar(color: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color, size: 54, label: initials(app.userName))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(app.userName).font(.system(size: 17, weight: .bold))
                         Text(app.userEmail).font(.system(size: 12)).foregroundStyle(.secondary)
@@ -361,7 +373,7 @@ struct AccountSettingsView: View {
                     Divider().opacity(0.4)
                     editableSetting("Email", text: $email)
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Workspace", value: app.company.name, showChevron: false)
+                    FormFieldRow(label: "Workspace", value: repositoryApp.selectedWorkspace?.name ?? app.company.name, showChevron: false)
                 }
             }
 
@@ -456,19 +468,20 @@ struct AppPreferencesView: View {
 
 struct ReportsExportView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
 
     var body: some View {
         settingsContainer(title: "Reports", onBack: onBack) {
             GlassCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(app.company.name).font(.system(size: 15, weight: .bold))
+                    Text(repositoryApp.selectedWorkspace?.name ?? app.company.name).font(.system(size: 15, weight: .bold))
                     HStack {
-                        reportMetric("Expenses", "\(app.currentExpenses.count)")
+                        reportMetric("Expenses", "\(repositoryApp.expenses.count)")
                         Spacer()
-                        reportMetric("Spend", money(app.currentExpenses.reduce(0) { $0 + $1.amount }))
+                        reportMetric("Spend", money(repositoryApp.expenses.reduce(0) { $0 + $1.amount.decimalValue }))
                         Spacer()
-                        reportMetric("Pending", "\(app.currentExpenses.filter { $0.status == .pending }.count)")
+                        reportMetric("Pending", "\(repositoryApp.managerQueue.count)")
                     }
                 }
             }

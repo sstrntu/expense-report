@@ -2,19 +2,19 @@ import SwiftUI
 
 struct PermissionsView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     @State private var editingID: String? = nil
     @State private var showInvite = false
-    @State private var memberToRemove: Member? = nil
+    @State private var memberToRemove: DomainWorkspaceMember? = nil
     @State private var showRemoveConfirm = false
-    @State private var pendingInvites = ["finance@turfmapp.io"]
     var onBack: () -> Void
 
-    private let roles = MemberRole.allCases
-    private var members: [Member] { app.currentMembers }
+    private let roles = WorkspaceRole.allCases
+    private var members: [DomainWorkspaceMember] { repositoryApp.members }
     private var canEditRoles: Bool { app.role == .manager || app.role == .admin }
     private var canInviteOrRemove: Bool { app.role == .admin }
-    private var editableRoles: [MemberRole] {
-        app.role == .admin ? [.employee, .manager, .admin] : [.employee, .manager]
+    private var editableRoles: [WorkspaceRole] {
+        app.role == .admin ? [.employee, .manager, .finance, .admin] : [.employee, .manager]
     }
 
     var body: some View {
@@ -41,6 +41,15 @@ struct PermissionsView: View {
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
+            if let lastError = repositoryApp.lastError {
+                infoBanner(
+                    icon: "exclamationmark.shield.fill",
+                    tint: Tokens.rejected,
+                    title: "Action blocked",
+                    message: lastError
+                )
+            }
+
             // Role count grid
             let counts = Dictionary(grouping: members, by: \.role)
             HStack(spacing: 8) {
@@ -66,11 +75,11 @@ struct PermissionsView: View {
                 }
             }
 
-            if canInviteOrRemove && !pendingInvites.isEmpty {
+            if canInviteOrRemove && !repositoryApp.invites.isEmpty {
                 Text("Pending invites").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
                 GlassCard(padding: 0) {
                     VStack(spacing: 0) {
-                        ForEach(Array(pendingInvites.enumerated()), id: \.offset) { idx, email in
+                        ForEach(Array(repositoryApp.invites.enumerated()), id: \.element.id) { idx, invite in
                             if idx > 0 { Divider().opacity(0.4) }
                             HStack(spacing: 12) {
                                 Image(systemName: "envelope.badge.fill")
@@ -78,11 +87,13 @@ struct PermissionsView: View {
                                     .frame(width: 32, height: 32)
                                     .background(Tokens.pending.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(email).font(.system(size: 13.5, weight: .medium))
-                                    Text("Invite sent · Employee access").font(.system(size: 11)).foregroundStyle(.secondary)
+                                    Text(invite.email).font(.system(size: 13.5, weight: .medium))
+                                    Text("Invite sent · \(invite.role.label) access").font(.system(size: 11)).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Button("Cancel") { pendingInvites.removeAll { $0 == email } }
+                                Button("Cancel") {
+                                    Task { await repositoryApp.cancelInvite(id: invite.id) }
+                                }
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(Tokens.rejected)
                             }
@@ -111,25 +122,29 @@ struct PermissionsView: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
         .sheet(isPresented: $showInvite) {
-            InviteMemberSheet { email in
-                pendingInvites.insert(email, at: 0)
+            InviteMemberSheet(availableRoles: editableRoles) { email, role in
+                Task { await repositoryApp.inviteMember(email: email, role: role) }
             }
             .presentationDetents([.medium])
         }
         .confirmationDialog("Remove member?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
-            Button("Remove \(memberToRemove?.name ?? "member")", role: .destructive) {}
+            Button("Remove \(memberToRemove?.displayName ?? "member")", role: .destructive) {
+                if let memberToRemove {
+                    Task { await repositoryApp.removeMember(id: memberToRemove.id) }
+                }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("\(memberToRemove?.name ?? "This member") will lose access to \(app.company.name).")
+            Text("\(memberToRemove?.displayName ?? "This member") will lose access to \(repositoryApp.selectedWorkspace?.name ?? app.company.name).")
         }
     }
 
-    private func memberRow(_ m: Member) -> some View {
+    private func memberRow(_ m: DomainWorkspaceMember) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Avatar(color: m.avatarColor, size: 36, label: m.initials)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(m.name).font(.system(size: 13, weight: .semibold))
+                    Text(m.displayName).font(.system(size: 13, weight: .semibold))
                     Text(m.email).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer()
@@ -169,7 +184,8 @@ struct PermissionsView: View {
                     HStack(spacing: 6) {
                         ForEach(editableRoles, id: \.self) { r in
                             Button {
-                                app.setMemberRole(id: m.id, to: r)
+                                Task { await repositoryApp.updateMemberRole(id: m.id, role: r) }
+                                app.setMemberRole(id: m.id, to: r.legacyMemberRole)
                                 editingID = nil
                             } label: {
                                 Text(r.label)
@@ -193,9 +209,11 @@ struct PermissionsView: View {
 }
 
 struct InviteMemberSheet: View {
-    var onInvite: (String) -> Void
+    let availableRoles: [WorkspaceRole]
+    var onInvite: (String, WorkspaceRole) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
+    @State private var role: WorkspaceRole = .employee
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -215,6 +233,19 @@ struct InviteMemberSheet: View {
                             .frame(maxWidth: 210)
                     }
                     .padding(.vertical, 11)
+                    Divider().opacity(0.4)
+                    HStack {
+                        Text("Role").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Spacer()
+                        Picker("Role", selection: $role) {
+                            ForEach(availableRoles, id: \.self) { r in
+                                Text(r.label).tag(r)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .font(.system(size: 13.5, weight: .medium))
+                    }
+                    .padding(.vertical, 11)
                 }
             }
             .padding(.horizontal, 20)
@@ -227,7 +258,7 @@ struct InviteMemberSheet: View {
             Spacer()
 
             Button {
-                onInvite(email.isEmpty ? "new.member@company.com" : email)
+                onInvite(email.isEmpty ? "new.member@company.com" : email, role)
                 dismiss()
             } label: {
                 Text("Send invite").primaryActionLabel()

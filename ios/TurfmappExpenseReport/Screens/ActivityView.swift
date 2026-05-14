@@ -2,35 +2,34 @@ import SwiftUI
 
 struct ActivityView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     @State private var filter: String = "All"
     @State private var searchText = ""
     @State private var projectFilter = "All projects"
-    @State private var expenseToDelete: Expense? = nil
-    var onOpen: (Expense) -> Void
+    @State private var expenseToDelete: DomainExpense? = nil
+    var onOpen: (DomainExpense) -> Void
 
     private let filters = ["All", "Awaiting Approval", "Approved", "Awaiting Reimbursement", "Reimbursed", "Rejected", "Archived"]
 
-    private var filtered: [Expense] {
-        let pool: [Expense]
-        if filter == "Archived" {
-            pool = app.currentArchivedExpenses
-        } else {
+    private var filtered: [DomainExpense] {
+        let pool = repositoryApp.expenses.filter { expense in
             switch filter {
-            case "Awaiting Approval":      pool = app.currentExpenses.filter { $0.status == .pending }
-            case "Approved":               pool = app.currentExpenses.filter { $0.status == .approved }
-            case "Awaiting Reimbursement": pool = app.currentExpenses.filter { $0.status == .purchased }
-            case "Reimbursed":             pool = app.currentExpenses.filter { $0.status == .reimbursed }
-            case "Rejected":               pool = app.currentExpenses.filter { $0.status == .rejected }
-            default:                       pool = app.currentExpenses
+            case "Archived": return expense.isArchived || expense.status == .archived
+            case "Awaiting Approval": return expense.status == .pendingManagerApproval
+            case "Approved": return expense.status == .approved
+            case "Awaiting Reimbursement": return [.pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement].contains(expense.status)
+            case "Reimbursed": return expense.status == .reimbursed
+            case "Rejected": return expense.status == .rejected
+            default: return !expense.isArchived && expense.status != .archived
             }
         }
 
         return pool.filter { expense in
             let matchesSearch = searchText.isEmpty ||
                 expense.merchant.localizedCaseInsensitiveContains(searchText) ||
-                expense.category.localizedCaseInsensitiveContains(searchText) ||
-                expense.project.localizedCaseInsensitiveContains(searchText)
-            let matchesProject = projectFilter == "All projects" || expense.project == projectFilter
+                expense.categoryLabel.localizedCaseInsensitiveContains(searchText) ||
+                expense.projectName(in: repositoryApp.projects).localizedCaseInsensitiveContains(searchText)
+            let matchesProject = projectFilter == "All projects" || expense.projectName(in: repositoryApp.projects) == projectFilter
             return matchesSearch && matchesProject
         }
     }
@@ -66,9 +65,9 @@ struct ActivityView: View {
                         Image(systemName: filter == "Archived" ? "archivebox" : "magnifyingglass")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(.secondary)
-                        Text(filter == "Archived" ? "No archived expenses" : app.currentExpenses.isEmpty ? "No expenses yet" : "No matching expenses")
+                        Text(filter == "Archived" ? "No archived expenses" : repositoryApp.expenses.isEmpty ? "No expenses yet" : "No matching expenses")
                             .font(.system(size: 14, weight: .semibold))
-                        Text(filter == "Archived" ? "Archive expenses to remove them from your main view." : app.currentExpenses.isEmpty ? "New expenses will appear here after submission." : "Adjust search, project, or status filters.")
+                        Text(filter == "Archived" ? "Archive expenses to remove them from your main view." : repositoryApp.expenses.isEmpty ? "New expenses will appear here after submission." : "Adjust search, project, or status filters.")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -83,7 +82,10 @@ struct ActivityView: View {
             Alert(
                 title: Text("Delete \"\(expense.merchant)\"?"),
                 message: Text("This cannot be undone."),
-                primaryButton: .destructive(Text("Delete")) { app.deleteExpense(id: expense.id) },
+                primaryButton: .destructive(Text("Delete")) {
+                    Task { await repositoryApp.deleteExpense(id: expense.id) }
+                    app.deleteExpense(id: expense.id)
+                },
                 secondaryButton: .cancel()
             )
         }
@@ -104,7 +106,7 @@ struct ActivityView: View {
             HStack(spacing: 8) {
                 Menu {
                     Button("All projects") { projectFilter = "All projects" }
-                    ForEach(app.currentProjects) { project in
+                    ForEach(repositoryApp.projects) { project in
                         Button(project.name) { projectFilter = project.name }
                     }
                 } label: {
@@ -125,7 +127,7 @@ struct ActivityView: View {
         }
     }
 
-    private func section(title: String, items: [Expense]) -> some View {
+    private func section(title: String, items: [DomainExpense]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title.uppercased())
                 .font(.system(size: 11, weight: .semibold)).tracking(0.6)
@@ -136,10 +138,11 @@ struct ActivityView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, e in
                         if idx > 0 { Divider().opacity(0.4) }
-                        Button { onOpen(e) } label: { ExpenseRow(expense: e) }
+                        Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects) }
                             .buttonStyle(.plain)
                             .contextMenu {
                                 Button {
+                                    Task { await repositoryApp.archiveExpense(id: e.id) }
                                     app.archiveExpense(id: e.id)
                                 } label: {
                                     Label(e.isArchived ? "Unarchive" : "Archive",

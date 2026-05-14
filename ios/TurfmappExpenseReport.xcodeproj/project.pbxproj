@@ -11,18 +11,26 @@
 		0581D62D224E38D8E3201A9D /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7038F8122D513472A92656 /* ProfileView.swift */; };
 		16AFC42C4F44934D90CD8C68 /* ManagerOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53DEF6879D81BC1B1ED4918 /* ManagerOverviewView.swift */; };
 		1EBDAF336E8CB243B5BF07D1 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67EC6D7BD90D039BB416ED74 /* ReviewView.swift */; };
+		1F2C7F65C5D14B58A75D1B31 /* RepositoryContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B43D89F8EDE49F8A2AB563D /* RepositoryContracts.swift */; };
+		21862060D3E648F49B94D41B /* ExpenseWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98201220CB004DBEB5E31E53 /* ExpenseWorkflow.swift */; };
+		22F7F5F50739463E8FE23D24 /* DomainPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 701D068A3E5046D98781C687 /* DomainPresentation.swift */; };
 		2493E01868B610DD3193D13D /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3C217BB946FC793FCE5377 /* HomeView.swift */; };
 		27BE218D218C12D24E764985 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29437C36AF260B6783FA3947 /* AppTheme.swift */; };
 		2A38DBEAE2ACA435E822BB54 /* ManageProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38CFAE9C5DE3B638DCBBB2C0 /* ManageProjectsView.swift */; };
+		2A715636718A48A2A9E3F1B2 /* DomainDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A603F1AE03D04221B673DBAF /* DomainDetailView.swift */; };
+		2F64B1809D4B4A2D8F9C0101 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F64B17F9D4B4A2D8F9C0101 /* AppEnvironment.swift */; };
 		40834B5A7CB85792D6B041B7 /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */; };
 		443FA1297503350D3A53D578 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231934AADFA8013182DE19B6 /* StatusPill.swift */; };
 		4DDED493FFFA0D6DAAFE572B /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB435F138568CD4F6440FBDF /* DashboardView.swift */; };
 		5A6E411E3F13C60CE06D5433 /* Avatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4CB3A46FA47E4715A510B1 /* Avatar.swift */; };
 		5D5D8C1FC9CA7F24D41815A7 /* RootShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 536DAABDF76A6F8DFD29DEEF /* RootShell.swift */; };
 		5FB4E6907640C710222DF67F /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649767E02DA13AB1CCBFD0E9 /* PermissionsView.swift */; };
+		69B14149D1014275883F54E3 /* MockRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7742B78E337F49FF8ED285C5 /* MockRepositories.swift */; };
 		73A10FB553C3D1261061CB5D /* BottomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8941FC76E8EADAC392D24D4C /* BottomTabBar.swift */; };
 		741A4BD84FE8A4F61135B0D5 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22F66287D08F237A93AEE5B /* DetailView.swift */; };
 		98000D0F105320FD2AEF70B2 /* SubmitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38494852C1A233217A4B4CAF /* SubmitView.swift */; };
+		9E96B3B177FD4285BC421165 /* V1Domain.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4B0C1CFC03D44669F832029 /* V1Domain.swift */; };
+		A210083ED5D840F6864AA8E8 /* RepositoryAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B04C0653890A49DBBA5226D5 /* RepositoryAppState.swift */; };
 		C6DD40BF0F22226F17CD100B /* Charts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCE3D5DFB96304D91AC7BF2 /* Charts.swift */; };
 		CC9FDDC6A08A8B2C2D9A3B8A /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FC5205A5E412F3544FBF6C8 /* MockData.swift */; };
 		D577E2515650656DF3A7B9F5 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCEF355C532DA04E3146431 /* ActivityView.swift */; };
@@ -37,6 +45,7 @@
 		2360D5D3F26299AE4D322585 /* TurfmappExpenseReport.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurfmappExpenseReport.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		29437C36AF260B6783FA3947 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		2C580869F5B6FF78D1128C4E /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
+		2F64B17F9D4B4A2D8F9C0101 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		38494852C1A233217A4B4CAF /* SubmitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmitView.swift; sourceTree = "<group>"; };
 		38CFAE9C5DE3B638DCBBB2C0 /* ManageProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageProjectsView.swift; sourceTree = "<group>"; };
 		3CCE3D5DFB96304D91AC7BF2 /* Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Charts.swift; sourceTree = "<group>"; };
@@ -47,9 +56,16 @@
 		67A7AB0D0FD25CE844CAF051 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		67EC6D7BD90D039BB416ED74 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		6F096F243857EBABB4129FEC /* TurfmappExpenseReportApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurfmappExpenseReportApp.swift; sourceTree = "<group>"; };
+		701D068A3E5046D98781C687 /* DomainPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainPresentation.swift; sourceTree = "<group>"; };
+		7742B78E337F49FF8ED285C5 /* MockRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRepositories.swift; sourceTree = "<group>"; };
+		7B43D89F8EDE49F8A2AB563D /* RepositoryContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryContracts.swift; sourceTree = "<group>"; };
 		8941FC76E8EADAC392D24D4C /* BottomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomTabBar.swift; sourceTree = "<group>"; };
 		8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
+		98201220CB004DBEB5E31E53 /* ExpenseWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseWorkflow.swift; sourceTree = "<group>"; };
+		A603F1AE03D04221B673DBAF /* DomainDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDetailView.swift; sourceTree = "<group>"; };
+		B04C0653890A49DBBA5226D5 /* RepositoryAppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryAppState.swift; sourceTree = "<group>"; };
 		BFCEF355C532DA04E3146431 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		C4B0C1CFC03D44669F832029 /* V1Domain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V1Domain.swift; sourceTree = "<group>"; };
 		CA4CB3A46FA47E4715A510B1 /* Avatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Avatar.swift; sourceTree = "<group>"; };
 		D53DEF6879D81BC1B1ED4918 /* ManagerOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagerOverviewView.swift; sourceTree = "<group>"; };
 		DB435F138568CD4F6440FBDF /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
@@ -95,6 +111,8 @@
 			isa = PBXGroup;
 			children = (
 				29437C36AF260B6783FA3947 /* AppTheme.swift */,
+				2F64B17F9D4B4A2D8F9C0101 /* AppEnvironment.swift */,
+				B04C0653890A49DBBA5226D5 /* RepositoryAppState.swift */,
 				2C580869F5B6FF78D1128C4E /* Tokens.swift */,
 			);
 			path = Theme;
@@ -114,7 +132,11 @@
 		88620CAAF6200DD5130B19A9 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				701D068A3E5046D98781C687 /* DomainPresentation.swift */,
+				98201220CB004DBEB5E31E53 /* ExpenseWorkflow.swift */,
 				0E14C7927495CDE1F99FD155 /* Models.swift */,
+				7B43D89F8EDE49F8A2AB563D /* RepositoryContracts.swift */,
+				C4B0C1CFC03D44669F832029 /* V1Domain.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -123,6 +145,7 @@
 			isa = PBXGroup;
 			children = (
 				5FC5205A5E412F3544FBF6C8 /* MockData.swift */,
+				7742B78E337F49FF8ED285C5 /* MockRepositories.swift */,
 			);
 			path = Mock;
 			sourceTree = "<group>";
@@ -142,6 +165,7 @@
 				BFCEF355C532DA04E3146431 /* ActivityView.swift */,
 				DB435F138568CD4F6440FBDF /* DashboardView.swift */,
 				E22F66287D08F237A93AEE5B /* DetailView.swift */,
+				A603F1AE03D04221B673DBAF /* DomainDetailView.swift */,
 				EB3C217BB946FC793FCE5377 /* HomeView.swift */,
 				38CFAE9C5DE3B638DCBBB2C0 /* ManageProjectsView.swift */,
 				D53DEF6879D81BC1B1ED4918 /* ManagerOverviewView.swift */,
@@ -220,6 +244,7 @@
 			files = (
 				D577E2515650656DF3A7B9F5 /* ActivityView.swift in Sources */,
 				27BE218D218C12D24E764985 /* AppTheme.swift in Sources */,
+				2F64B1809D4B4A2D8F9C0101 /* AppEnvironment.swift in Sources */,
 				5A6E411E3F13C60CE06D5433 /* Avatar.swift in Sources */,
 				73A10FB553C3D1261061CB5D /* BottomTabBar.swift in Sources */,
 				C6DD40BF0F22226F17CD100B /* Charts.swift in Sources */,
@@ -233,12 +258,19 @@
 				F2A21797BBFB2DFBB4576CA6 /* Models.swift in Sources */,
 				5FB4E6907640C710222DF67F /* PermissionsView.swift in Sources */,
 				0581D62D224E38D8E3201A9D /* ProfileView.swift in Sources */,
+				A210083ED5D840F6864AA8E8 /* RepositoryAppState.swift in Sources */,
+				1F2C7F65C5D14B58A75D1B31 /* RepositoryContracts.swift in Sources */,
 				1EBDAF336E8CB243B5BF07D1 /* ReviewView.swift in Sources */,
 				5D5D8C1FC9CA7F24D41815A7 /* RootShell.swift in Sources */,
 				443FA1297503350D3A53D578 /* StatusPill.swift in Sources */,
 				98000D0F105320FD2AEF70B2 /* SubmitView.swift in Sources */,
 				E4E2E3CF2031D2A9C6B0A3CD /* Tokens.swift in Sources */,
+				9E96B3B177FD4285BC421165 /* V1Domain.swift in Sources */,
 				0151543DF9C962D18EA3EA2A /* TurfmappExpenseReportApp.swift in Sources */,
+				22F7F5F50739463E8FE23D24 /* DomainPresentation.swift in Sources */,
+				2A715636718A48A2A9E3F1B2 /* DomainDetailView.swift in Sources */,
+				21862060D3E648F49B94D41B /* ExpenseWorkflow.swift in Sources */,
+				69B14149D1014275883F54E3 /* MockRepositories.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,7 +292,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.turfmapp.expense-report";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
@@ -407,7 +439,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.turfmapp.expense-report";
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;

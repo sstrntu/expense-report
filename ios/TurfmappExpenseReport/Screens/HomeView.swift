@@ -2,12 +2,17 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     @Binding var selectedTab: TabID
-    var onOpen: (Expense) -> Void
+    var onOpen: (DomainExpense) -> Void
 
     var body: some View {
-        let pending  = app.currentExpenses.filter { $0.status == .pending }.reduce(0)  { $0 + $1.amount }
-        let approved = app.currentExpenses.filter { $0.status == .approved }.reduce(0) { $0 + $1.amount }
+        let pending = repositoryApp.expenses
+            .filter { $0.status == .pendingManagerApproval }
+            .reduce(0) { $0 + $1.amount.decimalValue }
+        let approved = repositoryApp.expenses
+            .filter { $0.status == .approved || $0.status == .readyForReimbursement || $0.status == .pendingFinanceReview }
+            .reduce(0) { $0 + $1.amount.decimalValue }
 
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -70,7 +75,7 @@ struct HomeView: View {
                 }.frame(width: 40, height: 40)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("New Request").font(.system(size: 14, weight: .semibold))
+                    Text("New Expense").font(.system(size: 14, weight: .semibold))
                     Text("Submit before making the purchase")
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
                 }
@@ -104,10 +109,10 @@ struct HomeView: View {
 
     private var recentList: some View {
         GlassCard(padding: 0) {
-            VStack(spacing: 0) {
-                ForEach(Array(app.currentExpenses.prefix(4).enumerated()), id: \.element.id) { idx, e in
+                VStack(spacing: 0) {
+                ForEach(Array(repositoryApp.expenses.prefix(4).enumerated()), id: \.element.id) { idx, e in
                     if idx > 0 { Divider().opacity(0.4) }
-                    Button { onOpen(e) } label: { ExpenseRow(expense: e) }
+                    Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects) }
                         .buttonStyle(.plain)
                 }
             }
@@ -117,7 +122,9 @@ struct HomeView: View {
     private var projectsCard: some View {
         GlassCard(padding: 14) {
             VStack(spacing: 14) {
-                ForEach(app.currentProjects.prefix(3)) { p in ProjectRow(project: p) }
+                ForEach(repositoryApp.projects.prefix(3)) { p in
+                    DomainProjectRow(project: p, expenses: repositoryApp.expenses)
+                }
             }
         }
     }
@@ -163,6 +170,33 @@ struct ExpenseRow: View {
     }
 }
 
+struct DomainExpenseRow: View {
+    let expense: DomainExpense
+    let projects: [DomainProject]
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(expense.icon).font(.system(size: 18))
+                .frame(width: 36, height: 36)
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(expense.merchant).font(.system(size: 13.5, weight: .semibold))
+                Text("\(expense.categoryLabel) · \(expense.displayDate)")
+                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(expense.amount.formatted).font(.system(size: 13.5, weight: .semibold))
+                StatusPill(text: expense.status.displayLabel, tint: expense.status.tint, leadingIcon: expense.status.icon)
+                if let owner = expense.status.nextOwnerLabel {
+                    StatusPill(text: owner, tint: Tokens.slate500, leadingIcon: expense.status.nextOwnerIcon)
+                }
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+    }
+}
+
 struct ProjectRow: View {
     let project: Project
     var body: some View {
@@ -176,6 +210,35 @@ struct ProjectRow: View {
             ProgressView(value: project.progress)
                 .progressViewStyle(.linear)
                 .tint(project.color)
+        }
+    }
+}
+
+struct DomainProjectRow: View {
+    let project: DomainProject
+    let expenses: [DomainExpense]
+
+    private var spent: Double {
+        expenses
+            .filter { $0.projectId == project.id && [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
+            .reduce(0) { $0 + $1.amount.decimalValue }
+    }
+
+    private var progress: Double {
+        min(spent / max(project.budget.decimalValue, 1), 1)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(project.name).font(.system(size: 12.5, weight: .medium))
+                Spacer()
+                Text("$\(Int(spent / 1000))k / $\(Int(project.budget.decimalValue / 1000))k")
+                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+            }
+            ProgressView(value: progress)
+                .progressViewStyle(.linear)
+                .tint(Tokens.slate500)
         }
     }
 }

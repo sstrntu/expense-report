@@ -104,7 +104,7 @@ struct DetailView: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
         .sheet(isPresented: $showPurchaseSheet) {
-            PurchaseConfirmSheet { receipt in
+            PurchaseConfirmSheet(initialAmount: expense.amount) { _, receipt in
                 onAction(.purchased, nil, receipt)
             }
             .presentationDetents([.medium])
@@ -383,9 +383,17 @@ struct ReceiptPreviewSheet: View {
 // MARK: – Purchase confirmation sheet (employee)
 
 struct PurchaseConfirmSheet: View {
-    var onConfirm: (String?) -> Void
+    let initialAmount: Double
+    var onConfirm: (Double, String?) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var finalAmountText: String
     @State private var receiptName: String? = nil
+
+    init(initialAmount: Double, onConfirm: @escaping (Double, String?) -> Void) {
+        self.initialAmount = initialAmount
+        self.onConfirm = onConfirm
+        _finalAmountText = State(initialValue: String(format: "%.2f", initialAmount))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -397,6 +405,27 @@ struct PurchaseConfirmSheet: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 20)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Final amount")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 20)
+
+                HStack {
+                    Text("$")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    TextField("0.00", text: $finalAmountText)
+                        .font(.system(size: 14, weight: .semibold))
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                }
+                .padding(14)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.white.opacity(0.4), lineWidth: 0.5))
+                .padding(.horizontal, 20)
+            }
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("Receipt")
@@ -433,7 +462,7 @@ struct PurchaseConfirmSheet: View {
             Spacer()
 
             Button {
-                onConfirm(receiptName)
+                onConfirm(finalAmount, receiptName)
                 dismiss()
             } label: {
                 Text("Confirm Purchase")
@@ -443,9 +472,15 @@ struct PurchaseConfirmSheet: View {
                     .background(Tokens.purchased, in: RoundedRectangle(cornerRadius: 16))
             }
             .buttonStyle(.plain)
+            .disabled(finalAmount <= 0)
+            .opacity(finalAmount > 0 ? 1 : 0.45)
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
         }
+    }
+
+    private var finalAmount: Double {
+        Double(finalAmountText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
     }
 }
 
@@ -475,7 +510,7 @@ struct RejectReasonSheet: View {
             Spacer()
 
             Button {
-                onReject(reason)
+                onReject(trimmedReason)
                 dismiss()
             } label: {
                 Text("Reject expense")
@@ -485,9 +520,15 @@ struct RejectReasonSheet: View {
                     .background(Tokens.rejected, in: RoundedRectangle(cornerRadius: 16))
             }
             .buttonStyle(.plain)
+            .disabled(trimmedReason.isEmpty)
+            .opacity(trimmedReason.isEmpty ? 0.45 : 1)
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
         }
+    }
+
+    private var trimmedReason: String {
+        reason.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

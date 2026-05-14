@@ -89,10 +89,26 @@ ios/
 
 ---
 
-## Wiring to a real API (later)
+## Pre-database scope
 
-All data currently lives in `Mock/MockData.swift`.  
-When ready, replace with:
-- A `@MainActor class ExpenseService: ObservableObject` that fetches from your API
-- Inject it via `.environmentObject(ExpenseService())` in `TurfmappExpenseReportApp`
-- Views already use `MockData.*` in isolated spots — easy to swap call-by-call
+The app is currently a SwiftUI prototype backed by `Mock/MockData.swift`.
+
+Before wiring a database or API, use the repo-level docs to finish the product and data contract:
+
+- `docs/v1-pre-db-scope.md` — v1 feature scope, expense workflows, project policy rules, AI receipt scanning, and multi-workspace behavior.
+- `docs/database-integration-contract.md` — backend-facing entities, statuses, repository boundaries, and security rules.
+- `docs/pre-db-implementation-checklist.md` — implementation checklist for preparing the app before persistence.
+
+The confirmed v1 scope includes both pre-approval and reimbursement claims, manager and finance reimbursement paths, project-controlled permissions/budgets/policies/member access, AI receipt scanning, and multi-workspace support.
+
+## Supabase and OpenAI keys
+
+Use Supabase public config in the iOS app and keep OpenAI server-side:
+
+- iOS app: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
+- Supabase Edge Functions: `OPENAI_API_KEY`
+
+The app reads public Supabase values through `Theme/AppEnvironment.swift`.
+The OpenAI receipt scan scaffold lives at `../supabase/functions/scan-receipt/index.ts`.
+
+See `../docs/supabase-openai-setup.md` for the exact setup flow.
