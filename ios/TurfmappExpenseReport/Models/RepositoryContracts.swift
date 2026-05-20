@@ -47,6 +47,11 @@ protocol AuthRepository: Sendable {
     func signIn(email: String, password: String) async throws
     func signUp(email: String, password: String) async throws
     func signOut() async throws
+    /// True if a persisted session exists that the app can resume on launch
+    /// without prompting for credentials. Implementations that refresh tokens
+    /// transparently should still return true even when the access token has
+    /// expired, provided the refresh token is intact.
+    func hasPersistedSession() async -> Bool
     func currentUserId() async throws -> String?
     func currentUserProfile() async throws -> DomainUserProfile?
     func updateDisplayName(_ name: String) async throws

@@ -46,7 +46,19 @@ final class RepositoryAppState: ObservableObject {
     }
 
     var financeQueue: [DomainExpense] {
-        expenses.filter { $0.status == .pendingFinanceReview || $0.status == .readyForReimbursement }
+        expenses.filter {
+            ($0.status == .approved && $0.kind != .preApproval) ||
+            $0.status == .purchaseConfirmed ||
+            $0.status == .pendingFinanceReview ||
+            $0.status == .readyForReimbursement
+        }
+    }
+
+    /// Approved pre-approvals that are waiting for the employee to confirm the purchase.
+    /// Surfaced to managers/finance/admin so they can nudge submitters who haven't
+    /// confirmed their purchase yet.
+    var awaitingPurchaseQueue: [DomainExpense] {
+        expenses.filter { $0.status == .approved && $0.kind == .preApproval }
     }
 
     var draftExpenses: [DomainExpense] {
@@ -58,17 +70,62 @@ final class RepositoryAppState: ObservableObject {
         selectedWorkspace?.defaultCurrency ?? "USD"
     }
 
-    /// Expenses matching the workspace's default currency (the only ones we
-    /// add together). No exchange-rate conversion happens.
+    /// Expenses re-projected into the workspace default currency. Foreign
+    /// expenses are converted via the static FX table; anything we can't
+    /// convert is dropped (counted in `unconvertibleExpenseCount` so the UI
+    /// can footnote it).
     var expensesInDefaultCurrency: [DomainExpense] {
-        expenses.filter { $0.amount.currency == aggregationCurrency }
+        let target = aggregationCurrency
+        return expenses.compactMap { expense in
+            if expense.amount.currency == target { return expense }
+            guard let converted = CurrencyConverter.convert(
+                expense.amount.decimalValue,
+                from: expense.amount.currency,
+                to: target
+            ) else { return nil }
+            // Rebuild MoneyAmount in the target currency for display/aggregation.
+            return DomainExpense(
+                id: expense.id,
+                workspaceId: expense.workspaceId,
+                projectId: expense.projectId,
+                submittedByMembershipId: expense.submittedByMembershipId,
+                kind: expense.kind,
+                status: expense.status,
+                merchant: expense.merchant,
+                amount: MoneyAmount(minorUnits: Int((converted * 100).rounded()), currency: target),
+                categoryId: expense.categoryId,
+                businessPurpose: expense.businessPurpose,
+                purchaseDate: expense.purchaseDate,
+                neededByDate: expense.neededByDate,
+                createdAt: expense.createdAt,
+                submittedAt: expense.submittedAt,
+                isArchived: expense.isArchived
+            )
+        }
     }
 
-    /// Count of expenses in a non-default currency — used to surface a
-    /// "+N excluded" footnote on dashboards.
-    var foreignCurrencyExpenseCount: Int {
-        expenses.filter { $0.amount.currency != aggregationCurrency }.count
+    /// Expenses that could not be converted into the workspace currency
+    /// (currency missing from the static FX table). Shown as a footnote so
+    /// admins know to add the rate.
+    var unconvertibleExpenseCount: Int {
+        let target = aggregationCurrency
+        return expenses.filter {
+            $0.amount.currency != target && !CurrencyConverter.canConvert(from: $0.amount.currency, to: target)
+        }.count
     }
+
+    /// Count of expenses that were silently converted from a foreign
+    /// currency. Shown as an "Approximate FX" footnote.
+    var convertedForeignExpenseCount: Int {
+        let target = aggregationCurrency
+        return expenses.filter {
+            $0.amount.currency != target && CurrencyConverter.canConvert(from: $0.amount.currency, to: target)
+        }.count
+    }
+
+    /// Legacy alias retained so existing UI footnotes still compile. Counts
+    /// only the expenses we had to drop from the aggregate.
+    var foreignCurrencyExpenseCount: Int { unconvertibleExpenseCount }
 
     func categoryName(forId id: String) -> String {
         categories.first { $0.id == id }?.name ?? id.capitalized
@@ -77,6 +134,21 @@ final class RepositoryAppState: ObservableObject {
     func bootstrap() async {
         await loadCurrentUserProfile()
         await loadWorkspaces(selecting: selectedWorkspace?.id ?? UserDefaults.standard.string(forKey: selectedWorkspaceDefaultsKey))
+    }
+
+    /// True if a saved session resumed cleanly. False means the user must
+    /// sign in again (refresh failed, or no session was persisted at all).
+    func restoreSession() async -> Bool {
+        guard await authRepository.hasPersistedSession() else { return false }
+        do {
+            // Best-effort: verifies the access token (refreshing if needed)
+            // by exercising an authed request. A failure here means the
+            // refresh token is also dead, so we have to re-auth.
+            _ = try await authRepository.currentUserId()
+            return true
+        } catch {
+            return false
+        }
     }
 
     private func loadCurrentUserProfile() async {
@@ -588,6 +660,13 @@ final class RepositoryAppState: ObservableObject {
         } catch {
             setError(error)
         }
+    }
+
+    /// Pull-to-refresh entry point. Refreshes workspace list (to pick up new
+    /// invites/role changes) and then the data for the selected workspace.
+    func refresh() async {
+        await loadWorkspaces(selecting: selectedWorkspace?.id)
+        await reloadSelectedWorkspaceData()
     }
 
     private func reloadSelectedWorkspaceData() async {

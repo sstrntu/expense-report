@@ -29,7 +29,7 @@ struct ActivityView: View {
         return pool.filter { expense in
             let matchesSearch = searchText.isEmpty ||
                 expense.merchant.localizedCaseInsensitiveContains(searchText) ||
-                expense.categoryLabel.localizedCaseInsensitiveContains(searchText) ||
+                repositoryApp.categoryName(forId: expense.categoryId).localizedCaseInsensitiveContains(searchText) ||
                 expense.projectName(in: repositoryApp.projects).localizedCaseInsensitiveContains(searchText)
             let matchesProject = projectFilter == "All projects" || expense.projectName(in: repositoryApp.projects) == projectFilter
             return matchesSearch && matchesProject
@@ -130,7 +130,7 @@ struct ActivityView: View {
                 }
                 .buttonStyle(.plain)
 
-                Label("Last 30 days", systemImage: "calendar")
+                Label("All time", systemImage: "calendar")
                     .font(.system(size: 12, weight: .semibold))
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .background(Color.primary.opacity(0.06), in: Capsule())
@@ -151,7 +151,7 @@ struct ActivityView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, e in
                         if idx > 0 { Divider().opacity(0.4) }
-                        Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects) }
+                        Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects, categories: repositoryApp.categories) }
                             .buttonStyle(.plain)
                             .contextMenu {
                                 Button {

@@ -66,6 +66,7 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
     func signIn(email: String, password: String) async throws { throw error }
     func signUp(email: String, password: String) async throws { throw error }
     func signOut() async throws { throw error }
+    func hasPersistedSession() async -> Bool { false }
     func currentUserId() async throws -> String? { throw error }
     func currentUserProfile() async throws -> DomainUserProfile? { throw error }
     func updateDisplayName(_ name: String) async throws { throw error }
@@ -138,7 +139,15 @@ enum SupabaseRepositoryError: LocalizedError {
         case .unsupported(let feature):
             return "\(feature) is not connected to Supabase yet."
         case .requestFailed(let status, let message):
-            return "Supabase request failed (\(status)): \(message)"
+            // Supabase error bodies are typically JSON like {"msg": "...", "error_code": "..."}.
+            // Surface that human message when present; fall back to the raw body otherwise.
+            if let data = message.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let msg = json["msg"] as? String ?? json["message"] as? String ?? json["error_description"] as? String {
+                    return msg
+                }
+            }
+            return "Request failed (\(status)). \(message)"
         case .invalidResponse:
             return "Supabase returned an unexpected response."
         }
@@ -150,6 +159,18 @@ actor SupabaseRESTClient {
         let accessToken: String?
         let refreshToken: String?
         let user: AuthUser?
+        /// Seconds until `accessToken` expires from the moment it was issued.
+        /// Supabase returns this on every token grant; we use it (plus the
+        /// time we saved) to know when to refresh.
+        let expiresIn: Int?
+        /// Wall-clock time at which we saved this session. Combined with
+        /// `expiresIn` to derive a real expiration.
+        var savedAt: Date?
+
+        var expiresAt: Date? {
+            guard let savedAt, let expiresIn else { return nil }
+            return savedAt.addingTimeInterval(TimeInterval(expiresIn))
+        }
     }
 
     struct AuthUser: Codable {
@@ -230,6 +251,37 @@ actor SupabaseRESTClient {
 
     func hasAccessToken() -> Bool {
         session?.accessToken?.isEmpty == false
+    }
+
+    /// True when the persisted session looks usable: has a refresh token
+    /// (we can always recover from an expired access token) OR has an
+    /// access token that hasn't expired yet.
+    func hasPersistedSession() -> Bool {
+        guard let session else { return false }
+        if let refresh = session.refreshToken, !refresh.isEmpty { return true }
+        if let expiresAt = session.expiresAt { return expiresAt > Date().addingTimeInterval(30) }
+        return session.accessToken?.isEmpty == false
+    }
+
+    /// Refresh the access token using the saved refresh token. Idempotent;
+    /// callers don't need to know whether one is in flight. Throws if the
+    /// refresh fails — caller should treat that as a hard sign-out signal.
+    func refreshSessionIfNeeded() async throws {
+        guard let current = session else { throw SupabaseRepositoryError.missingSession }
+        // Refresh slightly before expiry so a long request started right at
+        // the boundary doesn't fail.
+        if let expiresAt = current.expiresAt, expiresAt > Date().addingTimeInterval(30) {
+            return
+        }
+        guard let refreshToken = current.refreshToken, !refreshToken.isEmpty else {
+            throw SupabaseRepositoryError.missingSession
+        }
+        let body = ["refresh_token": refreshToken]
+        let session: AuthSession = try await authRequest(path: "token?grant_type=refresh_token", body: body)
+        guard session.accessToken?.isEmpty == false else {
+            throw SupabaseRepositoryError.missingSession
+        }
+        save(session)
     }
 
     func get<T: Decodable>(_ path: String, queryItems: [URLQueryItem] = []) async throws -> T {
@@ -342,6 +394,10 @@ actor SupabaseRESTClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if requiresAuth {
+            // Refresh transparently if the access token is at/past expiry.
+            // We swallow refresh failures here so the original 401/403 from
+            // the downstream call reaches the caller as a single signal.
+            try? await refreshSessionIfNeeded()
             guard let accessToken = session?.accessToken else { throw SupabaseRepositoryError.missingSession }
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         } else {
@@ -369,8 +425,10 @@ actor SupabaseRESTClient {
     }
 
     private func save(_ session: AuthSession) {
-        self.session = session
-        if let data = try? JSONEncoder().encode(session) {
+        var stamped = session
+        stamped.savedAt = Date()
+        self.session = stamped
+        if let data = try? JSONEncoder().encode(stamped) {
             UserDefaults.standard.set(data, forKey: sessionDefaultsKey)
         }
     }
@@ -410,6 +468,10 @@ struct SupabaseAuthRepository: AuthRepository {
 
     func signOut() async throws {
         await client.signOut()
+    }
+
+    func hasPersistedSession() async -> Bool {
+        await client.hasPersistedSession()
     }
 
     func currentUserId() async throws -> String? {
@@ -573,7 +635,34 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
     }
 
     func acceptInvite(id: String) async throws -> DomainWorkspace {
-        throw SupabaseRepositoryError.unsupported("Invite acceptance")
+        // Server-side RPC: the joiner isn't a workspace member yet, so they
+        // can't insert into workspace_memberships directly. The SECURITY DEFINER
+        // function verifies the invite is addressed to their auth email,
+        // marks it accepted, and creates the membership atomically.
+        struct Args: Encodable { let inviteId: String }
+        let membership: WorkspaceMemberRow = try await client.rpc(
+            "accept_workspace_invite",
+            body: Args(inviteId: id)
+        )
+        // Load the workspace this membership belongs to.
+        let workspaceRows: [WorkspaceRow] = try await client.get(
+            "workspaces",
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "id", value: "eq.\(membership.workspaceId)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
+        guard let row = workspaceRows.first else { throw SupabaseRepositoryError.invalidResponse }
+        return DomainWorkspace(
+            id: row.id,
+            name: row.name,
+            abbr: row.abbr,
+            brandColorHex: row.brandColor,
+            defaultCurrency: row.defaultCurrency,
+            currentUserRole: membership.role,
+            logoUrl: row.logoUrl
+        )
     }
 
     func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) async throws -> WorkspaceInvite {
@@ -584,7 +673,19 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
             body: WorkspaceInviteInsert(workspaceId: workspaceId, email: email.lowercased(), role: role, invitedByUserId: currentUserId, expiresAt: expiresAt)
         )
         guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
-        return WorkspaceInvite(id: row.id, workspaceId: row.workspaceId, email: row.email, role: row.role, status: row.status, expiresAt: row.expiresAt)
+        let invite = WorkspaceInvite(id: row.id, workspaceId: row.workspaceId, email: row.email, role: row.role, status: row.status, expiresAt: row.expiresAt)
+
+        // Fire-and-forget email send. Failure here is non-fatal — the invite
+        // row exists, and the admin can re-trigger from the UI. Swallowing
+        // intentionally so a misconfigured Resend secret doesn't block the
+        // create-invite flow.
+        struct EmailBody: Encodable { let inviteId: String }
+        let _: EmptyResponse? = try? await client.invokeFunction(
+            "send-workspace-invite",
+            body: EmailBody(inviteId: invite.id)
+        )
+
+        return invite
     }
 
     func cancelInvite(id: String) async throws {
@@ -736,9 +837,22 @@ struct SupabaseProjectRepository: ProjectRepository {
 
     func createProject(_ project: DomainProject) async throws -> DomainProject {
         let ownerMembershipId = try await currentMembershipId(workspaceId: project.workspaceId)
-        let rows: [SupabaseProjectRow] = try await client.post("projects", body: ProjectInsert(project: project, ownerMembershipId: ownerMembershipId))
+        let newId = UUID().uuidString
+        let _: EmptyResponse = try await client.post(
+            "projects",
+            body: ProjectInsert(id: newId, project: project, ownerMembershipId: ownerMembershipId),
+            preferRepresentation: false
+        )
+        let rows: [SupabaseProjectRow] = try await client.get(
+            "projects",
+            queryItems: [
+                URLQueryItem(name: "select", value: "*,project_category_rules(category_id),project_memberships(role,workspace_membership_id)"),
+                URLQueryItem(name: "id", value: "eq.\(newId)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
         guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
-        return row.domainProject(currentMembershipId: nil)
+        return row.domainProject(currentMembershipId: ownerMembershipId)
     }
 
     func updateProject(_ project: DomainProject) async throws -> DomainProject {
@@ -806,7 +920,22 @@ struct SupabaseExpenseRepository: ExpenseRepository {
 
     func createDraft(_ input: ExpenseDraftInput) async throws -> DomainExpense {
         let membershipId = try await currentMembershipId(workspaceId: input.workspaceId)
-        let rows: [SupabaseExpenseRow] = try await client.post("expenses", body: ExpenseInsert(input: input, submittedByMembershipId: membershipId))
+        let newId = UUID().uuidString
+        // Prefer: return=minimal avoids RETURNING * which would trigger the SELECT
+        // RLS policy on the freshly-inserted row and fail with 42501.
+        let _: EmptyResponse = try await client.post(
+            "expenses",
+            body: ExpenseInsert(id: newId, input: input, submittedByMembershipId: membershipId),
+            preferRepresentation: false
+        )
+        let rows: [SupabaseExpenseRow] = try await client.get(
+            "expenses",
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "id", value: "eq.\(newId)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
         guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
         return row.domainExpense
     }
@@ -938,9 +1067,11 @@ struct SupabaseAttachmentRepository: AttachmentRepository {
 
         try await client.uploadStorageObject(bucket: bucket, objectPath: storageKey, contentType: contentType, data: data)
 
-        let rows: [AttachmentRow] = try await client.post(
+        let attachmentId = UUID().uuidString
+        let _: EmptyResponse = try await client.post(
             "attachments",
             body: AttachmentInsert(
+                id: attachmentId,
                 workspaceId: workspaceId,
                 expenseId: expenseId,
                 uploadedByMembershipId: membershipId,
@@ -950,7 +1081,16 @@ struct SupabaseAttachmentRepository: AttachmentRepository {
                 fileSizeBytes: data.count,
                 storageKey: storageKey,
                 sha256: data.sha256Hex
-            )
+            ),
+            preferRepresentation: false
+        )
+        let rows: [AttachmentRow] = try await client.get(
+            "attachments",
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "id", value: "eq.\(attachmentId)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
         )
         guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
         return row.domain
@@ -1026,6 +1166,7 @@ private struct AttachmentRow: Decodable {
 }
 
 private struct AttachmentInsert: Encodable {
+    let id: String
     let workspaceId: String
     let expenseId: String
     let uploadedByMembershipId: String
@@ -1183,6 +1324,7 @@ private struct ProjectMembershipRow: Codable {
 }
 
 private struct ProjectInsert: Encodable {
+    let id: String
     let workspaceId: String
     let name: String
     let ownerMembershipId: String
@@ -1195,7 +1337,8 @@ private struct ProjectInsert: Encodable {
     let routingMode: ProjectRoutingMode
     let overBudgetBehavior: OverBudgetBehavior
 
-    init(project: DomainProject, ownerMembershipId: String) {
+    init(id: String, project: DomainProject, ownerMembershipId: String) {
+        self.id = id
         workspaceId = project.workspaceId
         name = project.name
         self.ownerMembershipId = ownerMembershipId
@@ -1272,6 +1415,7 @@ private struct SupabaseExpenseRow: Codable {
 }
 
 private struct ExpenseInsert: Encodable {
+    let id: String
     let workspaceId: String
     let projectId: String
     let submittedByMembershipId: String
@@ -1285,7 +1429,8 @@ private struct ExpenseInsert: Encodable {
     let purchaseDate: Date?
     let neededByDate: Date?
 
-    init(input: ExpenseDraftInput, submittedByMembershipId: String) {
+    init(id: String, input: ExpenseDraftInput, submittedByMembershipId: String) {
+        self.id = id
         workspaceId = input.workspaceId
         projectId = input.projectId
         self.submittedByMembershipId = submittedByMembershipId

@@ -67,7 +67,7 @@ struct ManagerOverviewView: View {
 
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(app.role == .finance ? "Finance view" : "Manager view")
+                Text(app.role == .admin ? "Admin view" : app.role == .finance ? "Finance view" : "Manager view")
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
                 Text("Overview").font(.system(size: 26, weight: .bold))
             }
@@ -132,11 +132,18 @@ struct ManagerOverviewView: View {
                 )
             }
 
-            if repositoryApp.foreignCurrencyExpenseCount > 0 {
-                Text("Totals are in \(workspaceCurrency). \(repositoryApp.foreignCurrencyExpenseCount) expense(s) in other currencies are not included.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 4)
+            if repositoryApp.convertedForeignExpenseCount > 0 || repositoryApp.unconvertibleExpenseCount > 0 {
+                VStack(alignment: .leading, spacing: 2) {
+                    if repositoryApp.convertedForeignExpenseCount > 0 {
+                        Text("\(repositoryApp.convertedForeignExpenseCount) expense(s) converted to \(workspaceCurrency) at approximate rates.")
+                    }
+                    if repositoryApp.unconvertibleExpenseCount > 0 {
+                        Text("\(repositoryApp.unconvertibleExpenseCount) expense(s) excluded — currency not supported.")
+                    }
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+                .padding(.horizontal, 4)
             }
 
             Text("Project budgets")

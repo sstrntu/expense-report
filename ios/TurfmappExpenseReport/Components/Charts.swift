@@ -59,19 +59,62 @@ struct DonutChart: View {
 }
 
 struct BarsChart: View {
-    struct Bar: Hashable { let label: String; let value: Double }
+    struct Segment: Hashable {
+        let value: Double
+        let color: Color
+    }
+    struct Bar: Hashable {
+        let label: String
+        let segments: [Segment]
+
+        /// Legacy single-segment + projected initializer kept so existing
+        /// call sites don't have to change. Treats `value` as one segment
+        /// and `projected` as a second stacked segment above it.
+        init(label: String, value: Double, projected: Double = 0,
+             color: Color = Tokens.slate500, projectedColor: Color = Tokens.purchased) {
+            self.label = label
+            var segs: [Segment] = []
+            if value > 0 { segs.append(Segment(value: value, color: color)) }
+            if projected > 0 { segs.append(Segment(value: projected, color: projectedColor)) }
+            self.segments = segs
+        }
+
+        /// Multi-segment initializer. Segments stack bottom-to-top in the
+        /// order given.
+        init(label: String, segments: [Segment]) {
+            self.label = label
+            self.segments = segments
+        }
+
+        var value: Double { segments.reduce(0) { $0 + $1.value } }
+    }
     let bars: [Bar]
-    var color: Color = Tokens.slate500
     var height: CGFloat = 110
 
     var body: some View {
         let maxV = bars.map(\.value).max() ?? 1
+        let chartH = height - 18
         HStack(alignment: .bottom, spacing: 8) {
             ForEach(bars, id: \.self) { b in
+                let totalH = max(0, CGFloat(b.value / maxV) * chartH)
                 VStack(spacing: 6) {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(LinearGradient(colors: [color, color.opacity(0.6)], startPoint: .top, endPoint: .bottom))
-                        .frame(height: max(4, CGFloat(b.value / maxV) * (height - 18)))
+                    if b.segments.isEmpty {
+                        // Empty placeholder so bars without data still take their column.
+                        Color.clear.frame(height: 4)
+                    } else {
+                        VStack(spacing: 0) {
+                            // Segments stack top-to-bottom visually, so reverse to
+                            // render the first-added segment on the bottom.
+                            ForEach(Array(b.segments.reversed().enumerated()), id: \.offset) { _, seg in
+                                Rectangle()
+                                    .fill(LinearGradient(colors: [seg.color, seg.color.opacity(0.65)],
+                                                         startPoint: .top, endPoint: .bottom))
+                                    .frame(height: max(0, CGFloat(seg.value / maxV) * chartH))
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .frame(height: max(4, totalH))
+                    }
                     Text(b.label)
                         .font(.system(size: 9.5, weight: .medium))
                         .foregroundStyle(.secondary)

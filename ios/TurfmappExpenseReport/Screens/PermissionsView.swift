@@ -103,6 +103,24 @@ struct PermissionsView: View {
                 }
             }
 
+            Text("Role capabilities").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
+
+            GlassCard(padding: 0) {
+                VStack(spacing: 0) {
+                    roleCapabilityRow("Employee", icon: "person.fill", tint: Tokens.slate500,
+                                      description: "Submit expenses and track their status")
+                    Divider().opacity(0.4)
+                    roleCapabilityRow("Manager", icon: "checkmark.shield.fill", tint: Tokens.approved,
+                                      description: "Approve or reject expenses above the auto-approve threshold")
+                    Divider().opacity(0.4)
+                    roleCapabilityRow("Finance", icon: "banknote.fill", tint: Tokens.aiPurple,
+                                      description: "Mark expenses as reimbursed and handle finance review")
+                    Divider().opacity(0.4)
+                    roleCapabilityRow("Admin", icon: "crown.fill", tint: Tokens.pending,
+                                      description: "Full access — invite members, manage projects, configure workspace")
+                }
+            }
+
             Text("Approval policy").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
 
             GlassCard(padding: 16) {
@@ -133,6 +151,22 @@ struct PermissionsView: View {
         } message: {
             Text("\(memberToRemove?.displayName ?? "This member") will lose access to \(repositoryApp.selectedWorkspace?.name ?? app.company.name).")
         }
+    }
+
+    private func roleCapabilityRow(_ title: String, icon: String, tint: Color, description: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 32, height: 32)
+                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.system(size: 13, weight: .semibold))
+                Text(description).font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14).padding(.vertical, 11)
     }
 
     private func memberRow(_ m: DomainWorkspaceMember) -> some View {

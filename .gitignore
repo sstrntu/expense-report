@@ -24,3 +24,6 @@ supabase/functions/.env
 supabase/functions/.env.*
 !supabase/functions/.env.example
 ios/TurfmappExpenseReport/Config/*.local.xcconfig
+
+# Supabase CLI session state
+supabase/.temp/

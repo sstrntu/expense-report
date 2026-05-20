@@ -4,6 +4,7 @@ struct ReviewView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onOpen: (DomainExpense) -> Void
+    @State private var projectHistory: ProjectHistoryContext? = nil
 
     private var pending: [DomainExpense] {
         app.role.canApproveExpenses ? repositoryApp.managerQueue : []
@@ -13,11 +14,30 @@ struct ReviewView: View {
         app.role.canReimburseExpenses ? repositoryApp.financeQueue : []
     }
 
+    /// Surfaced to anyone who can approve or reimburse — visibility only, not actionable from here.
+    private var awaitingPurchase: [DomainExpense] {
+        (app.role.canApproveExpenses || app.role.canReimburseExpenses) ? repositoryApp.awaitingPurchaseQueue : []
+    }
+
+    /// Projects that have any past/archived expenses (reimbursed, cancelled, rejected, archived).
+    /// Used to build the always-visible history browser at the bottom of Review.
+    private var projectsWithHistory: [(project: DomainProject, count: Int)] {
+        repositoryApp.projects.map { project in
+            let count = repositoryApp.expenses.filter {
+                $0.projectId == project.id &&
+                ($0.isArchived || [.reimbursed, .cancelled, .rejected, .archived].contains($0.status))
+            }.count
+            return (project, count)
+        }
+        .filter { $0.count > 0 }
+        .sorted { $0.count > $1.count }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Review").font(.system(size: 26, weight: .bold))
-                Text("\(pending.count) approval\(pending.count == 1 ? "" : "s") · \(financeQueue.count) reimbursement\(financeQueue.count == 1 ? "" : "s")")
+                Text("\(pending.count) approval\(pending.count == 1 ? "" : "s") · \(financeQueue.count) reimbursement\(financeQueue.count == 1 ? "" : "s") · \(awaitingPurchase.count) awaiting purchase")
                     .font(.system(size: 13)).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 4).padding(.top, 4)
@@ -39,7 +59,7 @@ struct ReviewView: View {
                 .buttonStyle(.plain)
             }
 
-            if pending.isEmpty && financeQueue.isEmpty {
+            if pending.isEmpty && financeQueue.isEmpty && awaitingPurchase.isEmpty {
                 GlassCard(padding: 24) {
                     VStack(spacing: 6) {
                         Image(systemName: "checkmark.circle").font(.system(size: 28)).foregroundStyle(Tokens.approved)
@@ -55,10 +75,72 @@ struct ReviewView: View {
                 if !financeQueue.isEmpty {
                     queueSection(title: "Finance reimbursement", items: financeQueue, tint: Tokens.reimbursed)
                 }
+                if !awaitingPurchase.isEmpty {
+                    queueSection(title: "Awaiting purchase", items: awaitingPurchase, tint: Tokens.purchased)
+                }
+            }
+
+            if !projectsWithHistory.isEmpty {
+                pastActivitySection
             }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
+        .sheet(item: $projectHistory) { ctx in
+            ProjectHistorySheet(
+                projectId: ctx.projectId,
+                projectName: ctx.projectName,
+                onOpen: { e in
+                    projectHistory = nil
+                    onOpen(e)
+                }
+            )
+            .environmentObject(repositoryApp)
+            .presentationDetents([.large])
+        }
+    }
+
+    private var pastActivitySection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("PAST & ARCHIVED")
+                    .font(.system(size: 11, weight: .semibold)).tracking(0.6)
+                    .foregroundStyle(.tertiary)
+                Spacer()
+            }
+            .padding(.horizontal, 4)
+
+            GlassCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(projectsWithHistory.enumerated()), id: \.element.project.id) { idx, item in
+                        if idx > 0 { Divider().opacity(0.4) }
+                        Button {
+                            projectHistory = ProjectHistoryContext(
+                                projectId: item.project.id,
+                                projectName: item.project.name
+                            )
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(Tokens.slate500)
+                                    .frame(width: 32, height: 32)
+                                    .background(Tokens.slate500.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(item.project.name).font(.system(size: 13.5, weight: .semibold))
+                                    Text("\(item.count) past · reimbursed, cancelled, rejected, archived")
+                                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
     }
 
     private func queueSection(title: String, items: [DomainExpense], tint: Color) -> some View {
@@ -76,30 +158,141 @@ struct ReviewView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, e in
                         if idx > 0 { Divider().opacity(0.4) }
-                        Button { onOpen(e) } label: {
-                            HStack(spacing: 12) {
-                                Text(e.icon)
-                                    .font(.system(size: 18))
-                                    .frame(width: 40, height: 40)
-                                    .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+                        HStack(spacing: 12) {
+                            Text(e.icon)
+                                .font(.system(size: 18))
+                                .frame(width: 40, height: 40)
+                                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
 
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(e.merchant).font(.system(size: 13.5, weight: .semibold))
-                                    Text("\(e.categoryLabel) · \(e.displayDate)")
-                                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                VStack(alignment: .trailing, spacing: 2) {
-                                    Text(e.amount.formatted).font(.system(size: 14, weight: .bold))
-                                    Text(e.projectName(in: repositoryApp.projects)).font(.system(size: 10.5)).foregroundStyle(.tertiary)
-                                }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(e.merchant).font(.system(size: 13.5, weight: .semibold))
+                                Text("\(repositoryApp.categoryName(forId: e.categoryId)) · \(e.displayDate)")
+                                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                                StatusPill(text: e.status.displayLabel, tint: tint)
                             }
-                            .padding(.horizontal, 14).padding(.vertical, 14)
+                            .contentShape(Rectangle())
+                            .onTapGesture { onOpen(e) }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(e.amount.formatted).font(.system(size: 14, weight: .bold))
+                                Button {
+                                    if let project = repositoryApp.projects.first(where: { $0.id == e.projectId }) {
+                                        projectHistory = ProjectHistoryContext(projectId: project.id, projectName: project.name)
+                                    }
+                                } label: {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "clock.arrow.circlepath").font(.system(size: 9, weight: .semibold))
+                                        Text(e.projectName(in: repositoryApp.projects)).font(.system(size: 10.5, weight: .medium))
+                                    }
+                                    .foregroundStyle(Tokens.slate500)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 14).padding(.vertical, 14)
+                        .contentShape(Rectangle())
+                        .onTapGesture { onOpen(e) }
                     }
                 }
             }
         }
+    }
+}
+
+struct ProjectHistoryContext: Identifiable {
+    let id = UUID()
+    let projectId: String
+    let projectName: String
+}
+
+struct ProjectHistorySheet: View {
+    @EnvironmentObject var repositoryApp: RepositoryAppState
+    let projectId: String
+    let projectName: String
+    var onOpen: (DomainExpense) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private var history: [DomainExpense] {
+        repositoryApp.expenses
+            .filter { $0.projectId == projectId }
+            .filter { e in
+                e.isArchived ||
+                [.reimbursed, .cancelled, .rejected, .archived].contains(e.status)
+            }
+            .sorted { ($0.submittedAt ?? $0.createdAt) > ($1.submittedAt ?? $1.createdAt) }
+    }
+
+    private var totals: (count: Int, amount: Double) {
+        let amount = history
+            .filter { $0.amount.currency == repositoryApp.aggregationCurrency }
+            .reduce(0) { $0 + $1.amount.decimalValue }
+        return (history.count, amount)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(projectName).font(.system(size: 20, weight: .bold))
+                    Text("Past & archived expenses").font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).frame(width: 32, height: 32)
+                }
+                .buttonStyle(.plain)
+                .background(Color.primary.opacity(0.06), in: Circle())
+            }
+            .padding(.top, 24).padding(.horizontal, 20)
+
+            HStack(spacing: 10) {
+                summaryTile(label: "ENTRIES", value: "\(totals.count)")
+                summaryTile(label: "TOTAL",
+                            value: money(totals.amount, currency: repositoryApp.aggregationCurrency))
+            }
+            .padding(.horizontal, 20)
+
+            ScrollView {
+                if history.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "archivebox")
+                            .font(.system(size: 24, weight: .semibold)).foregroundStyle(.secondary)
+                        Text("No past or archived expenses").font(.system(size: 14, weight: .semibold))
+                        Text("Reimbursed, cancelled, rejected, or archived expenses for this project will show here.")
+                            .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 28).padding(.vertical, 36)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(history.enumerated()), id: \.element.id) { idx, expense in
+                            if idx > 0 { Divider().opacity(0.4) }
+                            Button { onOpen(expense) } label: {
+                                DomainExpenseRow(
+                                    expense: expense,
+                                    projects: repositoryApp.projects,
+                                    categories: repositoryApp.categories
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                    .padding(.horizontal, 20)
+                }
+            }
+        }
+    }
+
+    private func summaryTile(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.system(size: 10, weight: .semibold)).tracking(0.6).foregroundStyle(.tertiary)
+            Text(value).font(.system(size: 18, weight: .bold))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
     }
 }

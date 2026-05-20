@@ -16,6 +16,10 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<!-- HTTPS-only (Supabase, Resend). Declaring no non-exempt encryption
+	     skips the App Store Connect export-compliance question per release. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan receipts to automatically extract expense details.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

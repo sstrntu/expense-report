@@ -40,7 +40,7 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
 
-            if role != .employee {
+            if role == .manager || role == .admin {
                 sectionHeader("Workspace admin")
                 GlassCard(padding: 0) {
                     VStack(spacing: 0) {
@@ -55,6 +55,14 @@ struct ProfileView: View {
                         navRow(icon: "shield.fill",  label: "Permissions",
                                sub: "\(repositoryApp.members.count) members · 4 roles")        { onNav("permissions") }
                     }
+                }
+            }
+
+            if role == .finance || role == .admin {
+                sectionHeader("Finance")
+                GlassCard(padding: 0) {
+                    navRow(icon: "banknote.fill", label: "Reimbursement queue",
+                           sub: "Mark expenses as paid, handle finance review") { onNav("review") }
                 }
             }
 
@@ -74,13 +82,11 @@ struct ProfileView: View {
                            sub: "Password, sessions, recovery") { onNav("security") }
                     Divider().opacity(0.4)
                     navRow(icon: "gearshape.fill", label: "Preferences",
-                           sub: "Theme, currency, export format") { onNav("preferences") }
+                           sub: "Theme, currency, export format",
+                           comingSoon: true) {}
                     Divider().opacity(0.4)
                     navRow(icon: "doc.text.fill", label: "Reports & export",
-                           sub: "CSV, PDF, monthly summaries") { onNav("reports") }
-                    Divider().opacity(0.4)
-                    navRow(icon: "wifi.exclamationmark", label: "System states",
-                           sub: "Loading, offline, empty, retry") { onNav("systemStates") }
+                           sub: "CSV export available · PDF coming soon") { onNav("reports") }
                     Divider().opacity(0.4)
                     navRow(icon: "questionmark.circle.fill", label: "Help & support") { onNav("help") }
                     Divider().opacity(0.4)
@@ -88,27 +94,16 @@ struct ProfileView: View {
                 }
             }
 
-            if role == .employee {
-                GlassCard(padding: 14) {
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "person.fill")
-                            .foregroundStyle(Tokens.slate500)
-                            .font(.system(size: 14, weight: .semibold))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("Employee access").font(.system(size: 12.5, weight: .semibold))
-                            Text("Permissions are assigned by a manager or admin.")
-                                .font(.system(size: 11)).foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            } else {
-                sectionHeader("Access")
-                GlassCard(padding: 14) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        roleScopeRow("Manager", "Review queue, approve/reject, manage projects and policies", active: role == .manager)
-                        Divider().opacity(0.4)
-                        roleScopeRow("Admin", "Invite members, remove users, manage policies and reports", active: role == .admin)
-                    }
+            sectionHeader("Access")
+            GlassCard(padding: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    roleScopeRow("Employee", "Submit expenses and track reimbursement status", icon: "person.fill", active: role == .employee)
+                    Divider().opacity(0.4)
+                    roleScopeRow("Manager", "Approve or reject expenses above the auto-approve threshold", icon: "checkmark.shield.fill", active: role == .manager)
+                    Divider().opacity(0.4)
+                    roleScopeRow("Finance", "Mark expenses as reimbursed and handle finance review", icon: "banknote.fill", active: role == .finance)
+                    Divider().opacity(0.4)
+                    roleScopeRow("Admin", "Full access — invite members, remove users, configure workspace", icon: "crown.fill", active: role == .admin)
                 }
             }
 
@@ -121,13 +116,14 @@ struct ProfileView: View {
         .padding(.bottom, 100)
     }
 
-    private func roleScopeRow(_ title: String, _ subtitle: String, active: Bool) -> some View {
+    private func roleScopeRow(_ title: String, _ subtitle: String, icon: String, active: Bool) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: active ? "checkmark.circle.fill" : "circle")
                 .foregroundStyle(active ? Tokens.approved : Color.secondary.opacity(0.45))
                 .font(.system(size: 14, weight: .semibold))
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(active ? Color.primary : Color.secondary)
                 Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
             }
         }
@@ -156,32 +152,46 @@ struct ProfileView: View {
 
     private func navRow(icon: String, label: String, sub: String? = nil,
                         tint: Color? = nil, chevron: Bool = true,
+                        comingSoon: Bool = false,
                         action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(tint ?? .secondary)
+                    .foregroundStyle(comingSoon ? Color.secondary.opacity(0.5) : (tint ?? .secondary))
                     .frame(width: 32, height: 32)
                     .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(label)
-                        .font(.system(size: 13.5, weight: .medium))
-                        .foregroundStyle(tint ?? .primary)
+                    HStack(spacing: 6) {
+                        Text(label)
+                            .font(.system(size: 13.5, weight: .medium))
+                            .foregroundStyle(comingSoon ? Color.secondary : (tint ?? .primary))
+                        if comingSoon {
+                            Text("Coming soon")
+                                .font(.system(size: 9, weight: .semibold))
+                                .tracking(0.4)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Color.primary.opacity(0.08), in: Capsule())
+                        }
+                    }
                     if let sub {
                         Text(sub).font(.system(size: 11)).foregroundStyle(.tertiary)
                     }
                 }
                 Spacer()
-                if chevron {
+                if chevron && !comingSoon {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
+            .opacity(comingSoon ? 0.55 : 1)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(comingSoon)
     }
 }
 

@@ -21,6 +21,7 @@
 		40834B5A7CB85792D6B041B7 /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */; };
 		443FA1297503350D3A53D578 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231934AADFA8013182DE19B6 /* StatusPill.swift */; };
 		45A49085C87D7679952C460E /* PermissionMatrixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DA4C973EC4A0EC46FB9BA9D /* PermissionMatrixTests.swift */; };
+		4D237D0C9EBF4614E552C27D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */; };
 		4DDED493FFFA0D6DAAFE572B /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB435F138568CD4F6440FBDF /* DashboardView.swift */; };
 		5A6E411E3F13C60CE06D5433 /* Avatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4CB3A46FA47E4715A510B1 /* Avatar.swift */; };
 		5D5D8C1FC9CA7F24D41815A7 /* RootShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 536DAABDF76A6F8DFD29DEEF /* RootShell.swift */; };
@@ -39,6 +40,7 @@
 		D81A57A8F08D8D3AD7B5844E /* DomainDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B488DCADA8C68BFA0360E5C /* DomainDetailView.swift */; };
 		D9CB48D5495FA003F53A9239 /* SupabaseRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = E267442BEA226AA91190BCA2 /* SupabaseRepositories.swift */; };
 		E4E2E3CF2031D2A9C6B0A3CD /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C580869F5B6FF78D1128C4E /* Tokens.swift */; };
+		EB6D7FEB39BE53D706FD6259 /* CurrencyConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1318FEF50B5EA3EAB23F8E7F /* CurrencyConverter.swift */; };
 		EBDA7A1CA4F408572CA28FAB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DBA109009158416677C78BCB /* Assets.xcassets */; };
 		F2A21797BBFB2DFBB4576CA6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E14C7927495CDE1F99FD155 /* Models.swift */; };
 /* End PBXBuildFile section */
@@ -57,6 +59,7 @@
 		057E30DAAC213F6C11654F4F /* ExpenseWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseWorkflow.swift; sourceTree = "<group>"; };
 		0B483F7B06ED933848952D5F /* DomainPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainPresentation.swift; sourceTree = "<group>"; };
 		0E14C7927495CDE1F99FD155 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		1318FEF50B5EA3EAB23F8E7F /* CurrencyConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyConverter.swift; sourceTree = "<group>"; };
 		231934AADFA8013182DE19B6 /* StatusPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPill.swift; sourceTree = "<group>"; };
 		2360D5D3F26299AE4D322585 /* TurfmappExpenseReport.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TurfmappExpenseReport.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		29437C36AF260B6783FA3947 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
@@ -86,6 +89,7 @@
 		D6FB9F6D29FAAFB56DE2D00A /* TurfmappExpenseReportTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TurfmappExpenseReportTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB435F138568CD4F6440FBDF /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		DBA109009158416677C78BCB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E22F66287D08F237A93AEE5B /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
 		E267442BEA226AA91190BCA2 /* SupabaseRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseRepositories.swift; sourceTree = "<group>"; };
 		E6C1348EECDE16A1827E2010 /* RepositoryAppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryAppState.swift; sourceTree = "<group>"; };
@@ -117,6 +121,7 @@
 			children = (
 				DBA109009158416677C78BCB /* Assets.xcassets */,
 				67A7AB0D0FD25CE844CAF051 /* Info.plist */,
+				DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */,
 				6F096F243857EBABB4129FEC /* TurfmappExpenseReportApp.swift */,
 				5DB722DD20EF464B46CAF8A1 /* Components */,
 				7B8012651CA7FE1D3BCB2FCC /* Config */,
@@ -180,6 +185,7 @@
 		88620CAAF6200DD5130B19A9 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				1318FEF50B5EA3EAB23F8E7F /* CurrencyConverter.swift */,
 				0B483F7B06ED933848952D5F /* DomainPresentation.swift */,
 				057E30DAAC213F6C11654F4F /* ExpenseWorkflow.swift */,
 				0E14C7927495CDE1F99FD155 /* Models.swift */,
@@ -302,6 +308,7 @@
 			files = (
 				0982BE8186C0B5D411254834 /* AppConfig.local.xcconfig.example in Resources */,
 				EBDA7A1CA4F408572CA28FAB /* Assets.xcassets in Resources */,
+				4D237D0C9EBF4614E552C27D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -318,6 +325,7 @@
 				5A6E411E3F13C60CE06D5433 /* Avatar.swift in Sources */,
 				73A10FB553C3D1261061CB5D /* BottomTabBar.swift in Sources */,
 				C6DD40BF0F22226F17CD100B /* Charts.swift in Sources */,
+				EB6D7FEB39BE53D706FD6259 /* CurrencyConverter.swift in Sources */,
 				4DDED493FFFA0D6DAAFE572B /* DashboardView.swift in Sources */,
 				741A4BD84FE8A4F61135B0D5 /* DetailView.swift in Sources */,
 				D81A57A8F08D8D3AD7B5844E /* DomainDetailView.swift in Sources */,

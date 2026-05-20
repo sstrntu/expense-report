@@ -149,7 +149,7 @@ struct HomeView: View {
                 VStack(spacing: 0) {
                 ForEach(Array(repositoryApp.expenses.prefix(4).enumerated()), id: \.element.id) { idx, e in
                     if idx > 0 { Divider().opacity(0.4) }
-                    Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects) }
+                    Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects, categories: repositoryApp.categories) }
                         .buttonStyle(.plain)
                 }
             }
@@ -210,6 +210,11 @@ struct ExpenseRow: View {
 struct DomainExpenseRow: View {
     let expense: DomainExpense
     let projects: [DomainProject]
+    var categories: [DomainCategory] = []
+
+    private var categoryName: String {
+        categories.first { $0.id == expense.categoryId }?.name ?? expense.categoryLabel
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -218,7 +223,7 @@ struct DomainExpenseRow: View {
                 .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
             VStack(alignment: .leading, spacing: 1) {
                 Text(expense.merchant).font(.system(size: 13.5, weight: .semibold))
-                Text("\(expense.categoryLabel) · \(expense.displayDate)")
+                Text("\(categoryName) · \(expense.displayDate)")
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)
             }
             Spacer()
@@ -255,30 +260,90 @@ struct DomainProjectRow: View {
     let project: DomainProject
     let expenses: [DomainExpense]
 
+    private static let paidStatuses: Set<ExpenseWorkflowStatus> = [.reimbursed]
+    private static let pendingStatuses: Set<ExpenseWorkflowStatus> = [
+        .submitted, .pendingManagerApproval, .approved,
+        .purchaseConfirmed, .pendingFinanceReview, .readyForReimbursement
+    ]
+
     /// Only count expenses that share the project's currency. No conversion.
-    private var spent: Double {
-        expenses
-            .filter { $0.projectId == project.id
-                      && $0.amount.currency == project.budget.currency
-                      && [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
+    private var projectExpenses: [DomainExpense] {
+        expenses.filter { $0.projectId == project.id && $0.amount.currency == project.budget.currency }
+    }
+
+    private var paid: Double {
+        projectExpenses
+            .filter { Self.paidStatuses.contains($0.status) }
             .reduce(0) { $0 + $1.amount.decimalValue }
     }
 
-    private var progress: Double {
-        min(spent / max(project.budget.decimalValue, 1), 1)
+    private var pending: Double {
+        projectExpenses
+            .filter { Self.pendingStatuses.contains($0.status) }
+            .reduce(0) { $0 + $1.amount.decimalValue }
     }
 
+    private var committed: Double { paid + pending }
+
+    private var budget: Double { project.budget.decimalValue }
+
+    private var isOverBudget: Bool { committed > budget && budget > 0 }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(project.name).font(.system(size: 12.5, weight: .medium))
+                if isOverBudget {
+                    StatusPill(text: "Over budget", tint: Tokens.rejected, leadingIcon: "exclamationmark.triangle.fill")
+                }
                 Spacer()
-                Text("\(MoneyAmount.format(amount: spent, currency: project.budget.currency)) / \(project.budget.formatted)")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                Text("\(MoneyAmount.format(amount: committed, currency: project.budget.currency)) / \(project.budget.formatted)")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(isOverBudget ? Tokens.rejected : .secondary)
             }
-            ProgressView(value: progress)
-                .progressViewStyle(.linear)
-                .tint(Tokens.slate500)
+
+            // Two-segment progress bar: paid (solid) + pending (lighter). Both clip to the
+            // bar width; an extra "over" red tail shows whenever committed > budget.
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                let cap = max(budget, committed)
+                let paidW   = cap > 0 ? CGFloat(paid / cap) * width : 0
+                let pendW   = cap > 0 ? CGFloat(pending / cap) * width : 0
+                let budgetX = cap > 0 ? CGFloat(budget / cap) * width : width
+
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.primary.opacity(0.08))
+                    HStack(spacing: 0) {
+                        Capsule().fill(Tokens.slate500).frame(width: paidW)
+                        Capsule().fill(Tokens.purchased.opacity(0.7)).frame(width: pendW)
+                    }
+                    .clipShape(Capsule())
+                    if isOverBudget {
+                        Rectangle()
+                            .fill(Tokens.rejected.opacity(0.8))
+                            .frame(width: 1.5)
+                            .offset(x: budgetX - 0.75)
+                    }
+                }
+                .frame(height: 6)
+            }
+            .frame(height: 6)
+
+            if pending > 0 || isOverBudget {
+                HStack(spacing: 10) {
+                    breakdownChip(label: "Paid", value: paid, tint: Tokens.slate500)
+                    breakdownChip(label: "Pending", value: pending, tint: Tokens.purchased)
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    private func breakdownChip(label: String, value: Double, tint: Color) -> some View {
+        HStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 2).fill(tint).frame(width: 6, height: 6)
+            Text("\(label) \(MoneyAmount.format(amount: value, currency: project.budget.currency))")
+                .font(.system(size: 10.5)).foregroundStyle(.secondary)
         }
     }
 }

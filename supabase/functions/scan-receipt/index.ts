@@ -1,19 +1,9 @@
 // Supabase Edge Function: scan-receipt
+// Extracts merchant/amount/currency/date/category from a receipt via OpenAI
+// vision and persists into turfmapp_expenses.receipt_scans/_fields.
 //
-// Extracts merchant / amount / currency / date / category from a receipt
-// image or PDF using an OpenAI vision model, and persists the result into
-// public.receipt_scans + public.receipt_scan_fields so the iOS app can read
-// it back and let the user confirm fields.
-//
-// Required secret:
-//   OPENAI_API_KEY   API key for the OpenAI vision model.
-// Optional secrets:
-//   OPENAI_MODEL                     Defaults to "gpt-4o-mini".
-//   SUPABASE_STORAGE_RECEIPT_BUCKET  Defaults to "receipts".
-//
-// config.toml sets verify_jwt = true, so the caller's JWT is validated and
-// forwarded. All DB/Storage access uses a user-scoped client and therefore
-// stays under the caller's RLS policies.
+// Required secret: OPENAI_API_KEY. Optional: OPENAI_MODEL (default gpt-4o-mini),
+// SUPABASE_STORAGE_RECEIPT_BUCKET (default receipts).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
@@ -55,20 +45,17 @@ Deno.serve(async (req) => {
   let attachmentId: string;
   try {
     const body = await req.json();
-    // The iOS client encodes with convertToSnakeCase -> "attachment_id".
     attachmentId = body.attachment_id ?? body.attachmentId;
     if (!attachmentId) return json({ error: "attachment_id is required" }, 400);
   } catch {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  // User-scoped client: every query/storage read respects the caller's RLS.
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     db: { schema: "turfmapp_expenses" },
     global: { headers: { Authorization: authHeader } },
   });
 
-  // 1. Resolve the attachment the caller is allowed to see.
   const { data: attachment, error: attachmentError } = await supabase
     .from("attachments")
     .select("id, expense_id, workspace_id, storage_key, content_type")
@@ -80,7 +67,6 @@ Deno.serve(async (req) => {
     return json({ error: "Attachment not found or not accessible" }, 404);
   }
 
-  // 2. Open the scan row in a processing state.
   const { data: scan, error: scanError } = await supabase
     .from("receipt_scans")
     .insert({
@@ -116,7 +102,6 @@ Deno.serve(async (req) => {
     return await fail("Receipt scanning is not configured (missing OPENAI_API_KEY secret).");
   }
 
-  // 3. Download the receipt bytes from the private bucket.
   const { data: file, error: downloadError } = await supabase.storage
     .from(RECEIPT_BUCKET)
     .download(attachment.storage_key);
@@ -135,7 +120,6 @@ Deno.serve(async (req) => {
   const mime = attachment.content_type || "image/jpeg";
   const dataUrl = `data:${mime};base64,${base64}`;
 
-  // 4. Ask the vision model for structured fields.
   let extracted: Record<string, string> = {};
   try {
     const completion = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -178,7 +162,6 @@ Deno.serve(async (req) => {
     return await fail(`Scan failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // 5. Persist fields and mark the scan ready for human review.
   const value = (key: string) => String(extracted[key] ?? "").trim();
   const rows = [
     { field_name: "merchant", extracted_value: value("merchant") },

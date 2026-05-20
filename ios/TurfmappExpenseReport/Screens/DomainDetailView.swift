@@ -3,6 +3,7 @@ import SwiftUI
 struct DomainDetailView: View {
     let expense: DomainExpense
     let projects: [DomainProject]
+    var categories: [DomainCategory] = []
     let events: [ExpenseWorkflowEvent]
     var role: AppRole
     var onBack: () -> Void
@@ -14,11 +15,13 @@ struct DomainDetailView: View {
     var onMarkReimbursed: (PaymentMethod, String?) -> Void
     var onArchive: () -> Void
     var onDelete: () -> Void
+    var onAttachReceipt: (Data, String, String) -> Void = { _, _, _ in }
 
     @State private var showPurchaseSheet = false
     @State private var showReimbursedSheet = false
     @State private var showRejectSheet = false
     @State private var showDeleteConfirm = false
+    @State private var showReceiptSource = false
     @State private var previewReceipt: ReceiptPreview? = nil
 
     private var projectName: String { expense.projectName(in: projects) }
@@ -58,6 +61,13 @@ struct DomainDetailView: View {
         .sheet(item: $previewReceipt) { receipt in
             ReceiptPreviewSheet(receipt: receipt)
                 .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showReceiptSource) {
+            ReceiptSourceSheet { data, fileName, contentType in
+                showReceiptSource = false
+                onAttachReceipt(data, fileName, contentType)
+            }
+            .presentationDetents([.height(240)])
         }
         .confirmationDialog("Delete \"\(expense.merchant)\"?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { onDelete() }
@@ -131,7 +141,7 @@ struct DomainDetailView: View {
             VStack(spacing: 0) {
                 FormFieldRow(label: "Type", value: expense.kind.label, showChevron: false)
                 Divider().opacity(0.4)
-                FormFieldRow(label: "Category", value: expense.categoryLabel)
+                FormFieldRow(label: "Category", value: categories.first { $0.id == expense.categoryId }?.name ?? expense.categoryLabel)
                 Divider().opacity(0.4)
                 FormFieldRow(label: "Project", value: projectName)
                 Divider().opacity(0.4)
@@ -154,6 +164,25 @@ struct DomainDetailView: View {
                     Divider().opacity(0.4)
                     receiptRow(title: "Reimbursement proof", file: "reimbursement_proof.pdf", tint: Tokens.reimbursed)
                 }
+                Divider().opacity(0.4)
+                Button { showReceiptSource = true } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Tokens.slate500)
+                            .frame(width: 32, height: 32)
+                            .background(Tokens.slate500.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Add receipt").font(.system(size: 13.5, weight: .semibold))
+                            Text("Take a photo or pick from library").font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -275,7 +304,7 @@ struct DomainDetailView: View {
                 }
             }
         case .approved:
-            if role == .employee && expense.kind == .preApproval {
+            if (role == .employee || role == .admin) && expense.kind == .preApproval {
                 Button { showPurchaseSheet = true } label: {
                     Label("I Made the Purchase", systemImage: "bag.fill")
                         .font(.system(size: 15, weight: .semibold))
@@ -284,6 +313,15 @@ struct DomainDetailView: View {
                 }
                 .buttonStyle(.plain)
                 .background(Tokens.purchased, in: RoundedRectangle(cornerRadius: 14))
+            } else if role.canReimburseExpenses && expense.kind != .preApproval {
+                Button { showReimbursedSheet = true } label: {
+                    Label("Mark as Reimbursed", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity).padding(16)
+                }
+                .buttonStyle(.plain)
+                .background(Tokens.reimbursed, in: RoundedRectangle(cornerRadius: 14))
             } else {
                 statusInfoCard(icon: "clock", tint: Tokens.approved, title: "Approved", message: "Waiting for the next workflow step.")
             }

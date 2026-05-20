@@ -5,8 +5,38 @@ struct RootShell: View {
     @StateObject private var repositoryApp = RepositoryAppState()
     @State private var selectedTab: TabID = .home
     @State private var navStack: [NavRoute] = []
+    /// Tracks whether we've finished the launch-time session restore. We
+    /// hold the UI on a launch screen during this window so a returning user
+    /// doesn't see the AuthView flash before their saved session resolves.
+    @State private var launchState: LaunchState = .restoring
+
+    private enum LaunchState { case restoring, ready }
 
     var body: some View {
+        Group {
+            switch launchState {
+            case .restoring:
+                launchSplash
+            case .ready:
+                routedBody
+            }
+        }
+        .task {
+            await restoreSession()
+        }
+    }
+
+    private var launchSplash: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text("Loading…").font(.system(size: 12)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .appBackground()
+    }
+
+    @ViewBuilder
+    private var routedBody: some View {
         if !app.isAuthenticated {
             AuthView()
                 .environmentObject(app)
@@ -25,6 +55,30 @@ struct RootShell: View {
             appShell
                 .environmentObject(repositoryApp)
         }
+    }
+
+    /// Resume the previous session if one is persisted, then hand off to
+    /// `routedBody`. If restore fails we land on AuthView the same as a
+    /// fresh install.
+    private func restoreSession() async {
+        if await repositoryApp.restoreSession() {
+            await repositoryApp.bootstrap()
+            if let workspace = repositoryApp.selectedWorkspace {
+                app.signIn(email: repositoryApp.currentUserProfile?.email ?? "",
+                           needsSetup: false,
+                           role: workspace.currentUserRole.appRole)
+                app.company = workspace.legacyCompany
+            } else {
+                // Authenticated but hasn't created/joined a workspace yet.
+                app.signIn(email: repositoryApp.currentUserProfile?.email ?? "",
+                           needsSetup: true)
+            }
+            if let profile = repositoryApp.currentUserProfile {
+                if app.userName.isEmpty { app.userName = profile.displayName }
+                if app.userEmail.isEmpty { app.userEmail = profile.email }
+            }
+        }
+        launchState = .ready
     }
 
     private var appShell: some View {
@@ -46,6 +100,7 @@ struct RootShell: View {
                     screenContent
                 }
             }
+            .refreshable { await repositoryApp.refresh() }
             .zIndex(5)
 
             // Bottom tab bar (hidden when on add/stack screens)
@@ -58,13 +113,6 @@ struct RootShell: View {
         .onChange(of: app.role) { _, _ in
             selectedTab = .home
             navStack = []
-        }
-        .task {
-            await repositoryApp.bootstrap()
-            if let profile = repositoryApp.currentUserProfile {
-                if app.userName.isEmpty { app.userName = profile.displayName }
-                if app.userEmail.isEmpty { app.userEmail = profile.email }
-            }
         }
         .onChange(of: repositoryApp.currentUserProfile) { _, profile in
             guard let profile else { return }
@@ -99,7 +147,7 @@ struct RootShell: View {
                 .environmentObject(app)
             }
         case .dashboard:
-            DashboardView()
+            DashboardView { e in navStack.append(.domainDetail(e)) }
                 .environmentObject(app)
         case .add:
             SubmitView(onClose: { selectedTab = .home }, onSubmit: { selectedTab = .activity })
@@ -124,6 +172,7 @@ struct RootShell: View {
                 if key == "systemStates"   { navStack.append(.systemStates) }
                 if key == "help"           { navStack.append(.help) }
                 if key == "legal"          { navStack.append(.legal) }
+                if key == "review"         { selectedTab = .review }
             }
             .environmentObject(app)
         }
@@ -136,6 +185,7 @@ struct RootShell: View {
             DomainDetailView(
                 expense: e,
                 projects: repositoryApp.projects,
+                categories: repositoryApp.categories,
                 events: repositoryApp.eventsByExpenseId[e.id] ?? [],
                 role: app.role,
                 onBack: { navStack.removeLast() },
@@ -197,6 +247,31 @@ struct RootShell: View {
                 onDelete: {
                     Task { await repositoryApp.deleteExpense(id: e.id) }
                     navStack.removeLast()
+                },
+                onAttachReceipt: { data, fileName, contentType in
+                    // Tag the attachment with the kind that matches the current workflow step
+                    // so finance can tell a purchase receipt from the original submitted one.
+                    let kind: ExpenseAttachment.Kind = {
+                        switch e.status {
+                        case .approved, .purchaseConfirmed, .pendingFinanceReview, .readyForReimbursement:
+                            return .purchaseReceipt
+                        case .reimbursed:
+                            return .reimbursementProof
+                        default:
+                            return .submittedReceipt
+                        }
+                    }()
+                    Task {
+                        _ = await repositoryApp.uploadAttachment(
+                            expenseId: e.id,
+                            upload: PendingReceiptUpload(
+                                kind: kind,
+                                fileName: fileName,
+                                contentType: contentType,
+                                data: data
+                            )
+                        )
+                    }
                 }
             )
         case .manageProjects:

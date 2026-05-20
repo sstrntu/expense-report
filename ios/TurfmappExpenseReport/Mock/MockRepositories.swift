@@ -628,6 +628,10 @@ struct MockAuthRepository: AuthRepository {
         try await store.signOut()
     }
 
+    func hasPersistedSession() async -> Bool {
+        await store.currentUserId != nil
+    }
+
     func currentUserId() async throws -> String? {
         await store.currentUserId
     }
