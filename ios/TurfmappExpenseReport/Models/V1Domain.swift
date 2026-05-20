@@ -105,6 +105,13 @@ struct MoneyAmount: Codable, Hashable, Sendable {
     let currency: String
 }
 
+struct DomainCategory: Identifiable, Codable, Hashable, Sendable {
+    let id: String
+    let workspaceId: String
+    let name: String
+    let icon: String
+}
+
 struct DomainWorkspace: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let name: String
@@ -112,6 +119,14 @@ struct DomainWorkspace: Identifiable, Codable, Hashable, Sendable {
     let brandColorHex: String
     let defaultCurrency: String
     let currentUserRole: WorkspaceRole
+    let logoUrl: String?
+}
+
+struct DomainUserProfile: Codable, Hashable, Sendable {
+    let id: String
+    let email: String
+    let displayName: String
+    let avatarUrl: String?
 }
 
 struct DomainWorkspaceMember: Identifiable, Codable, Hashable, Sendable {
@@ -250,6 +265,7 @@ struct DomainNotification: Identifiable, Codable, Hashable, Sendable {
     let deepLinkRoute: String
     let isRead: Bool
     let createdAt: Date
+    let expenseId: String?
 }
 
 struct NotificationPreference: Codable, Hashable, Sendable {

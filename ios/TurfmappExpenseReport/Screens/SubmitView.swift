@@ -2,7 +2,6 @@ import SwiftUI
 import PhotosUI
 
 struct SubmitView: View {
-    @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onClose: () -> Void
     var onSubmit: () -> Void
@@ -10,7 +9,7 @@ struct SubmitView: View {
     @State private var vendor: String     = ""
     @State private var amountText: String = ""
     @State private var purpose: String    = ""
-    @State private var category: String   = "Meals"
+    @State private var selectedCategoryId: String?
     @State private var selectedProjectId: String?
     @State private var expenseKind: ExpenseKind = .preApproval
     @State private var purchaseDate = Date()
@@ -20,28 +19,45 @@ struct SubmitView: View {
     @State private var hasScanned = false
     @State private var scanStatus: ReceiptScanStatus = .notStarted
     @State private var receiptFileName: String? = nil
+    @State private var scannedDraftId: String? = nil
     @State private var showReceiptOptions = false
     @State private var showDiscardConfirm = false
     @State private var isSubmitting = false
     @State private var isSavingDraft = false
-    @State private var duplicateReceiptWarning = false
     @State private var aiFields: Set<String> = []
     @State private var scanFields: [LocalScanField] = []
+    @State private var saveDraftError: String?
+    @State private var currency: String?
 
-    private let categories = ["Meals", "Travel", "Software", "Office", "Other"]
+    /// Available ISO currency codes shown in the picker.
+    private static let currencyOptions = ["USD", "EUR", "GBP", "THB", "JPY", "SGD", "AUD", "CAD"]
 
+    private var effectiveCurrency: String {
+        currency ?? selectedProject?.budget.currency ?? repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD"
+    }
+
+    private var activeProjects: [DomainProject] {
+        repositoryApp.projects.filter { !$0.isArchived }
+    }
+    private var workspaceCategories: [DomainCategory] {
+        repositoryApp.categories
+    }
+    private var category: String {
+        guard let id = selectedCategoryId else { return workspaceCategories.first?.name ?? "" }
+        return repositoryApp.categoryName(forId: id)
+    }
     private var trimmedVendor: String { vendor.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var trimmedPurpose: String { purpose.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var amount: Double {
         Double(amountText.replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
     }
-    private var selectedProject: Project? {
-        if let id = selectedProjectId { return app.currentProjects.first { $0.id == id } }
-        return app.currentProjects.first
+    private var selectedProject: DomainProject? {
+        if let id = selectedProjectId { return activeProjects.first { $0.id == id } }
+        return activeProjects.first
     }
     private var willAutoApprove: Bool {
         guard let p = selectedProject else { return false }
-        return amount > 0 && amount <= p.autoApproveThreshold
+        return amount > 0 && amount <= p.approvalThreshold.decimalValue
     }
     private var canSubmit: Bool {
         validationMessages.isEmpty
@@ -98,14 +114,14 @@ struct SubmitView: View {
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
-                    editableRow(label: "Vendor",  placeholder: "Whole Foods Market", text: $vendor)
+                    editableRow(label: "Vendor",  placeholder: "Merchant name", text: $vendor)
                     Divider().opacity(0.4)
                     amountRow
                     Divider().opacity(0.4)
                     workflowDateRow
                     Divider().opacity(0.4)
-                    pickerRow(label: "Category", value: category, options: categories) {
-                        category = $0
+                    pickerRow(label: "Category", value: category, options: workspaceCategories.map(\.name)) { picked in
+                        selectedCategoryId = workspaceCategories.first { $0.name == picked }?.id
                         aiFields.remove("Category")
                     }
                     Divider().opacity(0.4)
@@ -128,15 +144,6 @@ struct SubmitView: View {
                 )
             }
 
-            if duplicateReceiptWarning {
-                infoBanner(
-                    icon: "doc.on.doc.fill",
-                    tint: Tokens.pending,
-                    title: "Possible duplicate receipt",
-                    message: "This file name was already attached in this draft. Keep it only if it is a different image."
-                )
-            }
-
             if amount > 0, let p = selectedProject {
                 routingBanner(project: p)
             }
@@ -149,6 +156,15 @@ struct SubmitView: View {
             .buttonStyle(.plain)
             .opacity(canSubmit && !isSubmitting ? 1 : 0.5)
             .disabled(!canSubmit || isSubmitting)
+
+            if let saveDraftError {
+                infoBanner(
+                    icon: "exclamationmark.triangle.fill",
+                    tint: Tokens.rejected,
+                    title: "Couldn't save draft",
+                    message: saveDraftError
+                )
+            }
 
             Button {
                 saveDraft()
@@ -167,9 +183,9 @@ struct SubmitView: View {
                 .interactiveDismissDisabled()
         }
         .sheet(isPresented: $showReceiptOptions) {
-            ReceiptSourceSheet { fileName in
+            ReceiptSourceSheet { data, fileName, contentType in
                 showReceiptOptions = false
-                startScan(fileName: fileName)
+                startScan(data: data, fileName: fileName, contentType: contentType)
             }
             .presentationDetents([.medium])
         }
@@ -195,20 +211,25 @@ struct SubmitView: View {
 
     @ViewBuilder
     private var draftsCard: some View {
-        if !app.currentDrafts.isEmpty {
+        let drafts = repositoryApp.draftExpenses
+        if !drafts.isEmpty {
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
                     Text("Drafts")
                         .font(.system(size: 13, weight: .semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 4)
-                    ForEach(Array(app.currentDrafts.prefix(2).enumerated()), id: \.element.id) { idx, draft in
+                    ForEach(Array(drafts.prefix(3).enumerated()), id: \.element.id) { idx, draft in
                         if idx > 0 { Divider().opacity(0.4) }
                         Button {
-                            vendor = draft.merchant == "Untitled expense" ? "" : draft.merchant
-                            amountText = draft.amount == 0 ? "" : String(format: "%.2f", draft.amount)
-                            category = draft.category
-                            selectedProjectId = app.currentProjects.first { $0.name == draft.project }?.id
+                            vendor = draft.merchant
+                            amountText = draft.amount.minorUnits == 0 ? "" : String(format: "%.2f", draft.amount.decimalValue)
+                            currency = draft.amount.currency
+                            selectedCategoryId = draft.categoryId
+                            selectedProjectId = draft.projectId
+                            expenseKind = draft.kind
+                            purpose = draft.businessPurpose
+                            scannedDraftId = draft.id
                         } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "doc.badge.clock")
@@ -216,12 +237,13 @@ struct SubmitView: View {
                                     .frame(width: 32, height: 32)
                                     .background(Tokens.pending.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(draft.merchant).font(.system(size: 13.5, weight: .semibold))
-                                    Text("\(draft.project) · \(draft.updated)")
+                                    Text(draft.merchant.isEmpty ? "Untitled expense" : draft.merchant)
+                                        .font(.system(size: 13.5, weight: .semibold))
+                                    Text(draft.projectName(in: repositoryApp.projects))
                                         .font(.system(size: 11)).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Text(draft.amount == 0 ? "--" : money(draft.amount))
+                                Text(draft.amount.minorUnits == 0 ? "--" : draft.amount.formatted)
                                     .font(.system(size: 12, weight: .semibold))
                             }
                             .padding(.horizontal, 14).padding(.vertical, 10)
@@ -349,36 +371,79 @@ struct SubmitView: View {
         }
     }
 
-    private func startScan(fileName: String) {
-        duplicateReceiptWarning = receiptFileName == fileName && (hasScanned || scanStatus == .failed)
+    private func startScan(data: Data, fileName: String, contentType: String) {
+        guard let project = selectedProject else {
+            scanStatus = .failed
+            return
+        }
         receiptFileName = fileName
         scanStatus = .uploading
         isScanning = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
-            scanStatus = .processing
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.7) {
-            if fileName.contains("failed") {
-                scanFields = []
-                hasScanned = false
-                scanStatus = .failed
+
+        Task {
+            let input = repositoryInput(project: project)
+            let outcome = await repositoryApp.scanReceipt(
+                input: input,
+                fileName: fileName,
+                contentType: contentType,
+                data: data
+            )
+            await MainActor.run {
                 isScanning = false
-                return
+                guard let outcome else {
+                    scanStatus = .failed
+                    hasScanned = false
+                    scanFields = []
+                    return
+                }
+                scannedDraftId = outcome.draftId
+                let result = outcome.result
+                if result.status == .needsReview || result.status == .confirmed {
+                    applyScanResult(result)
+                    hasScanned = true
+                    scanStatus = .needsReview
+                } else {
+                    scanStatus = .failed
+                    hasScanned = false
+                    scanFields = []
+                }
             }
-            vendor = "Whole Foods Market"
-            amountText = "47.23"
-            category = "Meals"
-            purchaseDate = Date()
-            aiFields = ["Vendor", "Amount", "Category"]
-            scanFields = [
-                LocalScanField(id: "merchant", label: "Vendor", value: "Whole Foods Market", confidence: .high),
-                LocalScanField(id: "amount", label: "Amount", value: "47.23", confidence: .high),
-                LocalScanField(id: "category", label: "Category", value: "Meals", confidence: .medium)
-            ]
-            hasScanned = true
-            scanStatus = .needsReview
-            isScanning = false
         }
+    }
+
+    private func applyScanResult(_ result: ReceiptScanResult) {
+        func value(_ name: String) -> String? {
+            result.fields.first { $0.fieldName == name }
+                .map { $0.normalizedValue ?? $0.extractedValue }
+                .flatMap { $0.isEmpty ? nil : $0 }
+        }
+        var fields: [LocalScanField] = []
+        if let merchant = value("merchant") {
+            vendor = merchant
+            aiFields.insert("Vendor")
+            fields.append(LocalScanField(id: "merchant", label: "Vendor", value: merchant, confidence: .high))
+        }
+        if let amountValue = value("amount") {
+            amountText = amountValue
+            aiFields.insert("Amount")
+            fields.append(LocalScanField(id: "amount", label: "Amount", value: amountValue, confidence: .high))
+        }
+        if let categoryName = value("category"),
+           let match = workspaceCategories.first(where: { $0.name.caseInsensitiveCompare(categoryName) == .orderedSame }) {
+            selectedCategoryId = match.id
+            aiFields.insert("Category")
+            fields.append(LocalScanField(id: "category", label: "Category", value: match.name, confidence: .medium))
+        }
+        if let dateValue = value("date") {
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "yyyy-MM-dd"
+            if let parsed = formatter.date(from: dateValue) {
+                purchaseDate = parsed
+            }
+        }
+        scanFields = fields
     }
 
     private func applyScanField(_ id: String, value: String) {
@@ -390,7 +455,7 @@ struct SubmitView: View {
             amountText = value
             aiFields.remove("Amount")
         case "category":
-            category = value
+            selectedCategoryId = workspaceCategories.first { $0.name.caseInsensitiveCompare(value) == .orderedSame }?.id
             aiFields.remove("Category")
         default:
             break
@@ -416,7 +481,24 @@ struct SubmitView: View {
             if aiFields.contains("Amount") {
                 StatusPill(text: "AI", tint: Tokens.aiPurple, leadingIcon: "sparkles")
             }
-            Text("$").font(.system(size: 13.5, weight: .medium)).foregroundStyle(.secondary)
+            Menu {
+                ForEach(Self.currencyOptions, id: \.self) { code in
+                    Button {
+                        currency = code
+                    } label: {
+                        HStack {
+                            Text(code)
+                            if effectiveCurrency == code { Image(systemName: "checkmark") }
+                        }
+                    }
+                }
+            } label: {
+                Text(effectiveCurrency)
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.primary.opacity(0.06), in: Capsule())
+            }
             TextField("0.00", text: $amountText)
                 .font(.system(size: 13.5, weight: .medium))
                 .keyboardType(.decimalPad)
@@ -455,13 +537,13 @@ struct SubmitView: View {
 
     private var projectRow: some View {
         Menu {
-            ForEach(app.currentProjects) { p in
+            ForEach(activeProjects) { p in
                 Button {
                     selectedProjectId = p.id
                 } label: {
                     HStack {
                         Text(p.name)
-                        if selectedProjectId == p.id || (selectedProjectId == nil && p.id == app.currentProjects.first?.id) {
+                        if selectedProjectId == p.id || (selectedProjectId == nil && p.id == activeProjects.first?.id) {
                             Image(systemName: "checkmark")
                         }
                     }
@@ -525,19 +607,20 @@ struct SubmitView: View {
         }
     }
 
-    private func routingBanner(project: Project) -> some View {
+    private func routingBanner(project: DomainProject) -> some View {
+        let threshold = project.approvalThreshold.decimalValue
         let tint = willAutoApprove ? Tokens.approved : Tokens.pending
         let icon = willAutoApprove ? "bolt.fill" : "person.crop.circle.badge.clock"
         let title = willAutoApprove ? autoRouteTitle : "Requires manager approval"
         let detail: String
         if willAutoApprove {
             detail = expenseKind == .preApproval
-                ? "Under \(money(project.autoApproveThreshold)) limit for \(project.name). You can buy after submission."
-                : "Under \(money(project.autoApproveThreshold)) limit for \(project.name). Finance can process reimbursement."
+                ? "Under \(money(threshold, currency: project.budget.currency)) limit for \(project.name). You can buy after submission."
+                : "Under \(money(threshold, currency: project.budget.currency)) limit for \(project.name). Finance can process reimbursement."
         } else {
             detail = expenseKind == .preApproval
-                ? "Over \(money(project.autoApproveThreshold)) limit for \(project.name). Wait for approval before purchasing."
-                : "Over \(money(project.autoApproveThreshold)) limit for \(project.name). Manager review is required before reimbursement."
+                ? "Over \(money(threshold, currency: project.budget.currency)) limit for \(project.name). Wait for approval before purchasing."
+                : "Over \(money(threshold, currency: project.budget.currency)) limit for \(project.name). Manager review is required before reimbursement."
         }
         return HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
@@ -564,16 +647,17 @@ struct SubmitView: View {
         isSubmitting = true
 
         Task {
-            let upload = receiptFileName.map {
-                PendingReceiptUpload(kind: .submittedReceipt, fileName: $0, contentType: "image/jpeg", data: Data("mock-receipt".utf8))
+            let input = repositoryInput(project: p)
+            let didSubmit: Bool
+            if let draftId = scannedDraftId {
+                didSubmit = await repositoryApp.updateDraftAndSubmit(id: draftId, input)
+            } else {
+                didSubmit = await repositoryApp.createAndSubmitExpense(input)
             }
-            let didSubmit = await repositoryApp.createAndSubmitExpense(repositoryInput(project: p), receipt: upload)
 
             await MainActor.run {
                 isSubmitting = false
                 if didSubmit {
-                    app.addExpense(kind: expenseKind, merchant: trimmedVendor, amount: amount, category: category,
-                                   project: p, purpose: trimmedPurpose, icon: iconFor(category))
                     onSubmit()
                 }
             }
@@ -581,33 +665,48 @@ struct SubmitView: View {
     }
 
     private func saveDraft() {
+        saveDraftError = nil
+        guard let project = selectedProject else {
+            saveDraftError = activeProjects.isEmpty
+                ? "Create a project first — drafts live inside a project."
+                : "Pick a project before saving a draft."
+            return
+        }
         isSavingDraft = true
-        let project = selectedProject
 
         Task {
-            var didSaveRepositoryDraft = project == nil
-            if let project {
-                didSaveRepositoryDraft = await repositoryApp.createDraft(repositoryInput(project: project))
+            let input = repositoryInput(project: project)
+            let didSave: Bool
+            if let draftId = scannedDraftId {
+                didSave = await repositoryApp.updateDraftOnly(id: draftId, input)
+            } else {
+                didSave = await repositoryApp.createDraft(input)
             }
 
             await MainActor.run {
                 isSavingDraft = false
-                if didSaveRepositoryDraft {
-                    app.saveDraft(merchant: vendor, amount: amount, category: category, project: project)
+                if didSave {
                     onClose()
+                } else {
+                    saveDraftError = repositoryApp.lastError ?? "Could not save draft. Check connection and try again."
                 }
             }
         }
     }
 
-    private func repositoryInput(project: Project) -> ExpenseDraftInput {
-        ExpenseDraftInput(
-            workspaceId: project.companyId,
+    private func repositoryInput(project: DomainProject) -> ExpenseDraftInput {
+        let resolvedCurrency = effectiveCurrency
+        let categoryId = selectedCategoryId
+            ?? workspaceCategories.first(where: { project.allowedCategoryIds.isEmpty || project.allowedCategoryIds.contains($0.id) })?.id
+            ?? workspaceCategories.first?.id
+            ?? ""
+        return ExpenseDraftInput(
+            workspaceId: project.workspaceId,
             projectId: project.id,
             kind: expenseKind,
             merchant: trimmedVendor.isEmpty ? "Untitled expense" : trimmedVendor,
-            amount: MoneyAmount(minorUnits: Int((amount * 100).rounded()), currency: "USD"),
-            categoryId: category.lowercased(),
+            amount: MoneyAmount(minorUnits: Int((amount * 100).rounded()), currency: resolvedCurrency),
+            categoryId: categoryId,
             businessPurpose: trimmedPurpose,
             purchaseDate: expenseKind == .reimbursementClaim ? purchaseDate : nil,
             neededByDate: expenseKind == .preApproval ? neededByDate : nil
@@ -659,7 +758,7 @@ struct ScanningSheet: View {
 
 struct CameraPicker: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
-    var onPicked: () -> Void
+    var onCaptured: (Data) -> Void
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let vc = UIImagePickerController()
@@ -678,7 +777,10 @@ struct CameraPicker: UIViewControllerRepresentable {
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             parent.isPresented = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { self.parent.onPicked() }
+            if let image = info[.originalImage] as? UIImage,
+               let data = image.jpegData(compressionQuality: 0.8) {
+                parent.onCaptured(data)
+            }
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
@@ -688,7 +790,8 @@ struct CameraPicker: UIViewControllerRepresentable {
 }
 
 struct ReceiptSourceSheet: View {
-    var onScan: (String) -> Void
+    /// (image data, file name, content type)
+    var onScan: (Data, String, String) -> Void
     @State private var showCamera = false
     @State private var photosItem: PhotosPickerItem?
 
@@ -726,15 +829,6 @@ struct ReceiptSourceSheet: View {
                     .padding(.horizontal, 14).padding(.vertical, 12)
                 }
                 .buttonStyle(.plain)
-
-                Divider().opacity(0.4).padding(.leading, 56)
-
-                Button { onScan("failed_receipt.jpg") } label: {
-                    sourceRow(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
-                              title: "Use Unreadable Sample",
-                              subtitle: "Preview failed scan and manual entry fallback")
-                }
-                .buttonStyle(.plain)
             }
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             .padding(.horizontal, 20)
@@ -742,12 +836,20 @@ struct ReceiptSourceSheet: View {
             Spacer()
         }
         .fullScreenCover(isPresented: $showCamera) {
-            CameraPicker(isPresented: $showCamera) { onScan("camera_receipt.jpg") }
-                .ignoresSafeArea()
+            CameraPicker(isPresented: $showCamera) { data in
+                onScan(data, "receipt-\(Int(Date().timeIntervalSince1970)).jpg", "image/jpeg")
+            }
+            .ignoresSafeArea()
         }
         .onChange(of: photosItem) { _, item in
-            guard item != nil else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onScan("library_receipt.jpg") }
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    await MainActor.run {
+                        onScan(data, "receipt-\(Int(Date().timeIntervalSince1970)).jpg", "image/jpeg")
+                    }
+                }
+            }
         }
     }
 

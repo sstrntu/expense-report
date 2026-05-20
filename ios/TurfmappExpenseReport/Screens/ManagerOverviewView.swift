@@ -4,12 +4,61 @@ struct ManagerOverviewView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onGoToReview: () -> Void
+    var onContinueDraft: () -> Void = {}
+
+    private var workspaceCurrency: String { repositoryApp.aggregationCurrency }
 
     private var pendingTotal: Double {
-        repositoryApp.managerQueue.reduce(0) { $0 + $1.amount.decimalValue }
+        repositoryApp.managerQueue
+            .filter { $0.amount.currency == workspaceCurrency }
+            .reduce(0) { $0 + $1.amount.decimalValue }
     }
     private var financeTotal: Double {
-        repositoryApp.financeQueue.reduce(0) { $0 + $1.amount.decimalValue }
+        repositoryApp.financeQueue
+            .filter { $0.amount.currency == workspaceCurrency }
+            .reduce(0) { $0 + $1.amount.decimalValue }
+    }
+
+    private static let spendStatuses: Set<ExpenseWorkflowStatus> =
+        [.approved, .pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement, .reimbursed]
+
+    private func spend(in dateInterval: DateInterval) -> Double {
+        repositoryApp.expenses
+            .filter { $0.amount.currency == workspaceCurrency }
+            .filter { Self.spendStatuses.contains($0.status) }
+            .filter { dateInterval.contains($0.submittedAt ?? $0.createdAt) }
+            .reduce(0) { $0 + $1.amount.decimalValue }
+    }
+
+    private var teamSpendMTD: Double {
+        let cal = Calendar.current
+        guard let interval = cal.dateInterval(of: .month, for: Date()) else { return 0 }
+        return spend(in: interval)
+    }
+
+    /// Month-over-month delta, or nil when there is no prior-month baseline.
+    private var spendDeltaVsLastMonth: Double? {
+        let cal = Calendar.current
+        guard let thisMonth = cal.dateInterval(of: .month, for: Date()),
+              let lastMonthDate = cal.date(byAdding: .month, value: -1, to: thisMonth.start),
+              let lastMonth = cal.dateInterval(of: .month, for: lastMonthDate) else { return nil }
+        let prior = spend(in: lastMonth)
+        guard prior > 0 else { return nil }
+        return (teamSpendMTD - prior) / prior * 100
+    }
+
+    private var spendDeltaDescription: String {
+        guard let delta = spendDeltaVsLastMonth else { return "No prior month" }
+        return String(format: "%+.0f%% vs LM", delta)
+    }
+
+    private var overdueApprovalCount: Int {
+        let cutoff = Date().addingTimeInterval(-24 * 60 * 60)
+        return repositoryApp.managerQueue.filter { ($0.submittedAt ?? $0.createdAt) < cutoff }.count
+    }
+
+    private var activeProjects: [DomainProject] {
+        repositoryApp.projects.filter { !$0.isArchived }
     }
 
     var body: some View {
@@ -32,11 +81,13 @@ struct ManagerOverviewView: View {
                                 .font(.system(size: 11, weight: .semibold)).tracking(0.6).foregroundStyle(.secondary)
                             Text("\(pendingCount)")
                                 .font(.system(size: 36, weight: .bold))
-                            Text("\(money(pendingTotal)) total")
+                            Text("\(money(pendingTotal, currency: workspaceCurrency)) total")
                                 .font(.system(size: 13)).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        StatusPill(text: "2 over 24h", tint: Tokens.pending, leadingIcon: "clock")
+                        if overdueApprovalCount > 0 {
+                            StatusPill(text: "\(overdueApprovalCount) over 24h", tint: Tokens.pending, leadingIcon: "clock")
+                        }
                     }
                     Button(action: onGoToReview) {
                         Text("Open review queue").primaryActionLabel()
@@ -46,9 +97,46 @@ struct ManagerOverviewView: View {
                 }
             }
 
+            if !repositoryApp.draftExpenses.isEmpty {
+                Button(action: onContinueDraft) {
+                    GlassCard(padding: 14) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "doc.badge.clock")
+                                .foregroundStyle(Tokens.pending)
+                                .frame(width: 32, height: 32)
+                                .background(Tokens.pending.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("\(repositoryApp.draftExpenses.count) draft\(repositoryApp.draftExpenses.count == 1 ? "" : "s")")
+                                    .font(.system(size: 13.5, weight: .semibold))
+                                    .foregroundStyle(Color.primary)
+                                Text("Tap to continue editing.")
+                                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
             HStack(spacing: 10) {
-                kpiCard(label: "FINANCE QUEUE", value: "\(financeCount)", delta: money(financeTotal), positive: true)
-                kpiCard(label: "TEAM SPEND MTD", value: "$18.4k",  delta: "+12% vs LM",   positive: true)
+                kpiCard(label: "FINANCE QUEUE", value: "\(financeCount)", delta: money(financeTotal, currency: workspaceCurrency), positive: true)
+                kpiCard(
+                    label: "TEAM SPEND MTD",
+                    value: money(teamSpendMTD, currency: workspaceCurrency),
+                    delta: spendDeltaDescription,
+                    positive: (spendDeltaVsLastMonth ?? 0) >= 0
+                )
+            }
+
+            if repositoryApp.foreignCurrencyExpenseCount > 0 {
+                Text("Totals are in \(workspaceCurrency). \(repositoryApp.foreignCurrencyExpenseCount) expense(s) in other currencies are not included.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 4)
             }
 
             Text("Project budgets")
@@ -56,19 +144,16 @@ struct ManagerOverviewView: View {
                 .padding(.horizontal, 4).padding(.top, 6)
 
             GlassCard(padding: 14) {
-                VStack(spacing: 14) {
-                    ForEach(app.currentProjects) { p in
-                        VStack(alignment: .leading, spacing: 5) {
-                            HStack {
-                                Text(p.name).font(.system(size: 12.5, weight: .medium))
-                                Spacer()
-                                Text("\(Int(p.progress * 100))%")
-                                    .font(.system(size: 11.5, weight: .medium))
-                                    .foregroundStyle(p.progress > 0.8 ? Tokens.pending : .secondary)
-                            }
-                            ProgressView(value: p.progress)
-                                .progressViewStyle(.linear)
-                                .tint(p.color)
+                if activeProjects.isEmpty {
+                    Text("No projects yet. Create one in You ▸ Manage projects.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 6)
+                } else {
+                    VStack(spacing: 14) {
+                        ForEach(activeProjects) { p in
+                            DomainProjectRow(project: p, expenses: repositoryApp.expenses)
                         }
                     }
                 }

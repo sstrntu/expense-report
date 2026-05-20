@@ -79,7 +79,20 @@ extension MoneyAmount {
     }
 
     var formatted: String {
-        String(format: "$%.2f", decimalValue)
+        Self.format(amount: decimalValue, currency: currency)
+    }
+
+    /// Renders a value with the given ISO-4217 currency code, using the
+    /// device's locale (e.g. "USD" -> "$1,234.56", "THB" -> "฿1,234.56",
+    /// "EUR" -> "€1,234.56"). No exchange-rate conversion is performed.
+    static func format(amount: Double, currency: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: amount))
+            ?? String(format: "%.2f %@", amount, currency)
     }
 }
 

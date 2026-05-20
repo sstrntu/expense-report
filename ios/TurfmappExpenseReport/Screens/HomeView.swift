@@ -6,17 +6,48 @@ struct HomeView: View {
     @Binding var selectedTab: TabID
     var onOpen: (DomainExpense) -> Void
 
+    private var workspaceCurrency: String { repositoryApp.aggregationCurrency }
+
+    private var expensesInCurrency: [DomainExpense] {
+        repositoryApp.expensesInDefaultCurrency
+    }
+
+    private var rejected: Double {
+        expensesInCurrency
+            .filter { $0.status == .rejected }
+            .reduce(0) { $0 + $1.amount.decimalValue }
+    }
+
+    /// Monthly reimbursable totals for the last 6 months, oldest first.
+    private var monthlySeries: [Double] {
+        let cal = Calendar.current
+        let now = Date()
+        return (0..<6).reversed().map { offset in
+            guard let date = cal.date(byAdding: .month, value: -offset, to: now),
+                  let interval = cal.dateInterval(of: .month, for: date) else { return 0 }
+            return expensesInCurrency
+                .filter { [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
+                .filter { interval.contains($0.submittedAt ?? $0.createdAt) }
+                .reduce(0) { $0 + $1.amount.decimalValue }
+        }
+    }
+
+    private var greeting: String {
+        let name = app.userName.split(separator: " ").first.map(String.init) ?? ""
+        return name.isEmpty ? "Welcome back" : "Hello, \(name)"
+    }
+
     var body: some View {
-        let pending = repositoryApp.expenses
+        let pending = expensesInCurrency
             .filter { $0.status == .pendingManagerApproval }
             .reduce(0) { $0 + $1.amount.decimalValue }
-        let approved = repositoryApp.expenses
+        let approved = expensesInCurrency
             .filter { $0.status == .approved || $0.status == .readyForReimbursement || $0.status == .pendingFinanceReview }
             .reduce(0) { $0 + $1.amount.decimalValue }
 
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Good morning, Sira").font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
+                Text(greeting).font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
                 Text("This month").font(.system(size: 26, weight: .bold))
             }
             .padding(.horizontal, 4)
@@ -26,7 +57,30 @@ struct HomeView: View {
 
             scanReceiptButton
 
-            aiInsightCard
+            if !repositoryApp.draftExpenses.isEmpty {
+                Button { selectedTab = .add } label: {
+                    GlassCard(padding: 14) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "doc.badge.clock")
+                                .foregroundStyle(Tokens.pending)
+                                .frame(width: 32, height: 32)
+                                .background(Tokens.pending.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("\(repositoryApp.draftExpenses.count) draft\(repositoryApp.draftExpenses.count == 1 ? "" : "s")")
+                                    .font(.system(size: 13.5, weight: .semibold))
+                                    .foregroundStyle(Color.primary)
+                                Text("Tap to continue editing.")
+                                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
 
             sectionHeader(title: "Recent activity", action: "See all") { selectedTab = .activity }
             recentList
@@ -46,21 +100,22 @@ struct HomeView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("REIMBURSABLE").font(.system(size: 11, weight: .semibold)).tracking(0.6).foregroundStyle(.secondary)
-                        Text(money(pending + approved)).font(.system(size: 36, weight: .bold)).tracking(-1)
+                        Text(money(pending + approved, currency: workspaceCurrency)).font(.system(size: 36, weight: .bold)).tracking(-1)
                     }
                     Spacer()
-                    StatusPill(text: "+12%", tint: Tokens.approved, leadingIcon: "arrow.up")
                 }
 
-                Sparkline(data: [42, 48, 39, 65, 58, 72, 68, 81, 74, 88, 82, 96])
-                    .frame(height: 50)
+                if monthlySeries.contains(where: { $0 > 0 }) {
+                    Sparkline(data: monthlySeries)
+                        .frame(height: 50)
+                }
 
                 HStack {
-                    miniStat("Pending",  money(pending))
+                    miniStat("Pending",  money(pending, currency: workspaceCurrency))
                     Spacer()
-                    miniStat("Approved", money(approved))
+                    miniStat("Approved", money(approved, currency: workspaceCurrency))
                     Spacer()
-                    miniStat("Rejected", "$22.18")
+                    miniStat("Rejected", money(rejected, currency: workspaceCurrency))
                 }
             }
         }
@@ -87,24 +142,6 @@ struct HomeView: View {
         }
         .buttonStyle(.plain)
         .glassSurface(corner: 18)
-    }
-
-    private var aiInsightCard: some View {
-        GlassCard(padding: 14) {
-            HStack(alignment: .top, spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 9)
-                        .fill(LinearGradient(colors: [Tokens.aiPurple, Tokens.slate500], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    Image(systemName: "sparkles").foregroundStyle(.white).font(.system(size: 14, weight: .semibold))
-                }.frame(width: 28, height: 28)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("AI Insight").font(.system(size: 12, weight: .semibold))
-                    Text("Your meals spend is 23% above your team average. Consider grouping meetings to share meal expenses.")
-                        .font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(nil)
-                }
-            }
-        }
     }
 
     private var recentList: some View {
@@ -218,9 +255,12 @@ struct DomainProjectRow: View {
     let project: DomainProject
     let expenses: [DomainExpense]
 
+    /// Only count expenses that share the project's currency. No conversion.
     private var spent: Double {
         expenses
-            .filter { $0.projectId == project.id && [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
+            .filter { $0.projectId == project.id
+                      && $0.amount.currency == project.budget.currency
+                      && [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
             .reduce(0) { $0 + $1.amount.decimalValue }
     }
 
@@ -233,7 +273,7 @@ struct DomainProjectRow: View {
             HStack {
                 Text(project.name).font(.system(size: 12.5, weight: .medium))
                 Spacer()
-                Text("$\(Int(spent / 1000))k / $\(Int(project.budget.decimalValue / 1000))k")
+                Text("\(MoneyAmount.format(amount: spent, currency: project.budget.currency)) / \(project.budget.formatted)")
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)
             }
             ProgressView(value: progress)
@@ -243,4 +283,8 @@ struct DomainProjectRow: View {
     }
 }
 
-func money(_ v: Double) -> String { String(format: "$%.2f", v) }
+/// Render an amount in the given ISO currency code (default USD). Use this
+/// only when you already know all the inputs share one currency.
+func money(_ v: Double, currency: String = "USD") -> String {
+    MoneyAmount.format(amount: v, currency: currency)
+}

@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @EnvironmentObject var app: AppState
@@ -12,26 +13,44 @@ struct ProfileView: View {
             Text("You").font(.system(size: 26, weight: .bold))
                 .padding(.horizontal, 4).padding(.top, 4)
 
-            GlassCard(padding: 18) {
-                HStack(spacing: 14) {
-                    Avatar(color: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color, size: 56, label: initials(app.userName))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(app.userName).font(.system(size: 17, weight: .bold))
-                        Text(roleSubtitle + " · \(app.userEmail)")
-                            .font(.system(size: 12)).foregroundStyle(.secondary)
+            let displayName = repositoryApp.currentUserProfile?.displayName ?? app.userName
+            let avatarURL = repositoryApp.currentUserProfile?.avatarUrl.flatMap(URL.init(string:))
+
+            Button { onNav("account") } label: {
+                GlassCard(padding: 18) {
+                    HStack(spacing: 14) {
+                        Avatar(
+                            color: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color,
+                            size: 56,
+                            label: initials(displayName),
+                            imageURL: avatarURL
+                        )
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(displayName.isEmpty ? "Add your name" : displayName)
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundStyle(Color.primary)
+                            Text(roleSubtitle + " · \(app.userEmail)")
+                                .font(.system(size: 12)).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold)).foregroundStyle(.tertiary)
                     }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(.tertiary)
                 }
             }
+            .buttonStyle(.plain)
 
             if role != .employee {
                 sectionHeader("Workspace admin")
                 GlassCard(padding: 0) {
                     VStack(spacing: 0) {
+                        if role == .admin {
+                            navRow(icon: "building.2.fill", label: "Workspace",
+                                   sub: "Name, logo, and identity") { onNav("workspace") }
+                            Divider().opacity(0.4)
+                        }
                         navRow(icon: "folder.fill",  label: "Manage projects",
-                               sub: "\(repositoryApp.projects.count) projects · \(money(repositoryApp.projects.reduce(0) { $0 + $1.budget.decimalValue })) budget") { onNav("manageProjects") }
+                               sub: "\(repositoryApp.projects.count) projects · \(money(repositoryApp.projects.filter { $0.budget.currency == repositoryApp.aggregationCurrency }.reduce(0) { $0 + $1.budget.decimalValue }, currency: repositoryApp.aggregationCurrency)) budget") { onNav("manageProjects") }
                         Divider().opacity(0.4)
                         navRow(icon: "shield.fill",  label: "Permissions",
                                sub: "\(repositoryApp.members.count) members · 4 roles")        { onNav("permissions") }
@@ -42,6 +61,9 @@ struct ProfileView: View {
             sectionHeader("Account")
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
+                    navRow(icon: "list.bullet",    label: "My activity",
+                           sub: "Drafts, submitted, approved, reimbursed") { onNav("activity") }
+                    Divider().opacity(0.4)
                     navRow(icon: "bell.fill",      label: "Notifications",
                            sub: "Approvals, reminders, reimbursements") { onNav("notifications") }
                     Divider().opacity(0.4)
@@ -169,17 +191,43 @@ struct NotificationsView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
+    var onOpenExpense: (DomainExpense) -> Void = { _ in }
     @State private var selectedNotification: AppNotification? = nil
     @State private var filter: NotificationFilter = .all
 
     private var notifications: [AppNotification] {
-        [
-            AppNotification(title: "Approval requested", subtitle: "Delta Airlines needs manager review", tint: Tokens.pending, action: "Open expense", kind: .approval, time: "2m ago", unread: true),
-            AppNotification(title: "Expense approved", subtitle: "Uber is ready for purchase confirmation", tint: Tokens.approved, action: "Confirm purchase", kind: .expense, time: "11m ago", unread: true),
-            AppNotification(title: "Reimbursement sent", subtitle: "WeWork was marked reimbursed", tint: Tokens.reimbursed, action: "View proof", kind: .payment, time: "Yesterday", unread: false),
-            AppNotification(title: "Workspace invite", subtitle: "Finance team invite is pending", tint: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color, action: "Review invite", kind: .admin, time: "Yesterday", unread: false)
-        ]
+        repositoryApp.notifications.map { n in
+            let kind: NotificationKind
+            let tint: Color
+            switch n.eventType {
+            case .expenseSubmitted, .expenseApproved, .expenseRejected:
+                kind = .approval; tint = Tokens.pending
+            case .purchaseConfirmed:
+                kind = .expense; tint = Tokens.purchased
+            case .reimbursementSent:
+                kind = .payment; tint = Tokens.reimbursed
+            case .workspaceInvite, .projectBudgetWarning:
+                kind = .admin; tint = Tokens.slate500
+            }
+            return AppNotification(
+                domainId: n.id,
+                expenseId: n.expenseId,
+                title: n.title,
+                subtitle: n.body,
+                tint: tint,
+                action: "Open",
+                kind: kind,
+                time: Self.relativeFormatter.localizedString(for: n.createdAt, relativeTo: Date()),
+                unread: !n.isRead
+            )
+        }
     }
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .abbreviated
+        return f
+    }()
 
     private var filteredNotifications: [AppNotification] {
         notifications.filter { filter == .all || $0.kind == filter.kind }
@@ -199,25 +247,22 @@ struct NotificationsView: View {
             }
 
             GlassCard(padding: 0) {
-                VStack(spacing: 0) {
-                    ForEach(Array(filteredNotifications.enumerated()), id: \.element.id) { idx, item in
-                        if idx > 0 { Divider().opacity(0.4) }
-                        notificationRow(item)
+                if filteredNotifications.isEmpty {
+                    emptyNotifications
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(filteredNotifications.enumerated()), id: \.element.id) { idx, item in
+                            if idx > 0 { Divider().opacity(0.4) }
+                            notificationRow(item)
+                        }
                     }
                 }
             }
 
             infoBanner(icon: "bell.badge.fill", tint: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color,
                        title: "\(unreadCount) unread notifications",
-                       message: "Covers approval requests, rejection updates, purchase confirmations, reimbursement events, and workspace invites.")
+                       message: "New approval, reimbursement, and workspace updates will appear here.")
 
-            GlassCard(padding: 0) {
-                VStack(spacing: 0) {
-                    actionRow("Notification preferences", "Push, email, and in-app settings")
-                    Divider().opacity(0.4)
-                    actionRow("Approval alerts", "Manager and admin notifications")
-                }
-            }
         }
         .sheet(item: $selectedNotification) { item in
             NotificationDetailSheet(notification: item)
@@ -225,9 +270,34 @@ struct NotificationsView: View {
         }
     }
 
+    private var emptyNotifications: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "bell.slash")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Text("No notifications")
+                .font(.system(size: 15, weight: .semibold))
+            Text("Approval, reimbursement, and invite updates will appear here when they are available.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 28)
+    }
+
     private func notificationRow(_ item: AppNotification) -> some View {
         Button {
-            selectedNotification = item
+            if item.unread, let domainId = item.domainId {
+                Task { await repositoryApp.markNotificationRead(id: domainId) }
+            }
+            if let expenseId = item.expenseId,
+               let expense = repositoryApp.expenses.first(where: { $0.id == expenseId }) {
+                onOpenExpense(expense)
+            } else {
+                selectedNotification = item
+            }
         } label: {
             HStack(spacing: 12) {
                 Circle().fill(item.unread ? item.tint : item.tint.opacity(0.45)).frame(width: 10, height: 10)
@@ -268,21 +338,12 @@ struct NotificationsView: View {
         .buttonStyle(.plain)
     }
 
-    private func actionRow(_ title: String, _ subtitle: String) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 13.5, weight: .medium))
-                Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
-        }
-        .padding(.horizontal, 14).padding(.vertical, 12)
-    }
 }
 
 struct AppNotification: Identifiable {
     let id = UUID()
+    var domainId: String? = nil
+    var expenseId: String? = nil
     let title: String
     let subtitle: String
     let tint: Color
@@ -354,16 +415,58 @@ struct AccountSettingsView: View {
     var onBack: () -> Void
     @State private var name = ""
     @State private var email = ""
+    @State private var avatarPick: PhotosPickerItem?
+    @State private var uploadingAvatar = false
 
     var body: some View {
+        let displayName = repositoryApp.currentUserProfile?.displayName ?? app.userName
+        let avatarURL = repositoryApp.currentUserProfile?.avatarUrl.flatMap(URL.init(string:))
+
         settingsContainer(title: "Account", onBack: onBack) {
             GlassCard(padding: 18) {
                 HStack(spacing: 14) {
-                    Avatar(color: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color, size: 54, label: initials(app.userName))
+                    PhotosPicker(selection: $avatarPick, matching: .images) {
+                        ZStack(alignment: .bottomTrailing) {
+                            Avatar(
+                                color: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color,
+                                size: 54,
+                                label: initials(displayName),
+                                imageURL: avatarURL
+                            )
+                            if uploadingAvatar {
+                                Circle().fill(.ultraThinMaterial).frame(width: 54, height: 54)
+                                    .overlay(ProgressView().tint(.white))
+                            } else {
+                                Circle().fill(Tokens.slate500)
+                                    .frame(width: 18, height: 18)
+                                    .overlay(
+                                        Image(systemName: "pencil")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    )
+                                    .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(app.userName).font(.system(size: 17, weight: .bold))
+                        Text(displayName.isEmpty ? "Add your name" : displayName)
+                            .font(.system(size: 17, weight: .bold))
                         Text(app.userEmail).font(.system(size: 12)).foregroundStyle(.secondary)
                     }
+                    Spacer()
+                }
+            }
+            .onChange(of: avatarPick) { _, item in
+                guard let item else { return }
+                Task {
+                    uploadingAvatar = true
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       !data.isEmpty {
+                        _ = await repositoryApp.setUserAvatar(data: data, contentType: "image/jpeg", fileExtension: "jpg")
+                    }
+                    avatarPick = nil
+                    uploadingAvatar = false
                 }
             }
 
@@ -371,15 +474,25 @@ struct AccountSettingsView: View {
                 VStack(spacing: 0) {
                     editableSetting("Name", text: $name)
                     Divider().opacity(0.4)
-                    editableSetting("Email", text: $email)
+                    FormFieldRow(label: "Email", value: app.userEmail, showChevron: false)
                     Divider().opacity(0.4)
                     FormFieldRow(label: "Workspace", value: repositoryApp.selectedWorkspace?.name ?? app.company.name, showChevron: false)
                 }
             }
 
+            if let lastError = repositoryApp.lastError {
+                infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
+                           title: "Could not save", message: lastError)
+            }
+
             Button {
-                app.userName = name.isEmpty ? app.userName : name
-                app.userEmail = email.isEmpty ? app.userEmail : email
+                let newName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !newName.isEmpty else { return }
+                Task {
+                    if await repositoryApp.updateDisplayName(newName) {
+                        await MainActor.run { app.userName = newName }
+                    }
+                }
             } label: {
                 Text("Save account").primaryActionLabel()
             }
@@ -410,58 +523,176 @@ struct AccountSettingsView: View {
 }
 
 struct SecuritySettingsView: View {
+    @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
+    @State private var showPasswordSheet = false
+    @State private var statusMessage: String?
 
     var body: some View {
         settingsContainer(title: "Security", onBack: onBack) {
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    securityRow("Password", "Updated 24 days ago", "key.fill")
+                    Button { showPasswordSheet = true } label: {
+                        securityRow("Change password", "Set a new password for this account", "key.fill", chevron: true)
+                    }
+                    .buttonStyle(.plain)
                     Divider().opacity(0.4)
-                    securityRow("Active sessions", "1 iPhone simulator", "iphone")
+                    Button {
+                        Task {
+                            if await repositoryApp.requestPasswordReset(email: app.userEmail) {
+                                await MainActor.run { statusMessage = "Password-reset email sent to \(app.userEmail)." }
+                            }
+                        }
+                    } label: {
+                        securityRow("Send password reset email", "Email a reset link to \(app.userEmail)", "envelope.fill", chevron: true)
+                    }
+                    .buttonStyle(.plain)
                     Divider().opacity(0.4)
-                    securityRow("Recovery email", "Verified", "checkmark.seal.fill")
+                    Button {
+                        Task {
+                            let ok = await repositoryApp.signOutAllSessions()
+                            if ok {
+                                await MainActor.run {
+                                    statusMessage = "Signed out of all devices."
+                                    app.signOut()
+                                }
+                            }
+                        }
+                    } label: {
+                        securityRow("Sign out of all devices", "Invalidates every active session", "rectangle.portrait.and.arrow.right.fill", chevron: true, tint: Tokens.rejected)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            infoBanner(icon: "lock.shield.fill", tint: Tokens.slate500,
-                       title: "Session expired state",
-                       message: "When auth expires, users return to sign in without losing a local draft.")
+
+            if let statusMessage {
+                infoBanner(icon: "checkmark.seal.fill", tint: Tokens.approved,
+                           title: "Done", message: statusMessage)
+            }
+
+            if let lastError = repositoryApp.lastError {
+                infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
+                           title: "Could not complete", message: lastError)
+            }
+        }
+        .sheet(isPresented: $showPasswordSheet) {
+            ChangePasswordSheet { newPassword in
+                Task {
+                    if await repositoryApp.updatePassword(newPassword) {
+                        await MainActor.run {
+                            statusMessage = "Password updated."
+                            showPasswordSheet = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.height(360)])
         }
     }
 
-    private func securityRow(_ title: String, _ subtitle: String, _ icon: String) -> some View {
+    private func securityRow(_ title: String, _ subtitle: String, _ icon: String,
+                             chevron: Bool = false, tint: Color? = nil) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon).foregroundStyle(.secondary).frame(width: 30, height: 30)
-                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
+            Image(systemName: icon).foregroundStyle(tint ?? .secondary).frame(width: 30, height: 30)
+                .background((tint ?? Color.primary).opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 13.5, weight: .medium))
+                    .foregroundStyle(tint ?? Color.primary)
                 Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
-            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+            if chevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(.horizontal, 14).padding(.vertical, 12)
     }
 }
 
+struct ChangePasswordSheet: View {
+    var onSubmit: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var newPassword = ""
+    @State private var confirm = ""
+
+    private var canSubmit: Bool {
+        newPassword.count >= 8 && newPassword == confirm
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Change password").font(.system(size: 20, weight: .bold))
+                .padding(.horizontal, 20).padding(.top, 24)
+
+            GlassCard(padding: 16) {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("New").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Spacer()
+                        SecureField("8+ characters", text: $newPassword)
+                            .font(.system(size: 13.5, weight: .medium))
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 220)
+                    }
+                    .padding(.vertical, 11)
+                    Divider().opacity(0.4)
+                    HStack {
+                        Text("Confirm").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Spacer()
+                        SecureField("Re-enter", text: $confirm)
+                            .font(.system(size: 13.5, weight: .medium))
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 220)
+                    }
+                    .padding(.vertical, 11)
+                }
+            }
+            .padding(.horizontal, 20)
+
+            if !confirm.isEmpty && newPassword != confirm {
+                Text("Passwords don't match.")
+                    .font(.system(size: 12)).foregroundStyle(Tokens.rejected)
+                    .padding(.horizontal, 20)
+            }
+
+            Spacer()
+
+            Button {
+                onSubmit(newPassword)
+            } label: {
+                Text("Save").primaryActionLabel()
+            }
+            .buttonStyle(.plain)
+            .opacity(canSubmit ? 1 : 0.5)
+            .disabled(!canSubmit)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+    }
+}
+
 struct AppPreferencesView: View {
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
-    @State private var compactMode = false
-    @State private var requireReceipt = true
+    @AppStorage("pref.compactLists") private var compactMode = false
 
     var body: some View {
         settingsContainer(title: "Preferences", onBack: onBack) {
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
-                    FormFieldRow(label: "Currency", value: "USD", showChevron: true)
+                    FormFieldRow(label: "Workspace currency",
+                                 value: repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD",
+                                 showChevron: false)
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Export format", value: "CSV + PDF", showChevron: true)
-                    Divider().opacity(0.4)
-                    ToggleRow(label: "Compact lists", isOn: compactMode)
-                    Divider().opacity(0.4)
-                    ToggleRow(label: "Require receipts", sub: "For reimbursable expenses", isOn: requireReceipt)
+                    ToggleRow(label: "Compact lists", sub: "Saved on this device", isOn: $compactMode)
                 }
             }
+            infoBanner(icon: "info.circle.fill", tint: Tokens.slate500,
+                       title: "Workspace settings",
+                       message: "Currency and receipt rules are configured per workspace and project by an admin.")
         }
     }
 }
@@ -471,6 +702,8 @@ struct ReportsExportView: View {
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
 
+    @State private var csvFile: URL?
+
     var body: some View {
         settingsContainer(title: "Reports", onBack: onBack) {
             GlassCard(padding: 16) {
@@ -479,23 +712,104 @@ struct ReportsExportView: View {
                     HStack {
                         reportMetric("Expenses", "\(repositoryApp.expenses.count)")
                         Spacer()
-                        reportMetric("Spend", money(repositoryApp.expenses.reduce(0) { $0 + $1.amount.decimalValue }))
+                        reportMetric("Spend",
+                            money(repositoryApp.expensesInDefaultCurrency.reduce(0) { $0 + $1.amount.decimalValue },
+                                  currency: repositoryApp.aggregationCurrency))
                         Spacer()
                         reportMetric("Pending", "\(repositoryApp.managerQueue.count)")
                     }
                 }
             }
 
-            GlassCard(padding: 0) {
-                VStack(spacing: 0) {
-                    exportRow("Monthly PDF", "Summary by status and project")
-                    Divider().opacity(0.4)
-                    exportRow("CSV export", "Raw expense rows for finance")
-                    Divider().opacity(0.4)
-                    exportRow("Receipt bundle", "Attached receipts and proofs")
+            if repositoryApp.expenses.isEmpty {
+                infoBanner(icon: "tray", tint: Tokens.slate500,
+                           title: "Nothing to export yet",
+                           message: "Submit your first expense and the CSV export will be ready here.")
+            } else {
+                Button { csvFile = makeCSVFile() } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 9))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Export CSV").font(.system(size: 13.5, weight: .semibold))
+                                .foregroundStyle(Color.primary)
+                            Text("\(repositoryApp.expenses.count) rows — id, date, project, category, merchant, amount, currency, status")
+                                .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                        }
+                        Spacer()
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+                .glassSurface(corner: 18)
+
+                if let csvFile {
+                    ShareLink(item: csvFile) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "paperplane.fill")
+                                .foregroundStyle(Tokens.approved)
+                                .frame(width: 30, height: 30)
+                                .background(Tokens.approved.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Share \(csvFile.lastPathComponent)")
+                                    .font(.system(size: 13.5, weight: .semibold))
+                                    .foregroundStyle(Color.primary)
+                                Text("Send to Mail, Files, AirDrop, …")
+                                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .glassSurface(corner: 18)
                 }
             }
+
+            infoBanner(icon: "info.circle.fill", tint: Tokens.slate500,
+                       title: "PDF & receipt bundle",
+                       message: "Coming soon — for now use the CSV in any spreadsheet tool.")
         }
+    }
+
+    private func makeCSVFile() -> URL? {
+        let projectsById = Dictionary(uniqueKeysWithValues: repositoryApp.projects.map { ($0.id, $0.name) })
+        var rows: [String] = ["id,date,project,category,merchant,amount,currency,status"]
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        for e in repositoryApp.expenses {
+            let date = e.submittedAt ?? e.purchaseDate ?? e.createdAt
+            let project = projectsById[e.projectId] ?? e.projectId
+            let category = repositoryApp.categoryName(forId: e.categoryId)
+            let amount = String(format: "%.2f", e.amount.decimalValue)
+            let cols = [e.id, iso.string(from: date), project, category, e.merchant, amount, e.amount.currency, e.status.rawValue]
+            rows.append(cols.map(csvEscape).joined(separator: ","))
+        }
+        let csv = rows.joined(separator: "\n").appending("\n")
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let workspaceSlug = (repositoryApp.selectedWorkspace?.name ?? "expenses")
+            .lowercased().replacingOccurrences(of: " ", with: "-")
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(workspaceSlug)-\(stamp).csv")
+        do {
+            try csv.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    private func csvEscape(_ value: String) -> String {
+        if value.contains(",") || value.contains("\"") || value.contains("\n") {
+            return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+        }
+        return value
     }
 
     private func reportMetric(_ label: String, _ value: String) -> some View {
@@ -505,17 +819,6 @@ struct ReportsExportView: View {
         }
     }
 
-    private func exportRow(_ title: String, _ subtitle: String) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 13.5, weight: .medium))
-                Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: "square.and.arrow.up").foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 14).padding(.vertical, 12)
-    }
 }
 
 struct HelpSupportView: View {
@@ -523,28 +826,35 @@ struct HelpSupportView: View {
 
     var body: some View {
         settingsContainer(title: "Help", onBack: onBack) {
-            GlassCard(padding: 0) {
-                VStack(spacing: 0) {
-                    helpRow("How approvals work", "Pre-approval, purchase, reimbursement")
-                    Divider().opacity(0.4)
-                    helpRow("Contact support", "Send logs and a short description")
-                    Divider().opacity(0.4)
-                    helpRow("Report a problem", "Attach screenshots and device details")
+            GlassCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("How approvals work").font(.system(size: 13.5, weight: .semibold))
+                    Text("Submit a pre-approval before purchase, or a reimbursement claim afterwards. The manager queue clears requests above the project's auto-approve threshold; finance then handles reimbursement.")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
-        }
-    }
 
-    private func helpRow(_ title: String, _ subtitle: String) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 13.5, weight: .medium))
-                Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
+            Link(destination: URL(string: "mailto:support@turfmapp.io?subject=Expenses%20app%20support")!) {
+                GlassCard(padding: 14) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "envelope.fill")
+                            .foregroundStyle(Tokens.slate500)
+                            .frame(width: 30, height: 30)
+                            .background(Tokens.slate500.opacity(0.1), in: RoundedRectangle(cornerRadius: 9))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Contact support").font(.system(size: 13.5, weight: .semibold))
+                                .foregroundStyle(Color.primary)
+                            Text("support@turfmapp.io")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+                    }
+                }
             }
-            Spacer()
-            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14).padding(.vertical, 12)
     }
 }
 
@@ -590,13 +900,160 @@ struct LegalAboutView: View {
             }
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    FormFieldRow(label: "Terms", value: "View", showChevron: true)
+                    FormFieldRow(label: "Build", value: "1.0 (1)", showChevron: false)
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Privacy", value: "View", showChevron: true)
-                    Divider().opacity(0.4)
-                    FormFieldRow(label: "Licenses", value: "View", showChevron: true)
+                    FormFieldRow(label: "Backend", value: "Supabase", showChevron: false)
                 }
             }
+        }
+    }
+}
+
+struct WorkspaceSettingsView: View {
+    @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
+    var onBack: () -> Void
+
+    @State private var logoPick: PhotosPickerItem?
+    @State private var uploading = false
+    @State private var nameDraft: String = ""
+    @State private var currencyDraft: String = "USD"
+    @State private var savingDetails = false
+    @State private var saveStatus: String?
+
+    private static let currencyOptions = ["USD", "EUR", "GBP", "THB", "JPY", "SGD", "AUD", "CAD"]
+
+    var body: some View {
+        let workspace = repositoryApp.selectedWorkspace
+        let logoURL = workspace?.logoUrl.flatMap(URL.init(string:))
+
+        settingsContainer(title: "Workspace", onBack: onBack) {
+            GlassCard(padding: 18) {
+                HStack(spacing: 14) {
+                    PhotosPicker(selection: $logoPick, matching: .images) {
+                        ZStack(alignment: .bottomTrailing) {
+                            WorkspaceBadge(
+                                color: workspace?.brandColor ?? app.company.color,
+                                name: workspace?.name ?? app.company.name,
+                                logoURL: logoURL,
+                                size: 60,
+                                corner: 14
+                            )
+                            if uploading {
+                                RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)
+                                    .frame(width: 60, height: 60)
+                                    .overlay(ProgressView().tint(.white))
+                            } else {
+                                Circle().fill(Tokens.slate500)
+                                    .frame(width: 20, height: 20)
+                                    .overlay(
+                                        Image(systemName: "pencil")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    )
+                                    .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(workspace?.name ?? app.company.name)
+                            .font(.system(size: 17, weight: .bold))
+                        Text("Tap the logo to upload an image, or leave it to show the workspace's initials.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .onChange(of: logoPick) { _, item in
+                guard let item else { return }
+                Task {
+                    uploading = true
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       !data.isEmpty {
+                        _ = await repositoryApp.setWorkspaceLogo(data: data, contentType: "image/jpeg", fileExtension: "jpg")
+                    }
+                    logoPick = nil
+                    uploading = false
+                }
+            }
+
+            if let lastError = repositoryApp.lastError {
+                infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
+                           title: "Could not update workspace", message: lastError)
+            }
+
+            GlassCard(padding: 16) {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("Name").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Spacer()
+                        TextField("Workspace name", text: $nameDraft)
+                            .font(.system(size: 13.5, weight: .medium))
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 220)
+                    }
+                    .padding(.vertical, 11)
+                    Divider().opacity(0.4)
+                    HStack {
+                        Text("Default currency").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Spacer()
+                        Picker("Currency", selection: $currencyDraft) {
+                            ForEach(Self.currencyOptions, id: \.self) { c in
+                                Text(c).tag(c)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                    }
+                    .padding(.vertical, 8)
+                    Divider().opacity(0.4)
+                    FormFieldRow(label: "Workspace ID",
+                                 value: String((workspace?.id ?? "").prefix(8)) + "…",
+                                 showChevron: false)
+                }
+            }
+
+            if let saveStatus {
+                infoBanner(icon: "checkmark.seal.fill", tint: Tokens.approved,
+                           title: "Saved", message: saveStatus)
+            }
+
+            Button {
+                let trimmed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                Task {
+                    savingDetails = true
+                    let ok = await repositoryApp.updateWorkspace(name: trimmed, defaultCurrency: currencyDraft)
+                    await MainActor.run {
+                        savingDetails = false
+                        if ok { saveStatus = "Workspace updated." }
+                    }
+                }
+            } label: {
+                Text(savingDetails ? "Saving..." : "Save changes").primaryActionLabel()
+            }
+            .buttonStyle(.plain)
+            .opacity((nameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                      (nameDraft == (workspace?.name ?? "") && currencyDraft == (workspace?.defaultCurrency ?? "USD")) ||
+                      savingDetails) ? 0.5 : 1)
+            .disabled(nameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                      (nameDraft == (workspace?.name ?? "") && currencyDraft == (workspace?.defaultCurrency ?? "USD")) ||
+                      savingDetails)
+
+            infoBanner(icon: "info.circle.fill", tint: Tokens.slate500,
+                       title: "Per-project policy",
+                       message: "Approval thresholds and routing live on individual projects — open Manage projects to edit those.")
+        }
+        .onAppear {
+            nameDraft = workspace?.name ?? ""
+            currencyDraft = workspace?.defaultCurrency ?? "USD"
+        }
+        .onChange(of: repositoryApp.selectedWorkspace?.id) { _, _ in
+            nameDraft = repositoryApp.selectedWorkspace?.name ?? ""
+            currencyDraft = repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD"
         }
     }
 }

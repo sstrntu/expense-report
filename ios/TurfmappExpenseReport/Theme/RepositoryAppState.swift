@@ -17,6 +17,9 @@ final class RepositoryAppState: ObservableObject {
     @Published private(set) var eventsByExpenseId: [String: [ExpenseWorkflowEvent]] = [:]
     @Published private(set) var members: [DomainWorkspaceMember] = []
     @Published private(set) var invites: [WorkspaceInvite] = []
+    @Published private(set) var categories: [DomainCategory] = []
+    @Published private(set) var notifications: [DomainNotification] = []
+    @Published private(set) var currentUserProfile: DomainUserProfile?
     @Published private(set) var lastError: String?
     @Published private(set) var isOfflineMode = false
     @Published private(set) var pendingOfflineDraftCount = 0
@@ -29,7 +32,7 @@ final class RepositoryAppState: ObservableObject {
     private let receiptScanRepository: any ReceiptScanRepository
     private let selectedWorkspaceDefaultsKey = "selectedWorkspaceId"
 
-    init(container: MockRepositoryContainer = .make()) {
+    init(container: RepositoryContainer = .configured()) {
         authRepository = container.auth
         workspaceRepository = container.workspaces
         projectRepository = container.projects
@@ -46,14 +49,184 @@ final class RepositoryAppState: ObservableObject {
         expenses.filter { $0.status == .pendingFinanceReview || $0.status == .readyForReimbursement }
     }
 
+    var draftExpenses: [DomainExpense] {
+        expenses.filter { $0.status == .draft }
+    }
+
+    /// ISO code the dashboards aggregate in (the workspace default).
+    var aggregationCurrency: String {
+        selectedWorkspace?.defaultCurrency ?? "USD"
+    }
+
+    /// Expenses matching the workspace's default currency (the only ones we
+    /// add together). No exchange-rate conversion happens.
+    var expensesInDefaultCurrency: [DomainExpense] {
+        expenses.filter { $0.amount.currency == aggregationCurrency }
+    }
+
+    /// Count of expenses in a non-default currency — used to surface a
+    /// "+N excluded" footnote on dashboards.
+    var foreignCurrencyExpenseCount: Int {
+        expenses.filter { $0.amount.currency != aggregationCurrency }.count
+    }
+
+    func categoryName(forId id: String) -> String {
+        categories.first { $0.id == id }?.name ?? id.capitalized
+    }
+
     func bootstrap() async {
+        await loadCurrentUserProfile()
         await loadWorkspaces(selecting: selectedWorkspace?.id ?? UserDefaults.standard.string(forKey: selectedWorkspaceDefaultsKey))
+    }
+
+    private func loadCurrentUserProfile() async {
+        currentUserProfile = (try? await authRepository.currentUserProfile()) ?? nil
+    }
+
+    @discardableResult
+    func setUserAvatar(data: Data, contentType: String, fileExtension: String) async -> Bool {
+        do {
+            lastError = nil
+            guard let uid = try await authRepository.currentUserId() else {
+                throw SupabaseRepositoryError.missingSession
+            }
+            let path = "users/\(uid)/\(UUID().uuidString).\(fileExtension)"
+            let url = try await authRepository.uploadBrandingImage(path: path, contentType: contentType, data: data)
+            try await authRepository.updateAvatarUrl(url)
+            if let p = currentUserProfile {
+                currentUserProfile = DomainUserProfile(id: p.id, email: p.email, displayName: p.displayName, avatarUrl: url)
+            } else {
+                await loadCurrentUserProfile()
+            }
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func updateWorkspace(name: String, defaultCurrency: String) async -> Bool {
+        guard let wsid = selectedWorkspace?.id else { return false }
+        do {
+            lastError = nil
+            _ = try await workspaceRepository.updateWorkspace(workspaceId: wsid, name: name, defaultCurrency: defaultCurrency)
+            await loadWorkspaces(selecting: wsid)
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func setWorkspaceLogo(data: Data, contentType: String, fileExtension: String) async -> Bool {
+        guard let wsid = selectedWorkspace?.id else { return false }
+        do {
+            lastError = nil
+            let path = "workspaces/\(wsid)/\(UUID().uuidString).\(fileExtension)"
+            let url = try await authRepository.uploadBrandingImage(path: path, contentType: contentType, data: data)
+            _ = try await workspaceRepository.updateWorkspaceLogo(workspaceId: wsid, logoUrl: url)
+            await loadWorkspaces(selecting: wsid)
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    func markNotificationRead(id: String) async {
+        do {
+            try await workspaceRepository.markNotificationRead(id: id)
+            await reloadSelectedWorkspaceData()
+        } catch {
+            setError(error)
+        }
+    }
+
+    func updateDisplayName(_ name: String) async -> Bool {
+        do {
+            lastError = nil
+            try await authRepository.updateDisplayName(name)
+            // Refresh the cached profile so the UI re-renders with the new
+            // displayName / initials immediately, without a full bootstrap.
+            if let p = currentUserProfile {
+                currentUserProfile = DomainUserProfile(
+                    id: p.id,
+                    email: p.email,
+                    displayName: name,
+                    avatarUrl: p.avatarUrl
+                )
+            } else {
+                await loadCurrentUserProfile()
+            }
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func updatePassword(_ newPassword: String) async -> Bool {
+        do {
+            lastError = nil
+            try await authRepository.updatePassword(newPassword)
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func signOutAllSessions() async -> Bool {
+        do {
+            lastError = nil
+            try await authRepository.signOutAllSessions()
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func requestPasswordReset(email: String) async -> Bool {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            lastError = "Enter your email first."
+            return false
+        }
+        do {
+            lastError = nil
+            try await authRepository.sendPasswordResetEmail(trimmed)
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
     }
 
     func signIn(email: String, password: String) async {
         do {
+            lastError = nil
             try await authRepository.signIn(email: email, password: password)
+            await loadCurrentUserProfile()
             await loadWorkspaces(selecting: selectedWorkspace?.id)
+        } catch {
+            setError(error)
+        }
+    }
+
+    func signUp(email: String, password: String) async {
+        do {
+            lastError = nil
+            try await authRepository.signUp(email: email, password: password)
+            if try await authRepository.currentUserId() != nil {
+                await loadCurrentUserProfile()
+                await loadWorkspaces(selecting: selectedWorkspace?.id)
+            }
         } catch {
             setError(error)
         }
@@ -108,6 +281,62 @@ final class RepositoryAppState: ObservableObject {
         } catch {
             setError(error)
             return false
+        }
+    }
+
+    /// Updates an existing draft (e.g. created during a receipt scan) with the
+    /// final fields and submits it, instead of creating a duplicate expense.
+    @discardableResult
+    func updateDraftAndSubmit(id: String, _ input: ExpenseDraftInput) async -> Bool {
+        do {
+            lastError = nil
+            _ = try await expenseRepository.updateDraft(id: id, input)
+            _ = try await expenseRepository.submitExpense(id: id)
+            await reloadSelectedWorkspaceData()
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func updateDraftOnly(id: String, _ input: ExpenseDraftInput) async -> Bool {
+        do {
+            lastError = nil
+            _ = try await expenseRepository.updateDraft(id: id, input)
+            await reloadSelectedWorkspaceData()
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    struct ReceiptScanOutcome {
+        let draftId: String
+        let result: ReceiptScanResult
+    }
+
+    /// Creates a backing draft, uploads the receipt, and runs the AI scan so
+    /// the result can prefill the form before the user submits.
+    func scanReceipt(input: ExpenseDraftInput, fileName: String, contentType: String, data: Data) async -> ReceiptScanOutcome? {
+        do {
+            lastError = nil
+            let draft = try await expenseRepository.createDraft(input)
+            let attachment = try await attachmentRepository.uploadAttachment(
+                expenseId: draft.id,
+                kind: .submittedReceipt,
+                fileName: fileName,
+                contentType: contentType,
+                data: data
+            )
+            let result = try await receiptScanRepository.startScan(attachmentId: attachment.id)
+            await reloadSelectedWorkspaceData()
+            return ReceiptScanOutcome(draftId: draft.id, result: result)
+        } catch {
+            setError(error)
+            return nil
         }
     }
 
@@ -368,6 +597,8 @@ final class RepositoryAppState: ObservableObject {
             eventsByExpenseId = [:]
             members = []
             invites = []
+            categories = []
+            notifications = []
             return
         }
 
@@ -375,6 +606,8 @@ final class RepositoryAppState: ObservableObject {
             projects = try await projectRepository.listProjects(workspaceId: workspace.id)
             members = try await workspaceRepository.listMembers(workspaceId: workspace.id)
             invites = try await workspaceRepository.listInvites(workspaceId: workspace.id)
+            categories = try await workspaceRepository.listCategories(workspaceId: workspace.id)
+            notifications = try await workspaceRepository.listNotifications(workspaceId: workspace.id)
             expenses = try await expenseRepository.listExpenses(
                 filters: ExpenseFilters(
                     workspaceId: workspace.id,

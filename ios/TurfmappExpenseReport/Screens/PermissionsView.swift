@@ -106,17 +106,13 @@ struct PermissionsView: View {
             Text("Approval policy").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
 
             GlassCard(padding: 16) {
-                VStack(spacing: 0) {
-                    FormFieldRow(label: "Workspace default threshold",  value: "$100")
-                    Divider().opacity(0.4)
-                    FormFieldRow(label: "Receipt required over", value: "$75")
-                    Divider().opacity(0.4)
-                    ToggleRow(label: "Two-step approval", sub: "Over $1,000", isOn: true)
-                    Divider().opacity(0.4)
-                    FormFieldRow(label: "Allowed categories", value: "Meals, Travel, Software")
-                    Divider().opacity(0.4)
-                    ToggleRow(label: "Finance reimbursement step", sub: "Manager approves, finance reimburses", isOn: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Approval thresholds, receipt rules, routing, and allowed categories are configured per project.")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text("Open You ▸ Manage projects ▸ a project to edit its policy.")
+                        .font(.system(size: 12, weight: .medium))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.horizontal, 16)
@@ -185,7 +181,6 @@ struct PermissionsView: View {
                         ForEach(editableRoles, id: \.self) { r in
                             Button {
                                 Task { await repositoryApp.updateMemberRole(id: m.id, role: r) }
-                                app.setMemberRole(id: m.id, to: r.legacyMemberRole)
                                 editingID = nil
                             } label: {
                                 Text(r.label)
@@ -273,7 +268,7 @@ struct InviteMemberSheet: View {
 struct ToggleRow: View {
     let label: String
     var sub: String? = nil
-    @State var isOn: Bool
+    @Binding var isOn: Bool
 
     var body: some View {
         HStack {

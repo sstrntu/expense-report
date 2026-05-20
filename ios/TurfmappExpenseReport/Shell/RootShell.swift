@@ -5,12 +5,12 @@ struct RootShell: View {
     @StateObject private var repositoryApp = RepositoryAppState()
     @State private var selectedTab: TabID = .home
     @State private var navStack: [NavRoute] = []
-    @State private var showNotifications = false
 
     var body: some View {
         if !app.isAuthenticated {
             AuthView()
                 .environmentObject(app)
+                .environmentObject(repositoryApp)
                 .appBackground()
         } else if app.needsSetup && !app.profileComplete {
             ProfileSetupView()
@@ -61,20 +61,15 @@ struct RootShell: View {
         }
         .task {
             await repositoryApp.bootstrap()
-        }
-        .overlay {
-            if showNotifications {
-                NotificationsView {
-                    withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) { showNotifications = false }
-                }
-                .environmentObject(app)
-                .transition(.asymmetric(
-                    insertion: .scale(scale: 0.02, anchor: UnitPoint(x: 0.9, y: 0.06))
-                        .combined(with: .opacity),
-                    removal: .scale(scale: 0.02, anchor: UnitPoint(x: 0.9, y: 0.06))
-                        .combined(with: .opacity)
-                ))
+            if let profile = repositoryApp.currentUserProfile {
+                if app.userName.isEmpty { app.userName = profile.displayName }
+                if app.userEmail.isEmpty { app.userEmail = profile.email }
             }
+        }
+        .onChange(of: repositoryApp.currentUserProfile) { _, profile in
+            guard let profile else { return }
+            if app.userName.isEmpty { app.userName = profile.displayName }
+            if app.userEmail.isEmpty { app.userEmail = profile.email }
         }
     }
 
@@ -92,7 +87,10 @@ struct RootShell: View {
         switch selectedTab {
         case .home:
             if app.role != .employee {
-                ManagerOverviewView { selectedTab = .review }
+                ManagerOverviewView(
+                    onGoToReview: { selectedTab = .review },
+                    onContinueDraft: { selectedTab = .add }
+                )
                     .environmentObject(app)
             } else {
                 HomeView(selectedTab: $selectedTab) { e in
@@ -116,6 +114,8 @@ struct RootShell: View {
             ProfileView(role: app.role, onSignOut: app.signOut) { key in
                 if key == "manageProjects" { navStack.append(.manageProjects) }
                 if key == "permissions"    { navStack.append(.permissions) }
+                if key == "workspace"      { navStack.append(.workspaceSettings) }
+                if key == "activity"       { navStack.append(.activity) }
                 if key == "notifications"  { navStack.append(.notifications) }
                 if key == "account"        { navStack.append(.accountSettings) }
                 if key == "security"       { navStack.append(.securitySettings) }
@@ -132,24 +132,6 @@ struct RootShell: View {
     @ViewBuilder
     private func routeView(_ route: NavRoute) -> some View {
         switch route {
-        case .detail(let e):
-            DetailView(expense: e, role: app.role,
-                       onBack: { navStack.removeLast() },
-                       onAction: { status, method, receipt in
-                           syncRepositoryAction(expense: e, status: status, method: method, receipt: receipt)
-                           app.updateStatus(id: e.id, to: status, paymentMethod: method, paymentReceipt: receipt)
-                           navStack.removeLast()
-                       },
-                       onArchive: {
-                           Task { await repositoryApp.archiveExpense(id: e.id) }
-                           app.archiveExpense(id: e.id)
-                           navStack.removeLast()
-                       },
-                       onDelete: {
-                           Task { await repositoryApp.deleteExpense(id: e.id) }
-                           app.deleteExpense(id: e.id)
-                           navStack.removeLast()
-                       })
         case .domainDetail(let e):
             DomainDetailView(
                 expense: e,
@@ -159,51 +141,36 @@ struct RootShell: View {
                 onBack: { navStack.removeLast() },
                 onApprove: {
                     Task { await repositoryApp.approveExpense(id: e.id) }
-                    app.updateStatus(id: e.id, to: .approved)
                     navStack.removeLast()
                 },
                 onReject: { reason in
                     Task { await repositoryApp.rejectExpense(id: e.id, reason: reason) }
-                    app.updateStatus(id: e.id, to: .rejected)
                     navStack.removeLast()
                 },
                 onResubmit: {
                     Task { await repositoryApp.resubmitExpense(id: e.id) }
-                    app.updateStatus(id: e.id, to: .pending)
                     navStack.removeLast()
                 },
                 onCancel: {
                     Task { await repositoryApp.cancelExpense(id: e.id, reason: "Cancelled by submitter.") }
-                    app.updateStatus(id: e.id, to: .rejected)
                     navStack.removeLast()
                 },
                 onConfirmPurchase: { finalAmount, receipt in
                     Task {
-                        let attachment = await uploadActionAttachment(
-                            expenseId: e.id,
-                            fileName: receipt,
-                            kind: .purchaseReceipt
-                        )
                         await repositoryApp.confirmPurchase(
                             id: e.id,
                             input: PurchaseConfirmationInput(
                                 finalAmount: finalAmount,
                                 purchaseDate: Date(),
-                                receiptAttachmentId: attachment?.id,
+                                receiptAttachmentId: nil,
                                 note: receipt
                             )
                         )
                     }
-                    app.updateStatus(id: e.id, to: .purchased, paymentReceipt: receipt)
                     navStack.removeLast()
                 },
                 onMarkReimbursed: { method, receipt in
                     Task {
-                        let attachment = await uploadActionAttachment(
-                            expenseId: e.id,
-                            fileName: receipt,
-                            kind: .reimbursementProof
-                        )
                         await repositoryApp.markReimbursed(
                             id: e.id,
                             input: ReimbursementInput(
@@ -211,11 +178,10 @@ struct RootShell: View {
                                 paymentMethod: method.repositoryMethod,
                                 paidAt: Date(),
                                 reference: receipt,
-                                proofAttachmentId: attachment?.id
+                                proofAttachmentId: nil
                             )
                         )
                     }
-                    app.updateStatus(id: e.id, to: .reimbursed, paymentMethod: method, paymentReceipt: receipt)
                     navStack.removeLast()
                 },
                 onArchive: {
@@ -226,23 +192,36 @@ struct RootShell: View {
                             await repositoryApp.archiveExpense(id: e.id)
                         }
                     }
-                    app.archiveExpense(id: e.id)
                     navStack.removeLast()
                 },
                 onDelete: {
                     Task { await repositoryApp.deleteExpense(id: e.id) }
-                    app.deleteExpense(id: e.id)
                     navStack.removeLast()
                 }
             )
         case .manageProjects:
             ManageProjectsView { navStack.removeLast() }
                 .environmentObject(app)
+        case .workspaceSettings:
+            WorkspaceSettingsView { navStack.removeLast() }
+                .environmentObject(app)
+        case .activity:
+            ActivityView(
+                onOpen: { e in navStack.append(.domainDetail(e)) },
+                onBack: { navStack.removeLast() }
+            )
+            .environmentObject(app)
         case .permissions:
             PermissionsView { navStack.removeLast() }
                 .environmentObject(app)
         case .notifications:
-            NotificationsView { navStack.removeLast() }
+            NotificationsView(
+                onBack: { navStack.removeLast() },
+                onOpenExpense: { e in
+                    navStack.removeLast()
+                    navStack.append(.domainDetail(e))
+                }
+            )
                 .environmentObject(app)
         case .accountSettings:
             AccountSettingsView { navStack.removeLast() }
@@ -296,14 +275,12 @@ struct RootShell: View {
                 }
             } label: {
                 HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(selectedWorkspace?.brandColor ?? app.company.color)
-                        .frame(width: 26, height: 26)
-                        .overlay(
-                            Text(selectedWorkspace?.abbr ?? app.company.abbr)
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(.white)
-                        )
+                    WorkspaceBadge(
+                        color: selectedWorkspace?.brandColor ?? app.company.color,
+                        name: selectedWorkspace?.name ?? app.company.name,
+                        logoURL: selectedWorkspace?.logoUrl.flatMap(URL.init(string:)),
+                        size: 26
+                    )
                     Text(selectedWorkspace?.name ?? app.company.name)
                         .font(.system(size: 13, weight: .semibold))
                     Image(systemName: "chevron.down")
@@ -318,17 +295,11 @@ struct RootShell: View {
 
             // Notification bell
             Button {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { showNotifications = true }
+                navStack.append(.notifications)
             } label: {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 16)).foregroundStyle(Color.primary)
-                        .frame(width: 38, height: 38)
-
-                    Circle().fill(Tokens.rejected).frame(width: 8, height: 8)
-                        .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
-                        .offset(x: -1, y: 2)
-                }
+                Image(systemName: "bell.fill")
+                    .font(.system(size: 16)).foregroundStyle(Color.primary)
+                    .frame(width: 38, height: 38)
             }
             .buttonStyle(.plain)
             .glassSurface(corner: 999)
@@ -336,53 +307,6 @@ struct RootShell: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .background(.ultraThinMaterial.opacity(0))
-    }
-
-    private func syncRepositoryAction(expense: Expense, status: ExpenseStatus, method: PaymentMethod?, receipt: String?) {
-        Task {
-            switch status {
-            case .approved:
-                await repositoryApp.approveExpense(id: expense.id)
-            case .rejected:
-                await repositoryApp.rejectExpense(id: expense.id, reason: "Rejected from expense detail.")
-            case .purchased:
-                await repositoryApp.confirmPurchase(
-                    id: expense.id,
-                    input: PurchaseConfirmationInput(
-                        finalAmount: MoneyAmount(minorUnits: Int((expense.amount * 100).rounded()), currency: "USD"),
-                        purchaseDate: Date(),
-                        receiptAttachmentId: nil,
-                        note: receipt
-                    )
-                )
-            case .reimbursed:
-                await repositoryApp.markReimbursed(
-                    id: expense.id,
-                    input: ReimbursementInput(
-                        amount: MoneyAmount(minorUnits: Int((expense.amount * 100).rounded()), currency: "USD"),
-                        paymentMethod: method?.repositoryMethod ?? .other,
-                        paidAt: Date(),
-                        reference: receipt,
-                        proofAttachmentId: nil
-                    )
-                )
-            case .pending:
-                break
-            }
-        }
-    }
-
-    private func uploadActionAttachment(expenseId: String, fileName: String?, kind: ExpenseAttachment.Kind) async -> ExpenseAttachment? {
-        guard let fileName, !fileName.isEmpty else { return nil }
-        return await repositoryApp.uploadAttachment(
-            expenseId: expenseId,
-            upload: PendingReceiptUpload(
-                kind: kind,
-                fileName: fileName,
-                contentType: "application/pdf",
-                data: Data("mock-attachment".utf8)
-            )
-        )
     }
 
     private var appBg: some View {
@@ -412,9 +336,10 @@ private extension PaymentMethod {
 // MARK: – Navigation routes
 
 enum NavRoute: Hashable {
-    case detail(Expense)
     case domainDetail(DomainExpense)
     case manageProjects
+    case workspaceSettings
+    case activity
     case permissions
     case notifications
     case accountSettings
@@ -430,13 +355,12 @@ enum NavRoute: Hashable {
 
 struct AuthView: View {
     @EnvironmentObject var app: AppState
-    @State private var email = "sira@turfmapp.com"
+    @EnvironmentObject var repositoryApp: RepositoryAppState
+    @State private var email = ""
     @State private var password = ""
     @State private var mode: AuthMode = .login
     @State private var showReset = false
     @State private var showVerification = false
-    @State private var previewCompany: Company = MockData.companies[0]
-    @State private var previewRole: AppRole = .employee
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -464,39 +388,9 @@ struct AuthView: View {
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
                     authField("Email", text: $email, keyboard: .emailAddress)
-                    if mode != .preview {
-                        Divider().opacity(0.4)
-                        secureField("Password", text: $password)
-                    }
+                    Divider().opacity(0.4)
+                    secureField("Password", text: $password)
                 }
-            }
-
-            if mode == .preview {
-                GlassCard(padding: 16) {
-                    VStack(spacing: 0) {
-                        Picker("Workspace", selection: $previewCompany) {
-                            ForEach(MockData.companies, id: \.self) { company in
-                                Text(company.name).tag(company)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .padding(.vertical, 10)
-
-                        Divider().opacity(0.4)
-
-                        Picker("Role", selection: $previewRole) {
-                            ForEach(AppRole.allCases) { role in
-                                Text(role.label).tag(role)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.top, 12)
-                    }
-                }
-
-                infoBanner(icon: "play.circle.fill", tint: Tokens.slate500,
-                           title: "Demo access",
-                           message: "Opens the app with a selected workspace and role.")
             }
 
             if showReset {
@@ -508,35 +402,57 @@ struct AuthView: View {
             if showVerification {
                 infoBanner(icon: "checkmark.seal.fill", tint: Tokens.approved,
                            title: "Verification required",
-                           message: "We will ask new users to confirm their email before joining a workspace.")
+                           message: "Check your email to confirm this account, then sign in.")
+            }
+
+            if let lastError = repositoryApp.lastError {
+                infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
+                           title: "Authentication failed",
+                           message: lastError)
             }
 
             Button {
-                if mode == .signup { showVerification = true }
-                if mode == .preview {
-                    app.company = previewCompany
-                    app.signIn(email: email, needsSetup: false, role: previewRole)
-                } else {
-                    app.signIn(email: email, needsSetup: mode == .signup)
+                Task {
+                    switch mode {
+                    case .login:
+                        await repositoryApp.signIn(email: email, password: password)
+                        showVerification = false
+                    case .signup:
+                        showVerification = false
+                        await repositoryApp.signUp(email: email, password: password)
+                        showVerification = repositoryApp.lastError?.localizedCaseInsensitiveContains("confirm") == true
+                    }
+                    if repositoryApp.lastError == nil {
+                        app.signIn(email: email, needsSetup: repositoryApp.workspaces.isEmpty)
+                        if let workspace = repositoryApp.selectedWorkspace {
+                            app.company = workspace.legacyCompany
+                            app.role = workspace.currentUserRole.appRole
+                        }
+                    }
                 }
             } label: {
                 Text(mode.actionTitle).primaryActionLabel()
             }
             .buttonStyle(.plain)
+            .disabled(email.isEmpty || password.isEmpty)
 
             HStack {
                 if mode == .login {
-                    Button("Forgot password?") { showReset = true }
+                    Button("Forgot password?") {
+                        Task {
+                            let sent = await repositoryApp.requestPasswordReset(email: email)
+                            await MainActor.run { showReset = sent }
+                        }
+                    }
+                    .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 } else {
                     Button("Back to sign in") { mode = .login }
                 }
                 Spacer()
-                if mode != .preview {
-                    Button(mode == .login ? "Create account" : "Use sign in") {
-                        mode = mode == .login ? .signup : .login
-                        showReset = false
-                        showVerification = false
-                    }
+                Button(mode == .login ? "Create account" : "Use sign in") {
+                    mode = mode == .login ? .signup : .login
+                    showReset = false
+                    showVerification = false
                 }
             }
             .font(.system(size: 13, weight: .semibold))
@@ -574,16 +490,13 @@ struct AuthView: View {
     }
 }
 
-enum AuthMode {
-    case login, signup, preview
-
-    static var allCases: [AuthMode] { [.login, .signup, .preview] }
+enum AuthMode: CaseIterable {
+    case login, signup
 
     var title: String {
         switch self {
         case .login: return "Sign in"
         case .signup: return "Create account"
-        case .preview: return "Demo"
         }
     }
 
@@ -591,15 +504,14 @@ enum AuthMode {
         switch self {
         case .login: return "Sign in"
         case .signup: return "Create account"
-        case .preview: return "Enter demo"
         }
     }
 }
 
 struct ProfileSetupView: View {
     @EnvironmentObject var app: AppState
-    @State private var name = "Sira Sasitorn"
-    @State private var email = "sira@turfmapp.com"
+    @State private var name = ""
+    @State private var nickname = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -613,12 +525,12 @@ struct ProfileSetupView: View {
                 VStack(spacing: 0) {
                     setupField("Full name", text: $name)
                     Divider().opacity(0.4)
-                    setupField("Email", text: $email)
+                    setupField("Nickname", text: $nickname)
                 }
             }
 
             Button {
-                app.completeProfile(name: name, email: email)
+                app.completeProfile(name: name, nickname: nickname)
             } label: {
                 Text("Continue").primaryActionLabel()
             }

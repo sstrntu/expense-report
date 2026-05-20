@@ -29,7 +29,6 @@ struct ReviewView: View {
                             await repositoryApp.approveExpense(id: item.id)
                         }
                     }
-                    pending.forEach { app.updateStatus(id: $0.id, to: .approved) }
                 } label: {
                     Label("Approve all visible", systemImage: "checkmark.circle.fill")
                         .font(.system(size: 13.5, weight: .semibold))

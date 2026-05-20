@@ -63,10 +63,9 @@ struct ManageProjectsView: View {
                 Task {
                     await repositoryApp.updateProjectThreshold(
                         id: project.id,
-                        threshold: MoneyAmount(minorUnits: Int((newValue * 100).rounded()), currency: "USD")
+                        threshold: MoneyAmount(minorUnits: Int((newValue * 100).rounded()), currency: project.approvalThreshold.currency)
                     )
                 }
-                app.setProjectThreshold(id: project.id, to: newValue)
             }
             .presentationDetents([.height(280)])
         }
@@ -79,7 +78,9 @@ struct ManageProjectsView: View {
 
     private func projectRow(_ p: DomainProject) -> some View {
         let spent = repositoryApp.expenses
-            .filter { $0.projectId == p.id && [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
+            .filter { $0.projectId == p.id
+                      && $0.amount.currency == p.budget.currency
+                      && [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
             .reduce(0) { $0 + $1.amount.decimalValue }
         let progress = min(spent / max(p.budget.decimalValue, 1), 1)
 
@@ -103,9 +104,9 @@ struct ManageProjectsView: View {
             .buttonStyle(.plain)
 
             HStack {
-                Text("$\(Int(spent / 1000))k spent")
+                Text("\(MoneyAmount.format(amount: spent, currency: p.budget.currency)) spent")
                 Spacer()
-                Text("$\(Int(p.budget.decimalValue / 1000))k budget")
+                Text("\(p.budget.formatted) budget")
             }
             .font(.system(size: 11)).foregroundStyle(.secondary)
 
@@ -177,16 +178,27 @@ struct ManageProjectsView: View {
                 }
 
                 Button {
-                    let legacyProject = app.addProject(
-                        name: projectName,
-                        budget: Double(projectBudget) ?? 0,
-                        owner: projectOwner,
-                        visibility: projectVisibility,
-                        threshold: Double(projectThreshold) ?? 100
+                    guard let workspaceId = repositoryApp.selectedWorkspace?.id else { return }
+                    let currency = repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD"
+                    let budget = Double(projectBudget) ?? 0
+                    let threshold = Double(projectThreshold) ?? 100
+                    let newProject = DomainProject(
+                        id: UUID().uuidString,
+                        workspaceId: workspaceId,
+                        name: projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled project" : projectName,
+                        budget: MoneyAmount(minorUnits: Int((max(budget, 0)) * 100), currency: currency),
+                        budgetPeriod: "quarterly",
+                        ownerMembershipId: "",
+                        visibility: projectVisibility.lowercased() == "org-wide" ? "workspace" : projectVisibility.lowercased(),
+                        routingMode: .managerThenFinance,
+                        overBudgetBehavior: .warn,
+                        allowedCategoryIds: [],
+                        approvalThreshold: MoneyAmount(minorUnits: Int(max(threshold, 0) * 100), currency: currency),
+                        receiptRequiredThreshold: MoneyAmount(minorUnits: 7500, currency: currency),
+                        currentUserProjectRole: .projectAdmin,
+                        isArchived: false
                     )
-                    Task {
-                        await repositoryApp.createProject(domainProject(from: legacyProject))
-                    }
+                    Task { await repositoryApp.createProject(newProject) }
                     showCreate = false
                 } label: {
                     Text("Create project")
@@ -216,24 +228,6 @@ struct ManageProjectsView: View {
         .padding(.vertical, 11)
     }
 
-    private func domainProject(from project: Project) -> DomainProject {
-        DomainProject(
-            id: project.id,
-            workspaceId: project.companyId,
-            name: project.name,
-            budget: MoneyAmount(minorUnits: Int((project.budget * 100).rounded()), currency: "USD"),
-            budgetPeriod: "quarterly",
-            ownerMembershipId: "member_current",
-            visibility: project.visibility,
-            routingMode: .managerThenFinance,
-            overBudgetBehavior: .warn,
-            allowedCategoryIds: ["meals", "travel", "software", "office", "other"],
-            approvalThreshold: MoneyAmount(minorUnits: Int((project.autoApproveThreshold * 100).rounded()), currency: "USD"),
-            receiptRequiredThreshold: MoneyAmount(minorUnits: 7500, currency: "USD"),
-            currentUserProjectRole: .projectAdmin,
-            isArchived: false
-        )
-    }
 }
 
 private extension ProjectRole {
@@ -244,122 +238,6 @@ private extension ProjectRole {
         case .approver: return "Approver"
         case .finance: return "Finance"
         case .projectAdmin: return "Project admin"
-        }
-    }
-}
-
-// MARK: – Threshold editor sheet
-
-struct ThresholdEditorSheet: View {
-    let project: Project
-    var onSave: (Double) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var amountText: String
-
-    init(project: Project, onSave: @escaping (Double) -> Void) {
-        self.project = project
-        self.onSave = onSave
-        _amountText = State(initialValue: String(format: "%.0f", project.autoApproveThreshold))
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Auto-approve threshold").font(.system(size: 18, weight: .bold))
-                Text(project.name).font(.system(size: 13)).foregroundStyle(.secondary)
-            }
-            .padding(.top, 24).padding(.horizontal, 20)
-
-            Text("Expenses at or below this amount on this project will skip manager approval.")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-
-            HStack {
-                Text("$").font(.system(size: 28, weight: .bold)).foregroundStyle(.secondary)
-                TextField("0", text: $amountText)
-                    .font(.system(size: 36, weight: .bold))
-                    .keyboardType(.numberPad)
-            }
-            .padding(.horizontal, 20)
-
-            Spacer()
-
-            Button {
-                if let v = Double(amountText), v >= 0 { onSave(v) }
-                dismiss()
-            } label: {
-                Text("Save").primaryActionLabel()
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 24)
-        }
-    }
-}
-
-struct ProjectDetailSheet: View {
-    let project: Project
-    @EnvironmentObject var app: AppState
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(project.name).font(.system(size: 20, weight: .bold))
-                    Text("\(project.owner) · \(project.visibility)").font(.system(size: 12)).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-                .background(Color.primary.opacity(0.06), in: Circle())
-            }
-            .padding(.top, 24).padding(.horizontal, 20)
-
-            VStack(spacing: 0) {
-                FormFieldRow(label: "Budget", value: money(project.budget), showChevron: false)
-                Divider().opacity(0.4)
-                FormFieldRow(label: "Spent", value: money(project.spent), showChevron: false)
-                Divider().opacity(0.4)
-                FormFieldRow(label: "Auto-approve under", value: money(project.autoApproveThreshold), showChevron: false)
-                Divider().opacity(0.4)
-                FormFieldRow(label: "Visibility", value: project.visibility.capitalized, showChevron: false)
-            }
-            .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-            .padding(.horizontal, 20)
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Assigned members")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                HStack(spacing: -8) {
-                    ForEach(app.currentMembers.prefix(4)) { member in
-                        Avatar(color: member.avatarColor, size: 34, label: member.initials)
-                            .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 1))
-                    }
-                    Spacer()
-                    Text("\(app.currentMembers.count) total")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 20)
-
-            infoBanner(icon: "slider.horizontal.3", tint: Tokens.slate500,
-                       title: "Project policy",
-                       message: "Project-level policy overrides workspace defaults for approval threshold, visibility, and assigned members.")
-                .padding(.horizontal, 20)
-
-            infoBanner(icon: "archivebox.fill", tint: Tokens.pending,
-                       title: "Archive actions",
-                       message: "Project detail should support archive and delete confirmation before hiding a project.")
-                .padding(.horizontal, 20)
-
-            Spacer()
         }
     }
 }
@@ -429,17 +307,15 @@ struct DomainProjectDetailSheet: View {
     @State private var overBudgetBehavior: OverBudgetBehavior = .warn
     @State private var allowedCategoryIds: Set<String> = []
 
-    private let categories: [(id: String, label: String)] = [
-        ("meals", "Meals"),
-        ("travel", "Travel"),
-        ("software", "Software"),
-        ("office", "Office"),
-        ("other", "Other")
-    ]
+    private var categories: [(id: String, label: String)] {
+        repositoryApp.categories.map { (id: $0.id, label: $0.name) }
+    }
 
     private var spent: Double {
         expenses
-            .filter { $0.projectId == project.id && [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
+            .filter { $0.projectId == project.id
+                      && $0.amount.currency == project.budget.currency
+                      && [.approved, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains($0.status) }
             .reduce(0) { $0 + $1.amount.decimalValue }
     }
 
@@ -488,7 +364,7 @@ struct DomainProjectDetailSheet: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
-                Text("Project member access will persist as project_members rows; current mock shows active workspace members eligible for assignment.")
+                Text("All active workspace members are eligible for assignment.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -537,7 +413,7 @@ struct DomainProjectDetailSheet: View {
             Divider().opacity(0.4)
             FormFieldRow(label: "Budget period", value: project.budgetPeriod.capitalized, showChevron: false)
             Divider().opacity(0.4)
-            FormFieldRow(label: "Spent", value: money(spent), showChevron: false)
+            FormFieldRow(label: "Spent", value: MoneyAmount.format(amount: spent, currency: project.budget.currency), showChevron: false)
             Divider().opacity(0.4)
             FormFieldRow(label: "Auto-approve under", value: project.approvalThreshold.formatted, showChevron: false)
             Divider().opacity(0.4)

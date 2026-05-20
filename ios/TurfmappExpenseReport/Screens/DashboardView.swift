@@ -5,8 +5,11 @@ struct DashboardView: View {
     @EnvironmentObject var repositoryApp: RepositoryAppState
     @State private var drilldown: DashboardDrilldown? = nil
 
+    private var workspaceCurrency: String { repositoryApp.aggregationCurrency }
+    private var expensesInCurrency: [DomainExpense] { repositoryApp.expensesInDefaultCurrency }
+
     private var cats: [DonutChart.Segment] {
-        let totals = Dictionary(grouping: repositoryApp.expenses, by: \.categoryLabel)
+        let totals = Dictionary(grouping: expensesInCurrency, by: \.categoryLabel)
             .mapValues { $0.reduce(0) { $0 + $1.amount.decimalValue } }
 
         return totals
@@ -22,7 +25,7 @@ struct DashboardView: View {
         return (0..<6).reversed().map { offset in
             let date = calendar.date(byAdding: .month, value: -offset, to: now) ?? now
             let components = calendar.dateComponents([.year, .month], from: date)
-            let value = repositoryApp.expenses
+            let value = expensesInCurrency
                 .filter { expense in
                     let expenseDate = expense.purchaseDate ?? expense.submittedAt ?? expense.createdAt
                     let expenseComponents = calendar.dateComponents([.year, .month], from: expenseDate)
@@ -35,7 +38,7 @@ struct DashboardView: View {
     }
 
     private var merchants: [(String, Double, Int)] {
-        Dictionary(grouping: repositoryApp.expenses, by: \.merchant)
+        Dictionary(grouping: expensesInCurrency, by: \.merchant)
             .map { merchant, expenses in
                 (merchant, expenses.reduce(0) { $0 + $1.amount.decimalValue }, expenses.count)
             }
@@ -47,7 +50,15 @@ struct DashboardView: View {
     var body: some View {
         let segments = cats
         let total = segments.reduce(0) { $0 + $1.value }
-        let average = repositoryApp.expenses.isEmpty ? 0 : total / Double(repositoryApp.expenses.count)
+        let average = expensesInCurrency.isEmpty ? 0 : total / Double(expensesInCurrency.count)
+        let monthValues = months.map(\.value)
+        let spendDelta: String = {
+            guard monthValues.count >= 2 else { return "—" }
+            let prev = monthValues[monthValues.count - 2]
+            let curr = monthValues[monthValues.count - 1]
+            guard prev > 0 else { return curr > 0 ? "New" : "—" }
+            return String(format: "%+.1f%%", (curr - prev) / prev * 100)
+        }()
 
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -57,8 +68,8 @@ struct DashboardView: View {
             .padding(.horizontal, 4).padding(.top, 4)
 
             HStack(spacing: 10) {
-                kpiCard(label: "TOTAL SPEND", value: String(format: "$%.2fk", total / 1000), delta: "+8.2%", positive: true)
-                kpiCard(label: "AVG PER CLAIM", value: money(average), delta: "\(repositoryApp.expenses.count) claims", positive: true)
+                kpiCard(label: "TOTAL SPEND", value: money(total, currency: workspaceCurrency), delta: spendDelta, positive: !spendDelta.hasPrefix("-"))
+                kpiCard(label: "AVG PER CLAIM", value: money(average, currency: workspaceCurrency), delta: "\(expensesInCurrency.count) claims", positive: true)
             }
 
             categoryCard(segments: segments, total: total)
@@ -75,6 +86,13 @@ struct DashboardView: View {
             }
 
             merchantsCard
+
+            if repositoryApp.foreignCurrencyExpenseCount > 0 {
+                Text("Charts and totals show \(workspaceCurrency) only. \(repositoryApp.foreignCurrencyExpenseCount) expense(s) in other currencies are not included.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 4)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
@@ -104,7 +122,7 @@ struct DashboardView: View {
                         DonutChart(segments: segments).frame(width: 132, height: 132)
                         VStack(spacing: 1) {
                             Text("TOTAL").font(.system(size: 10, weight: .semibold)).tracking(0.6).foregroundStyle(.tertiary)
-                            Text(String(format: "$%.2fk", total/1000)).font(.system(size: 18, weight: .bold))
+                            Text(money(total, currency: workspaceCurrency)).font(.system(size: 18, weight: .bold))
                         }
                     }
                     VStack(alignment: .leading, spacing: 6) {
@@ -160,7 +178,7 @@ struct DashboardView: View {
                                 Text("\(m.2) transactions").font(.system(size: 11)).foregroundStyle(.tertiary)
                             }
                             Spacer()
-                            Text("$\(Int(m.1))").font(.system(size: 13, weight: .semibold))
+                            Text(money(m.1, currency: workspaceCurrency)).font(.system(size: 13, weight: .semibold))
                         }
                         .padding(.horizontal, 16).padding(.vertical, 11)
                     }

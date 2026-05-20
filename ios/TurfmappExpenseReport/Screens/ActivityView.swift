@@ -1,13 +1,15 @@
 import SwiftUI
 
 struct ActivityView: View {
-    @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
     @State private var filter: String = "All"
     @State private var searchText = ""
     @State private var projectFilter = "All projects"
     @State private var expenseToDelete: DomainExpense? = nil
     var onOpen: (DomainExpense) -> Void
+    /// Provided only when pushed as a stack screen (e.g. from You → My activity).
+    /// When nil the view assumes it's the root of the Activity tab.
+    var onBack: (() -> Void)? = nil
 
     private let filters = ["All", "Awaiting Approval", "Approved", "Awaiting Reimbursement", "Reimbursed", "Rejected", "Archived"]
 
@@ -36,8 +38,20 @@ struct ActivityView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Activity").font(.system(size: 26, weight: .bold))
-                .padding(.horizontal, 4).padding(.top, 4)
+            HStack(spacing: 8) {
+                if let onBack {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.plain)
+                    .glassSurface(corner: 999)
+                }
+                Text("Activity").font(.system(size: 26, weight: .bold))
+                Spacer()
+            }
+            .padding(.horizontal, 4).padding(.top, 4)
 
             searchAndProjectFilters
 
@@ -84,7 +98,6 @@ struct ActivityView: View {
                 message: Text("This cannot be undone."),
                 primaryButton: .destructive(Text("Delete")) {
                     Task { await repositoryApp.deleteExpense(id: expense.id) }
-                    app.deleteExpense(id: expense.id)
                 },
                 secondaryButton: .cancel()
             )
@@ -143,7 +156,6 @@ struct ActivityView: View {
                             .contextMenu {
                                 Button {
                                     Task { await repositoryApp.archiveExpense(id: e.id) }
-                                    app.archiveExpense(id: e.id)
                                 } label: {
                                     Label(e.isArchived ? "Unarchive" : "Archive",
                                           systemImage: e.isArchived ? "tray.and.arrow.up" : "archivebox")

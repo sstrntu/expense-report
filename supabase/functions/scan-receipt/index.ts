@@ -1,138 +1,220 @@
-type ScanReceiptRequest = {
-  attachmentId?: string
-  storagePath?: string
-  signedUrl?: string
-  contentType?: string
-}
+// Supabase Edge Function: scan-receipt
+//
+// Extracts merchant / amount / currency / date / category from a receipt
+// image or PDF using an OpenAI vision model, and persists the result into
+// public.receipt_scans + public.receipt_scan_fields so the iOS app can read
+// it back and let the user confirm fields.
+//
+// Required secret:
+//   OPENAI_API_KEY   API key for the OpenAI vision model.
+// Optional secrets:
+//   OPENAI_MODEL                     Defaults to "gpt-4o-mini".
+//   SUPABASE_STORAGE_RECEIPT_BUCKET  Defaults to "receipts".
+//
+// config.toml sets verify_jwt = true, so the caller's JWT is validated and
+// forwarded. All DB/Storage access uses a user-scoped client and therefore
+// stays under the caller's RLS policies.
 
-type ScanReceiptField = {
-  fieldName: string
-  extractedValue: string
-  normalizedValue?: string
-  confidence: 'high' | 'medium' | 'low' | 'manual'
-}
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") ?? "gpt-4o-mini";
+const RECEIPT_BUCKET = Deno.env.get("SUPABASE_STORAGE_RECEIPT_BUCKET") ?? "receipts";
+
+interface ScanField {
+  id: string;
+  field_name: string;
+  extracted_value: string;
+  normalized_value: string | null;
+  confidence: "high" | "medium" | "low" | "manual";
+  confirmed_by_user: boolean;
 }
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
-
-  if (request.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405)
-  }
-
-  const openAIKey = Deno.env.get('OPENAI_API_KEY')
-  if (!openAIKey) {
-    return json({ error: 'OPENAI_API_KEY is not configured for this Edge Function.' }, 500)
-  }
-
-  const body = await request.json().catch(() => ({})) as ScanReceiptRequest
-  if (!body.attachmentId && !body.storagePath && !body.signedUrl) {
-    return json({ error: 'attachmentId, storagePath, or signedUrl is required.' }, 400)
-  }
-
-  const model = Deno.env.get('OPENAI_MODEL') ?? 'gpt-4.1-mini'
-  const receiptReference = body.signedUrl ?? body.storagePath ?? body.attachmentId ?? 'receipt'
-
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openAIKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: 'system',
-          content: [
-            {
-              type: 'input_text',
-              text: 'Extract expense receipt fields. Return only strict JSON with keys merchant, amount, currency, category, purchaseDate, confidenceNotes.',
-            },
-          ],
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'input_text',
-              text: `Receipt reference: ${receiptReference}. If this is a signed URL, inspect the image/document and extract fields for an expense report.`,
-            },
-          ],
-        },
-      ],
-      text: {
-        format: {
-          type: 'json_object',
-        },
-      },
-    }),
-  })
-
-  if (!response.ok) {
-    const message = await response.text()
-    return json({ error: 'OpenAI receipt scan failed.', detail: message }, 502)
-  }
-
-  const result = await response.json()
-  const extractedText = result.output_text ?? '{}'
-  const parsed = safeJSON(extractedText)
-  const fields: ScanReceiptField[] = normalizeFields(parsed)
-
-  return json({
-    attachmentId: body.attachmentId,
-    status: 'needs_review',
-    fields,
-    raw: parsed,
-  })
-})
-
-function normalizeFields(value: Record<string, unknown>): ScanReceiptField[] {
-  return [
-    field('merchant', value.merchant, undefined, 'medium'),
-    field('amount', value.amount, value.amount, 'medium'),
-    field('currency', value.currency ?? 'USD', value.currency ?? 'USD', 'medium'),
-    field('category', value.category, value.category, 'low'),
-    field('purchase_date', value.purchaseDate, value.purchaseDate, 'medium'),
-  ].filter((item) => item.extractedValue.length > 0)
-}
-
-function field(
-  fieldName: string,
-  extractedValue: unknown,
-  normalizedValue: unknown,
-  confidence: ScanReceiptField['confidence'],
-): ScanReceiptField {
-  return {
-    fieldName,
-    extractedValue: String(extractedValue ?? ''),
-    normalizedValue: normalizedValue == null ? undefined : String(normalizedValue),
-    confidence,
-  }
-}
-
-function safeJSON(text: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(text)
-    return typeof parsed === 'object' && parsed !== null ? parsed as Record<string, unknown> : {}
-  } catch {
-    return {}
-  }
-}
-
-function json(body: unknown, status = 200): Response {
+function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'application/json',
-    },
-  })
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) return json({ error: "Missing Authorization header" }, 401);
+
+  let attachmentId: string;
+  try {
+    const body = await req.json();
+    // The iOS client encodes with convertToSnakeCase -> "attachment_id".
+    attachmentId = body.attachment_id ?? body.attachmentId;
+    if (!attachmentId) return json({ error: "attachment_id is required" }, 400);
+  } catch {
+    return json({ error: "Invalid JSON body" }, 400);
+  }
+
+  // User-scoped client: every query/storage read respects the caller's RLS.
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    db: { schema: "turfmapp_expenses" },
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  // 1. Resolve the attachment the caller is allowed to see.
+  const { data: attachment, error: attachmentError } = await supabase
+    .from("attachments")
+    .select("id, expense_id, workspace_id, storage_key, content_type")
+    .eq("id", attachmentId)
+    .is("deleted_at", null)
+    .single();
+
+  if (attachmentError || !attachment) {
+    return json({ error: "Attachment not found or not accessible" }, 404);
+  }
+
+  // 2. Open the scan row in a processing state.
+  const { data: scan, error: scanError } = await supabase
+    .from("receipt_scans")
+    .insert({
+      attachment_id: attachment.id,
+      expense_id: attachment.expense_id,
+      status: "processing",
+      provider: "openai",
+    })
+    .select("id")
+    .single();
+
+  if (scanError || !scan) {
+    return json({ error: `Could not create scan: ${scanError?.message ?? "unknown"}` }, 500);
+  }
+  const scanId = scan.id as string;
+
+  const fail = async (message: string) => {
+    await supabase
+      .from("receipt_scans")
+      .update({ status: "failed", error_message: message })
+      .eq("id", scanId);
+    return json({
+      id: scanId,
+      attachment_id: attachment.id,
+      expense_id: attachment.expense_id,
+      status: "failed",
+      error_message: message,
+      receipt_scan_fields: [],
+    });
+  };
+
+  if (!OPENAI_API_KEY) {
+    return await fail("Receipt scanning is not configured (missing OPENAI_API_KEY secret).");
+  }
+
+  // 3. Download the receipt bytes from the private bucket.
+  const { data: file, error: downloadError } = await supabase.storage
+    .from(RECEIPT_BUCKET)
+    .download(attachment.storage_key);
+
+  if (downloadError || !file) {
+    return await fail(`Could not download receipt: ${downloadError?.message ?? "unknown"}`);
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  const base64 = btoa(binary);
+  const mime = attachment.content_type || "image/jpeg";
+  const dataUrl = `data:${mime};base64,${base64}`;
+
+  // 4. Ask the vision model for structured fields.
+  let extracted: Record<string, string> = {};
+  try {
+    const completion = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You extract structured data from receipts. Respond ONLY with a JSON object " +
+              'with keys: merchant (string), amount (string, numeric only e.g. "47.23"), ' +
+              'currency (ISO 4217, e.g. "USD"), date (YYYY-MM-DD), category (one of ' +
+              "Meals, Travel, Software, Office, Other). Use an empty string if unknown.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extract the receipt fields." },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!completion.ok) {
+      return await fail(`Vision model error (${completion.status}): ${await completion.text()}`);
+    }
+    const payload = await completion.json();
+    const content = payload?.choices?.[0]?.message?.content ?? "{}";
+    extracted = JSON.parse(content);
+  } catch (e) {
+    return await fail(`Scan failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // 5. Persist fields and mark the scan ready for human review.
+  const value = (key: string) => String(extracted[key] ?? "").trim();
+  const rows = [
+    { field_name: "merchant", extracted_value: value("merchant") },
+    { field_name: "amount", extracted_value: value("amount") },
+    { field_name: "currency", extracted_value: value("currency") || "USD" },
+    { field_name: "date", extracted_value: value("date") },
+    { field_name: "category", extracted_value: value("category") },
+  ].map((r) => ({
+    receipt_scan_id: scanId,
+    field_name: r.field_name,
+    extracted_value: r.extracted_value,
+    normalized_value: r.extracted_value || null,
+    confidence: r.extracted_value ? "high" : "low",
+    confirmed_by_user: false,
+  }));
+
+  const { data: savedFields, error: fieldError } = await supabase
+    .from("receipt_scan_fields")
+    .upsert(rows, { onConflict: "receipt_scan_id,field_name" })
+    .select("id, field_name, extracted_value, normalized_value, confidence, confirmed_by_user");
+
+  if (fieldError) {
+    return await fail(`Could not save fields: ${fieldError.message}`);
+  }
+
+  await supabase
+    .from("receipt_scans")
+    .update({ status: "needs_review", raw_result_json: extracted, error_message: null })
+    .eq("id", scanId);
+
+  return json({
+    id: scanId,
+    attachment_id: attachment.id,
+    expense_id: attachment.expense_id,
+    status: "needs_review",
+    error_message: null,
+    receipt_scan_fields: (savedFields ?? []) as ScanField[],
+  });
+});

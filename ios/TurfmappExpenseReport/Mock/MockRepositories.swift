@@ -21,7 +21,8 @@ actor MockRepositoryStore {
                 abbr: company.abbr,
                 brandColorHex: company.color.hexString,
                 defaultCurrency: "USD",
-                currentUserRole: idx == 0 ? .admin : .manager
+                currentUserRole: idx == 0 ? .admin : .manager,
+                logoUrl: nil
             )
         }
 
@@ -117,7 +118,8 @@ actor MockRepositoryStore {
             abbr: String((workspaceName.isEmpty ? "UW" : workspaceName).prefix(2)).uppercased(),
             brandColorHex: "878E9F",
             defaultCurrency: defaultCurrency,
-            currentUserRole: .admin
+            currentUserRole: .admin,
+            logoUrl: nil
         )
         workspaces.insert(workspace, at: 0)
         members.insert(
@@ -256,6 +258,11 @@ actor MockRepositoryStore {
         workspaces.first { $0.id == workspaceId }?.currentUserRole ?? .employee
     }
 
+    func listCategories(workspaceId: String) -> [DomainCategory] {
+        [("Meals", "fork.knife"), ("Travel", "airplane"), ("Software", "desktopcomputer"), ("Office", "briefcase"), ("Other", "tag")]
+            .map { DomainCategory(id: $0.0.lowercased(), workspaceId: workspaceId, name: $0.0, icon: $0.1) }
+    }
+
     func listProjects(workspaceId: String) -> [DomainProject] {
         projects.filter { $0.workspaceId == workspaceId && !$0.isArchived }
     }
@@ -345,6 +352,30 @@ actor MockRepositoryStore {
         expenses.insert(expense, at: 0)
         appendEvent(expenseId: expense.id, from: nil, to: .draft, eventType: "created", note: nil)
         return expense
+    }
+
+    func updateDraft(id: String, _ input: ExpenseDraftInput) throws -> DomainExpense {
+        guard let idx = expenses.firstIndex(where: { $0.id == id }) else { throw MockRepositoryError.notFound }
+        let existing = expenses[idx]
+        let updated = DomainExpense(
+            id: existing.id,
+            workspaceId: existing.workspaceId,
+            projectId: input.projectId,
+            submittedByMembershipId: existing.submittedByMembershipId,
+            kind: input.kind,
+            status: existing.status,
+            merchant: input.merchant,
+            amount: input.amount,
+            categoryId: input.categoryId,
+            businessPurpose: input.businessPurpose,
+            purchaseDate: input.purchaseDate,
+            neededByDate: input.neededByDate,
+            createdAt: existing.createdAt,
+            submittedAt: existing.submittedAt,
+            isArchived: existing.isArchived
+        )
+        expenses[idx] = updated
+        return updated
     }
 
     func submitExpense(id: String) throws -> DomainExpense {
@@ -589,12 +620,36 @@ struct MockAuthRepository: AuthRepository {
         try await store.signIn(email: email, password: password)
     }
 
+    func signUp(email: String, password: String) async throws {
+        try await store.signIn(email: email, password: password)
+    }
+
     func signOut() async throws {
         try await store.signOut()
     }
 
     func currentUserId() async throws -> String? {
         await store.currentUserId
+    }
+
+    func updateDisplayName(_ name: String) async throws {}
+
+    func currentUserProfile() async throws -> DomainUserProfile? {
+        DomainUserProfile(id: "user_sira", email: "sira@mock.io", displayName: "Sira", avatarUrl: nil)
+    }
+
+    func updateAvatarUrl(_ url: String?) async throws {}
+
+    func uploadBrandingImage(path: String, contentType: String, data: Data) async throws -> String {
+        "mock://branding/\(path)"
+    }
+
+    func sendPasswordResetEmail(_ email: String) async throws {}
+
+    func updatePassword(_ newPassword: String) async throws {}
+
+    func signOutAllSessions() async throws {
+        try await store.signOut()
     }
 }
 
@@ -611,6 +666,22 @@ struct MockWorkspaceRepository: WorkspaceRepository {
 
     func listInvites(workspaceId: String) async throws -> [WorkspaceInvite] {
         await store.listInvites(workspaceId: workspaceId)
+    }
+
+    func listCategories(workspaceId: String) async throws -> [DomainCategory] {
+        await store.listCategories(workspaceId: workspaceId)
+    }
+
+    func listNotifications(workspaceId: String) async throws -> [DomainNotification] { [] }
+
+    func markNotificationRead(id: String) async throws {}
+
+    func updateWorkspaceLogo(workspaceId: String, logoUrl: String?) async throws -> DomainWorkspace {
+        DomainWorkspace(id: workspaceId, name: "Mock", abbr: "MK", brandColorHex: "878E9F", defaultCurrency: "USD", currentUserRole: .admin, logoUrl: logoUrl)
+    }
+
+    func updateWorkspace(workspaceId: String, name: String, defaultCurrency: String) async throws -> DomainWorkspace {
+        DomainWorkspace(id: workspaceId, name: name, abbr: String(name.prefix(2)).uppercased(), brandColorHex: "878E9F", defaultCurrency: defaultCurrency, currentUserRole: .admin, logoUrl: nil)
     }
 
     func createWorkspace(name: String, defaultCurrency: String) async throws -> DomainWorkspace {
@@ -671,6 +742,10 @@ struct MockExpenseRepository: ExpenseRepository {
 
     func createDraft(_ input: ExpenseDraftInput) async throws -> DomainExpense {
         try await store.createDraft(input)
+    }
+
+    func updateDraft(id: String, _ input: ExpenseDraftInput) async throws -> DomainExpense {
+        try await store.updateDraft(id: id, input)
     }
 
     func submitExpense(id: String) async throws -> DomainExpense {

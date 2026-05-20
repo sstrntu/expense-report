@@ -45,20 +45,37 @@ struct PendingReceiptUpload: Codable, Hashable, Sendable {
 
 protocol AuthRepository: Sendable {
     func signIn(email: String, password: String) async throws
+    func signUp(email: String, password: String) async throws
     func signOut() async throws
     func currentUserId() async throws -> String?
+    func currentUserProfile() async throws -> DomainUserProfile?
+    func updateDisplayName(_ name: String) async throws
+    func updateAvatarUrl(_ url: String?) async throws
+    /// Uploads bytes to the public `branding` bucket at the given path and
+    /// returns the public URL the image can be displayed at.
+    func uploadBrandingImage(path: String, contentType: String, data: Data) async throws -> String
+    /// Sends a Supabase password-reset email to `email`. Best practice: do not
+    /// reveal whether the email exists; show success regardless of return.
+    func sendPasswordResetEmail(_ email: String) async throws
+    func updatePassword(_ newPassword: String) async throws
+    func signOutAllSessions() async throws
 }
 
 protocol WorkspaceRepository: Sendable {
     func listWorkspacesForCurrentUser() async throws -> [DomainWorkspace]
     func listMembers(workspaceId: String) async throws -> [DomainWorkspaceMember]
     func listInvites(workspaceId: String) async throws -> [WorkspaceInvite]
+    func listCategories(workspaceId: String) async throws -> [DomainCategory]
     func createWorkspace(name: String, defaultCurrency: String) async throws -> DomainWorkspace
     func acceptInvite(id: String) async throws -> DomainWorkspace
     func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) async throws -> WorkspaceInvite
     func cancelInvite(id: String) async throws
     func updateMemberRole(id: String, role: WorkspaceRole) async throws -> DomainWorkspaceMember
     func removeMember(id: String) async throws
+    func listNotifications(workspaceId: String) async throws -> [DomainNotification]
+    func markNotificationRead(id: String) async throws
+    func updateWorkspaceLogo(workspaceId: String, logoUrl: String?) async throws -> DomainWorkspace
+    func updateWorkspace(workspaceId: String, name: String, defaultCurrency: String) async throws -> DomainWorkspace
 }
 
 protocol ProjectRepository: Sendable {
@@ -72,6 +89,7 @@ protocol ExpenseRepository: Sendable {
     func listExpenses(filters: ExpenseFilters) async throws -> [DomainExpense]
     func listEvents(expenseId: String) async throws -> [ExpenseWorkflowEvent]
     func createDraft(_ input: ExpenseDraftInput) async throws -> DomainExpense
+    func updateDraft(id: String, _ input: ExpenseDraftInput) async throws -> DomainExpense
     func submitExpense(id: String) async throws -> DomainExpense
     func resubmitExpense(id: String) async throws -> DomainExpense
     func cancelExpense(id: String, reason: String?) async throws -> DomainExpense

@@ -1,4 +1,4 @@
-project_id = "ladderice-nike-godown"
+project_id = "pwxhgvuyaxgavommtqpr"
 
 [functions.scan-receipt]
 verify_jwt = true
