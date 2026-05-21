@@ -32,8 +32,21 @@ struct DashboardView: View {
         return totals
             .sorted { $0.value > $1.value }
             .map { category, value in
-                DonutChart.Segment(value: value, color: categoryColor(category), label: category)
+                DonutChart.Segment(value: value, color: categoryColor(category), label: localizeCategory(category))
             }
+    }
+
+    /// Map an English-stored seeded category to the user-selected language.
+    /// Workspace-custom categories pass through unchanged.
+    private func localizeCategory(_ name: String) -> String {
+        switch name {
+        case "Travel":   return tr("category.travel")
+        case "Meals":    return tr("category.meals")
+        case "Software": return tr("category.software")
+        case "Office":   return tr("category.office")
+        case "Other":    return tr("category.other")
+        default:         return name
+        }
     }
 
     /// Ordered list of category names that have any activity, used both to
@@ -105,8 +118,8 @@ struct DashboardView: View {
 
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("All activity").font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
-                Text("Analytics").font(.system(size: 26, weight: .bold))
+                Text(tr("dashboard.subtitle")).font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
+                Text(tr("dashboard.title")).font(.system(size: 26, weight: .bold))
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
@@ -117,13 +130,13 @@ struct DashboardView: View {
             GlassCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("Monthly spend").font(.system(size: 13, weight: .semibold))
+                        Text(tr("dashboard.monthly")).font(.system(size: 13, weight: .semibold))
                         Spacer()
-                        StatusPill(text: "6 mo", tint: Tokens.slate500)
+                        StatusPill(text: tr("dashboard.monthly.range_6mo"), tint: Tokens.slate500)
                     }
                     BarsChart(bars: months)
                     // Wrap to multiple lines when the workspace has many categories.
-                    FlowingLegend(items: monthlyCategoryOrder.map { (categoryColor($0), $0) })
+                    FlowingLegend(items: monthlyCategoryOrder.map { (categoryColor($0), localizeCategory($0)) })
                 }
             }
 
@@ -132,10 +145,10 @@ struct DashboardView: View {
             if repositoryApp.convertedForeignExpenseCount > 0 || repositoryApp.unconvertibleExpenseCount > 0 {
                 VStack(alignment: .leading, spacing: 2) {
                     if repositoryApp.convertedForeignExpenseCount > 0 {
-                        Text("\(repositoryApp.convertedForeignExpenseCount) expense(s) converted to \(workspaceCurrency) at approximate rates.")
+                        Text(tr("dashboard.foreign.converted", repositoryApp.convertedForeignExpenseCount, workspaceCurrency))
                     }
                     if repositoryApp.unconvertibleExpenseCount > 0 {
-                        Text("\(repositoryApp.unconvertibleExpenseCount) expense(s) excluded — currency not supported.")
+                        Text(tr("dashboard.foreign.excluded", repositoryApp.unconvertibleExpenseCount))
                     }
                 }
                 .font(.system(size: 11))
@@ -158,19 +171,19 @@ struct DashboardView: View {
         GlassCard(padding: 16) {
             HStack(alignment: .top, spacing: 0) {
                 breakdownColumn(
-                    label: "PAID",
+                    label: tr("dashboard.kpi.paid"),
                     value: money(paid, currency: workspaceCurrency),
                     accent: Tokens.slate500
                 )
                 Divider().frame(height: 38).padding(.horizontal, 8).opacity(0.4)
                 breakdownColumn(
-                    label: "PENDING",
+                    label: tr("dashboard.kpi.pending"),
                     value: money(pending, currency: workspaceCurrency),
                     accent: Tokens.purchased
                 )
                 Divider().frame(height: 38).padding(.horizontal, 8).opacity(0.4)
                 breakdownColumn(
-                    label: "TOTAL",
+                    label: tr("dashboard.kpi.total"),
                     value: money(paid + pending, currency: workspaceCurrency),
                     accent: Color.primary
                 )
@@ -211,12 +224,12 @@ struct DashboardView: View {
     private func categoryCard(segments: [DonutChart.Segment], total: Double) -> some View {
         GlassCard(padding: 16) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("By category").font(.system(size: 13, weight: .semibold))
+                Text(tr("dashboard.category")).font(.system(size: 13, weight: .semibold))
                 HStack(spacing: 18) {
                     ZStack {
                         DonutChart(segments: segments).frame(width: 132, height: 132)
                         VStack(spacing: 1) {
-                            Text("TOTAL").font(.system(size: 10, weight: .semibold)).tracking(0.6).foregroundStyle(.tertiary)
+                            Text(tr("dashboard.category.total")).font(.system(size: 10, weight: .semibold)).tracking(0.6).foregroundStyle(.tertiary)
                             Text(money(total, currency: workspaceCurrency)).font(.system(size: 18, weight: .bold))
                         }
                     }
@@ -225,7 +238,7 @@ struct DashboardView: View {
                             Button {
                                 drilldown = DashboardDrilldown(
                                     title: c.label,
-                                    subtitle: "Category drilldown",
+                                    subtitle: tr("dashboard.drilldown.category"),
                                     expenses: repositoryApp.expenses.filter { repositoryApp.categoryName(forId: $0.categoryId) == c.label },
                                     projects: repositoryApp.projects,
                                     categories: repositoryApp.categories
@@ -251,7 +264,7 @@ struct DashboardView: View {
     private var merchantsCard: some View {
         GlassCard(padding: 0) {
             VStack(spacing: 0) {
-                Text("Top merchants").font(.system(size: 13, weight: .semibold))
+                Text(tr("dashboard.top_merchants")).font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 8)
                 ForEach(Array(merchants.enumerated()), id: \.offset) { idx, m in
@@ -259,7 +272,7 @@ struct DashboardView: View {
                     Button {
                         drilldown = DashboardDrilldown(
                             title: m.0,
-                            subtitle: "Merchant drilldown",
+                            subtitle: tr("dashboard.drilldown.merchant"),
                             expenses: repositoryApp.expenses.filter { $0.merchant == m.0 },
                             projects: repositoryApp.projects,
                             categories: repositoryApp.categories
@@ -272,7 +285,7 @@ struct DashboardView: View {
                                 .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(m.0).font(.system(size: 13, weight: .semibold))
-                                Text("\(m.2) transactions").font(.system(size: 11)).foregroundStyle(.tertiary)
+                                Text(tr("dashboard.transactions", m.2)).font(.system(size: 11)).foregroundStyle(.tertiary)
                             }
                             Spacer()
                             Text(money(m.1, currency: workspaceCurrency)).font(.system(size: 13, weight: .semibold))

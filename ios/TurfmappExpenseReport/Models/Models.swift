@@ -58,6 +58,19 @@ enum PaymentMethod: String, CaseIterable, Codable, Hashable {
         case .cheque:   return "doc.text"
         }
     }
+
+    /// User-facing label. `rawValue` is kept English-stable so it serializes
+    /// consistently; this property returns the current language's string.
+    @MainActor
+    var localizedLabel: String {
+        switch self {
+        case .transfer: return tr("sheet.paid.method.transfer")
+        case .qr:       return tr("sheet.paid.method.qr")
+        case .cash:     return tr("sheet.paid.method.cash")
+        case .card:     return tr("sheet.paid.method.card")
+        case .cheque:   return tr("sheet.paid.method.cheque")
+        }
+    }
 }
 
 struct Expense: Identifiable, Hashable {

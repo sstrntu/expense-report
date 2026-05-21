@@ -1,0 +1,525 @@
+/* === Tabs & shell === */
+"tab.home" = "หน้าหลัก";
+"tab.overview" = "ภาพรวม";
+"tab.dashboard" = "แดชบอร์ด";
+"tab.activity" = "กิจกรรม";
+"tab.review" = "ตรวจสอบ";
+"tab.you" = "คุณ";
+"shell.loading" = "กำลังโหลด…";
+
+/* === Common === */
+"common.cancel" = "ยกเลิก";
+"common.save" = "บันทึก";
+"common.done" = "เสร็จสิ้น";
+"common.delete" = "ลบ";
+"common.archive" = "เก็บถาวร";
+"common.unarchive" = "ยกเลิกเก็บถาวร";
+"common.confirm" = "ยืนยัน";
+"common.back" = "ย้อนกลับ";
+"common.next" = "ถัดไป";
+"common.close" = "ปิด";
+"common.search" = "ค้นหา";
+"common.all" = "ทั้งหมด";
+"common.coming_soon" = "เร็ว ๆ นี้";
+"common.approximate" = "โดยประมาณ";
+"common.optional" = "ไม่บังคับ";
+"common.required" = "จำเป็น";
+"common.yes" = "ใช่";
+"common.no" = "ไม่";
+"common.continue" = "ดำเนินการต่อ";
+"common.retry" = "ลองอีกครั้ง";
+"common.add" = "เพิ่ม";
+"common.edit" = "แก้ไข";
+"common.remove" = "ถอดออก";
+"common.update" = "อัปเดต";
+"common.error" = "ข้อผิดพลาด";
+"common.success" = "บันทึกแล้ว";
+"common.loading" = "กำลังโหลด…";
+
+/* === Auth === */
+"auth.signin.title" = "เข้าสู่ระบบ";
+"auth.signup.title" = "สร้างบัญชี";
+"auth.email" = "อีเมล";
+"auth.password" = "รหัสผ่าน";
+"auth.signin.action" = "เข้าสู่ระบบ";
+"auth.signup.action" = "สร้างบัญชี";
+"auth.forgot" = "ลืมรหัสผ่าน?";
+"auth.back_to_signin" = "กลับไปเข้าสู่ระบบ";
+"auth.switch_to_signup" = "สร้างบัญชี";
+"auth.switch_to_signin" = "เข้าสู่ระบบ";
+"auth.subtitle" = "ติดตามการอนุมัติ การซื้อ และการเบิกจ่ายของเวิร์กสเปซ";
+"auth.reset_sent.title" = "ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว";
+"auth.reset_sent.message" = "ตรวจสอบ %@ เพื่อรับลิงก์รีเซ็ต";
+"auth.reset_sent.fallback" = "อีเมลของคุณ";
+"auth.verification.title" = "ต้องยืนยันบัญชี";
+"auth.verification.message" = "ตรวจสอบอีเมลเพื่อยืนยันบัญชี แล้วเข้าสู่ระบบ";
+"auth.failed.title" = "การเข้าสู่ระบบล้มเหลว";
+
+/* === Profile setup === */
+"setup.profile.title" = "ตั้งค่าโปรไฟล์";
+"setup.profile.subtitle" = "สร้างข้อมูลที่เพื่อนร่วมงานจะเห็นในคำขอ การอนุมัติ และบันทึกการเบิกจ่าย";
+"setup.profile.fullname" = "ชื่อ-นามสกุล";
+"setup.profile.nickname" = "ชื่อเล่น";
+
+/* === Workspace setup === */
+"setup.workspace.title" = "เวิร์กสเปซ";
+"setup.workspace.subtitle" = "สร้างองค์กรหรือเข้าร่วมด้วยรหัสคำเชิญก่อนส่งค่าใช้จ่าย";
+"setup.workspace.mode.create" = "สร้าง";
+"setup.workspace.mode.join" = "เข้าร่วม";
+"setup.workspace.org_name" = "องค์กร";
+"setup.workspace.default_currency" = "สกุลเงินเริ่มต้น";
+"setup.workspace.invite_code" = "รหัสคำเชิญ";
+"setup.workspace.status" = "สถานะ";
+"setup.workspace.waiting_invite" = "รอคำเชิญ";
+"setup.workspace.ready_join" = "พร้อมเข้าร่วม";
+"setup.workspace.failed.title" = "ตั้งค่าเวิร์กสเปซล้มเหลว";
+"setup.workspace.invite_required.title" = "ต้องใช้คำเชิญ";
+"setup.workspace.invite_required.message" = "หากยังไม่ได้รับคำเชิญ หน้าจอนี้จะกั้นผู้ใช้ไว้นอกเวิร์กสเปซ";
+"setup.workspace.create_action" = "สร้างเวิร์กสเปซ";
+"setup.workspace.join_action" = "เข้าร่วมเวิร์กสเปซ";
+
+/* === Roles === */
+"role.employee" = "พนักงาน";
+"role.manager" = "ผู้จัดการ";
+"role.finance" = "การเงิน";
+"role.admin" = "ผู้ดูแลระบบ";
+"role.member" = "สมาชิก";
+"role.workspace_admin" = "ผู้ดูแลเวิร์กสเปซ";
+"role.employee.description" = "ส่งค่าใช้จ่ายและติดตามสถานะการเบิกจ่าย";
+"role.manager.description" = "อนุมัติหรือปฏิเสธค่าใช้จ่ายที่เกินเกณฑ์อนุมัติอัตโนมัติ";
+"role.finance.description" = "ทำเครื่องหมายว่าเบิกจ่ายแล้วและจัดการตรวจสอบทางการเงิน";
+"role.admin.description" = "สิทธิ์เต็ม — เชิญสมาชิก ลบผู้ใช้ ตั้งค่าเวิร์กสเปซ";
+
+/* === Expense status === */
+"status.draft" = "ฉบับร่าง";
+"status.submitted" = "ส่งแล้ว";
+"status.scan_processing" = "กำลังสแกนใบเสร็จ";
+"status.scan_failed" = "สแกนล้มเหลว";
+"status.pending_manager_approval" = "รออนุมัติ";
+"status.pending_finance_review" = "รอตรวจสอบจากการเงิน";
+"status.approved" = "อนุมัติแล้ว";
+"status.rejected" = "ปฏิเสธ";
+"status.purchase_confirmed" = "รอการเบิกจ่าย";
+"status.ready_for_reimbursement" = "พร้อมจ่าย";
+"status.reimbursed" = "เบิกจ่ายแล้ว";
+"status.cancelled" = "ยกเลิก";
+"status.archived" = "เก็บถาวร";
+
+/* === Expense kind === */
+"kind.pre_approval" = "ขออนุมัติล่วงหน้า";
+"kind.reimbursement_claim" = "เบิกค่าใช้จ่าย";
+
+/* === Home / Activity === */
+"home.title" = "หน้าหลัก";
+"home.recent" = "กิจกรรมล่าสุด";
+"home.empty.title" = "ยังไม่มีค่าใช้จ่าย";
+"home.empty.subtitle" = "แตะ + เพื่อส่งคำขอแรกของคุณ";
+"home.greeting.welcome" = "ยินดีต้อนรับกลับ";
+"home.greeting.hello" = "สวัสดี %@";
+"home.this_month" = "เดือนนี้";
+"home.reimbursable" = "ที่เบิกได้";
+"home.stat.pending" = "ค้างชำระ";
+"home.stat.approved" = "อนุมัติแล้ว";
+"home.stat.rejected" = "ปฏิเสธ";
+"home.see_all" = "ดูทั้งหมด";
+"home.new_expense" = "ค่าใช้จ่ายใหม่";
+"home.new_expense.subtitle" = "ส่งก่อนทำการซื้อ";
+"home.drafts.count" = "ฉบับร่าง %d ฉบับ";
+"home.drafts.count.plural" = "ฉบับร่าง %d ฉบับ";
+"home.drafts.continue" = "แตะเพื่อแก้ไขต่อ";
+
+/* === Detail view sheets === */
+"detail.purchase_sheet.title" = "ยืนยันการซื้อ";
+"detail.purchase_sheet.subtitle" = "ยืนยันว่าคุณได้ทำการซื้อแล้ว แนบใบเสร็จเพื่อให้ทีมดำเนินการเบิกจ่าย";
+"detail.purchase_sheet.final_amount" = "จำนวนเงินสุดท้าย";
+"detail.purchase_sheet.receipt" = "ใบเสร็จ";
+"detail.reject_sheet.title" = "ปฏิเสธคำขอ";
+"detail.reject_sheet.subtitle" = "เพิ่มเหตุผลเพื่อให้พนักงานทราบสิ่งที่ต้องแก้ไขก่อนส่งใหม่";
+"detail.reject_sheet.reason_placeholder" = "เหตุผล";
+"detail.paid_sheet.title" = "ทำเครื่องหมายว่าเบิกจ่ายแล้ว";
+"detail.paid_sheet.method" = "วิธีชำระเงิน";
+"detail.paid_sheet.receipt" = "ใบเสร็จการชำระเงิน";
+"detail.receipt_preview.title" = "ดูตัวอย่างใบเสร็จ";
+"detail.receipt_preview.subtitle" = "ตรวจสอบหลักฐานที่อัปโหลดได้ที่นี่ พร้อมซูม แชร์ และดำเนินการใหม่ในเวอร์ชันเต็ม";
+
+/* === Submit view discard === */
+"submit.discard.action" = "ละทิ้งฉบับร่าง";
+"submit.discard.keep" = "แก้ไขต่อ";
+
+/* === Manage projects detail === */
+"projects.auto_approve_under" = "อนุมัติอัตโนมัติเมื่อต่ำกว่า";
+"projects.visibility" = "การเข้าถึง";
+"projects.auto_approve_threshold" = "เกณฑ์อนุมัติอัตโนมัติ";
+"projects.auto_approve_threshold.subtitle" = "ค่าใช้จ่ายที่เท่ากับหรือต่ำกว่าจำนวนนี้จะใช้โหมดการส่งต่อของโครงการ";
+"projects.assigned_members" = "สมาชิกที่ได้รับมอบหมาย";
+"projects.member_assignment_note" = "สมาชิกเวิร์กสเปซที่ใช้งานอยู่ทุกคนสามารถถูกมอบหมายได้";
+"projects.archive" = "เก็บถาวรโครงการ";
+"projects.save_policy" = "บันทึกนโยบาย";
+"projects.routing" = "การส่งต่อ";
+"projects.over_budget" = "เกินงบ";
+"projects.allowed_categories" = "หมวดหมู่ที่อนุญาต";
+"projects.budget_period" = "ช่วงงบประมาณ";
+"projects.member_total" = "%d คน";
+"activity.title" = "กิจกรรม";
+"activity.search.placeholder" = "ค้นหาร้านค้า หมวดหมู่ โครงการ";
+"activity.all_projects" = "ทุกโครงการ";
+"activity.all_time" = "ทุกช่วงเวลา";
+"activity.section.today" = "วันนี้";
+"activity.section.this_week" = "สัปดาห์นี้";
+"activity.section.earlier" = "ก่อนหน้า";
+"activity.empty.archived.title" = "ไม่มีค่าใช้จ่ายที่เก็บถาวร";
+"activity.empty.archived.subtitle" = "เก็บถาวรค่าใช้จ่ายเพื่อนำออกจากมุมมองหลัก";
+"activity.empty.fresh.title" = "ยังไม่มีค่าใช้จ่าย";
+"activity.empty.fresh.subtitle" = "ค่าใช้จ่ายใหม่จะปรากฏที่นี่หลังส่ง";
+"activity.empty.filtered.title" = "ไม่พบค่าใช้จ่ายที่ตรงกัน";
+"activity.empty.filtered.subtitle" = "ปรับการค้นหา ตัวกรองโครงการ หรือสถานะ";
+"activity.filter.all" = "ทั้งหมด";
+"activity.filter.awaiting_approval" = "รออนุมัติ";
+"activity.filter.approved" = "อนุมัติแล้ว";
+"activity.filter.awaiting_reimbursement" = "รอเบิกจ่าย";
+"activity.filter.reimbursed" = "เบิกจ่ายแล้ว";
+"activity.filter.rejected" = "ปฏิเสธ";
+"activity.filter.archived" = "เก็บถาวร";
+"activity.delete.title" = "ลบ \"%@\"?";
+"activity.delete.message" = "การลบไม่สามารถย้อนกลับได้";
+
+/* === Dashboard / Analytics === */
+"dashboard.subtitle" = "กิจกรรมทั้งหมด";
+"dashboard.title" = "การวิเคราะห์";
+"dashboard.kpi.paid" = "จ่ายแล้ว";
+"dashboard.kpi.pending" = "ค้างชำระ";
+"dashboard.kpi.total" = "รวม";
+"dashboard.category" = "ตามหมวดหมู่";
+"dashboard.category.total" = "รวม";
+"dashboard.monthly" = "รายจ่ายรายเดือน";
+"dashboard.monthly.range_6mo" = "6 เดือน";
+"dashboard.top_merchants" = "ร้านค้ายอดนิยม";
+"dashboard.transactions" = "%d รายการ";
+"dashboard.foreign.converted" = "%d รายการแปลงเป็น %@ ด้วยอัตราโดยประมาณ";
+"dashboard.foreign.excluded" = "%d รายการถูกตัดออก — สกุลเงินไม่รองรับ";
+"dashboard.drilldown.category" = "เจาะลึกตามหมวดหมู่";
+"dashboard.drilldown.merchant" = "เจาะลึกตามร้านค้า";
+
+/* === Manager overview === */
+"overview.admin_view" = "มุมมองผู้ดูแลระบบ";
+"overview.finance_view" = "มุมมองการเงิน";
+"overview.manager_view" = "มุมมองผู้จัดการ";
+"overview.title" = "ภาพรวม";
+"overview.awaiting.label" = "รออนุมัติจากคุณ";
+"overview.awaiting.total" = "รวม %@";
+"overview.open_queue" = "เปิดคิวตรวจสอบ";
+"overview.drafts.count" = "ฉบับร่าง %d ฉบับ";
+"overview.drafts.count.plural" = "ฉบับร่าง %d ฉบับ";
+"overview.drafts.continue" = "แตะเพื่อแก้ไขต่อ";
+"overview.finance_queue" = "คิวการเงิน";
+"overview.team_spend_mtd" = "ค่าใช้จ่ายทีมเดือนนี้";
+"overview.no_prior_month" = "ไม่มีข้อมูลเดือนก่อน";
+"overview.over_24h" = "เกิน 24 ชม. %d รายการ";
+"overview.project_budgets" = "งบประมาณโครงการ";
+"overview.no_projects" = "ยังไม่มีโครงการ สร้างใน คุณ ▸ จัดการโครงการ";
+"overview.delta.vs_lm" = "%@%% เทียบเดือนก่อน";
+"overview.budget.over" = "เกินงบ";
+"overview.budget.paid" = "จ่ายแล้ว";
+"overview.budget.pending" = "ค้างชำระ";
+
+/* === Review === */
+"review.title" = "ตรวจสอบ";
+"review.summary" = "%d รออนุมัติ · %d รอเบิกจ่าย · %d รอซื้อ";
+"review.summary.plural" = "%d รออนุมัติ · %d รอเบิกจ่าย · %d รอซื้อ";
+"review.approve_all" = "อนุมัติทั้งหมดที่เห็น";
+"review.empty.title" = "ไม่มีค้างคา";
+"review.empty.subtitle" = "ไม่มีรายการอนุมัติหรือเบิกจ่ายรออยู่";
+"review.section.manager" = "การอนุมัติของผู้จัดการ";
+"review.section.finance" = "การเบิกจ่ายของการเงิน";
+"review.section.awaiting_purchase" = "รอการซื้อ";
+"review.section.past" = "ที่ผ่านมา & เก็บถาวร";
+"review.past.count" = "%d รายการที่ผ่านมา · เบิกจ่ายแล้ว ยกเลิก ปฏิเสธ เก็บถาวร";
+"review.history.title" = "%@";
+"review.history.subtitle" = "ค่าใช้จ่ายที่ผ่านมาและเก็บถาวร";
+"review.history.empty.title" = "ไม่มีค่าใช้จ่ายที่ผ่านมาหรือเก็บถาวร";
+"review.history.empty.subtitle" = "ค่าใช้จ่ายที่เบิกจ่ายแล้ว ยกเลิก ปฏิเสธ หรือเก็บถาวรของโครงการนี้จะปรากฏที่นี่";
+"review.history.entries" = "รายการ";
+"review.history.total" = "รวม";
+
+/* === Expense detail === */
+"detail.title" = "รายละเอียดค่าใช้จ่าย";
+"detail.field.type" = "ประเภท";
+"detail.field.category" = "หมวดหมู่";
+"detail.field.project" = "โครงการ";
+"detail.field.submitted_by" = "ส่งโดย";
+"detail.field.receipt" = "ใบเสร็จ";
+"detail.timeline" = "ไทม์ไลน์";
+"detail.timeline.created" = "สร้าง";
+"detail.timeline.no_events" = "ยังไม่มีเหตุการณ์";
+"detail.notes" = "บันทึก";
+"detail.notes.submitted_for" = "ส่งสำหรับ %@";
+"detail.notes.reviewer_rejected" = "โปรดเพิ่มบริบทและวัตถุประสงค์ทางธุรกิจที่ชัดเจน";
+"detail.notes.manager_approved" = "อนุมัติตามนโยบายโครงการ";
+"detail.notes.author.reviewer" = "ผู้ตรวจสอบ";
+"detail.notes.author.manager" = "ผู้จัดการ";
+"detail.receipts.submitted" = "ใบเสร็จที่ส่ง";
+"detail.receipts.purchase" = "ใบเสร็จการซื้อ";
+"detail.receipts.reimbursement" = "หลักฐานการเบิกจ่าย";
+"detail.add_receipt" = "เพิ่มใบเสร็จ";
+"detail.add_receipt.subtitle" = "ถ่ายภาพหรือเลือกจากคลังภาพ";
+"detail.action.approve" = "อนุมัติ";
+"detail.action.reject" = "ปฏิเสธ";
+"detail.action.purchased" = "ฉันซื้อแล้ว";
+"detail.action.mark_reimbursed" = "ทำเครื่องหมายเบิกจ่ายแล้ว";
+"detail.action.resubmit" = "ส่งใหม่";
+"detail.action.cancel_submission" = "ยกเลิกการส่ง";
+"detail.delete.title" = "ลบ \"%@\"?";
+"detail.delete.message" = "การลบไม่สามารถย้อนกลับได้";
+"detail.info.awaiting_approval.title" = "รออนุมัติ";
+"detail.info.awaiting_approval.message" = "ผู้จัดการหรือผู้ดูแลต้องตรวจสอบค่าใช้จ่ายนี้";
+"detail.info.approved.title" = "อนุมัติแล้ว";
+"detail.info.approved.message" = "รอขั้นตอนถัดไปของกระบวนการ";
+"detail.info.awaiting_reimbursement.title" = "รอเบิกจ่าย";
+"detail.info.awaiting_reimbursement.message" = "การเงินหรือผู้ดูแลต้องดำเนินการค่าใช้จ่ายนี้";
+"detail.info.not_approved.title" = "ไม่ได้รับอนุมัติ";
+"detail.info.not_approved.message" = "ตรวจสอบเหตุผลและส่งใหม่หากจำเป็น";
+"detail.info.reimbursed.title" = "เบิกจ่ายแล้ว";
+"detail.info.reimbursed.message" = "ทำเครื่องหมายว่าได้ชำระเงินแล้ว";
+"detail.info.no_action" = "ไม่มีการดำเนินการที่พร้อมในขณะนี้";
+
+/* === Submit / new expense === */
+"submit.title" = "ค่าใช้จ่ายใหม่";
+"submit.title.pre_approval" = "ขออนุมัติใหม่";
+"submit.title.reimbursement" = "เบิกค่าใช้จ่ายใหม่";
+"submit.subtitle.pre_approval" = "ขออนุมัติก่อนซื้อ";
+"submit.subtitle.reimbursement" = "เบิกคืนค่าใช้จ่ายที่จ่ายไปแล้ว";
+"submit.close" = "ปิด";
+"submit.kind.pre_approval" = "ขออนุมัติล่วงหน้า";
+"submit.kind.reimbursement" = "เบิกค่าใช้จ่าย";
+"submit.field.vendor" = "ร้านค้า";
+"submit.field.vendor.placeholder" = "ชื่อร้านค้า";
+"submit.field.amount" = "จำนวนเงิน";
+"submit.field.currency" = "สกุลเงิน";
+"submit.field.category" = "หมวดหมู่";
+"submit.field.project" = "โครงการ";
+"submit.field.project.select" = "เลือกโครงการ";
+"submit.field.purpose" = "วัตถุประสงค์";
+"submit.field.purpose.placeholder" = "ประชุมทีม — รีวิวงานออกแบบ";
+"submit.field.business_purpose" = "วัตถุประสงค์ทางธุรกิจ";
+"submit.field.purchase_date" = "วันที่ซื้อ";
+"submit.field.needed_by" = "ต้องการภายใน";
+"submit.scan.title.pre_approval" = "สแกนใบเสร็จหรือสินค้า";
+"submit.scan.title.reimbursement" = "สแกนใบเสร็จหรือสินค้า";
+"submit.scan.subtitle.pre_approval" = "แนบบริบทหรือใบเสนอราคา";
+"submit.scan.subtitle.reimbursement" = "AI จะกรอกร้านค้า จำนวนเงิน และหมวดหมู่ให้";
+"submit.scan.scanning_label" = "กำลังสแกนใบเสร็จ";
+"submit.scan.uploading_label" = "กำลังอัปโหลดใบเสร็จ";
+"submit.action.cannot_submit" = "ส่งค่าใช้จ่ายไม่ได้";
+"submit.action.save_draft.saving" = "กำลังบันทึก...";
+"submit.drafts.title" = "ฉบับร่าง";
+"submit.discard.message" = "ข้อมูลร้านค้า จำนวนเงิน วัตถุประสงค์ และใบเสร็จยังไม่ได้ส่ง";
+"submit.scan.processing_detail" = "กำลังดึงข้อมูลร้านค้า จำนวนเงิน วันที่ และหมวดหมู่";
+"submit.scan.ai_review" = "ตรวจสอบข้อมูล AI";
+"submit.scan.add_receipt" = "เพิ่มใบเสร็จหรือภาพถ่ายสินค้า";
+"submit.scan.take_photo" = "ถ่ายภาพ";
+"submit.scan.take_photo.subtitle" = "ถ่ายใบเสร็จด้วยกล้อง";
+"submit.scan.choose_library" = "เลือกจากคลังภาพ";
+"submit.scan.choose_library.subtitle" = "เลือกภาพใบเสร็จที่มีอยู่";
+"submit.scan.uploading" = "กำลังอัปโหลด…";
+"submit.scan.processing" = "กำลังสแกนใบเสร็จ…";
+"submit.scan.needs_review" = "ตรวจสอบข้อมูลที่ดึงมา";
+"submit.scan.failed" = "สแกนล้มเหลว";
+"submit.scan.retry" = "ถ่ายใหม่";
+"submit.action.submit" = "ส่ง";
+"submit.action.save_draft" = "บันทึกเป็นฉบับร่าง";
+"submit.confidence.high" = "สูง";
+"submit.confidence.medium" = "ปานกลาง";
+"submit.confidence.low" = "ต่ำ";
+"submit.confidence.manual" = "ป้อนเอง";
+
+/* === Sheets === */
+"sheet.purchase.title" = "ยืนยันการซื้อ";
+"sheet.purchase.amount" = "จำนวนเงินสุดท้าย";
+"sheet.purchase.receipt" = "บันทึกใบเสร็จ";
+"sheet.purchase.action" = "ยืนยันการซื้อ";
+"sheet.paid.title" = "ทำเครื่องหมายว่าจ่ายแล้ว";
+"sheet.paid.method" = "วิธีชำระเงิน";
+"sheet.paid.method.transfer" = "โอนเงินผ่านธนาคาร";
+"sheet.paid.method.qr" = "คิวอาร์โค้ด";
+"sheet.paid.method.cash" = "เงินสด";
+"sheet.paid.method.card" = "บัตร";
+"sheet.paid.method.cheque" = "เช็ค";
+"sheet.paid.reference" = "เลขอ้างอิง";
+"sheet.paid.action" = "ทำเครื่องหมายเบิกจ่ายแล้ว";
+"sheet.reject.title" = "ปฏิเสธค่าใช้จ่าย";
+"sheet.reject.reason" = "เหตุผล";
+"sheet.reject.action" = "ปฏิเสธ";
+
+/* === Profile / You === */
+"profile.title" = "คุณ";
+"profile.add_name" = "เพิ่มชื่อของคุณ";
+"profile.section.workspace_admin" = "ผู้ดูแลเวิร์กสเปซ";
+"profile.section.finance" = "การเงิน";
+"profile.section.account" = "บัญชี";
+"profile.section.access" = "การเข้าถึง";
+"profile.nav.workspace" = "เวิร์กสเปซ";
+"profile.nav.workspace.sub" = "ชื่อ โลโก้ และเอกลักษณ์";
+"profile.nav.manage_projects" = "จัดการโครงการ";
+"profile.nav.manage_projects.sub" = "%d โครงการ · งบ %@";
+"profile.nav.permissions" = "สิทธิ์การใช้งาน";
+"profile.nav.permissions.sub" = "%d สมาชิก · 4 บทบาท";
+"profile.nav.reimbursement_queue" = "คิวการเบิกจ่าย";
+"profile.nav.reimbursement_queue.sub" = "ทำเครื่องหมายว่าจ่ายแล้ว จัดการตรวจสอบทางการเงิน";
+"profile.nav.activity" = "กิจกรรมของฉัน";
+"profile.nav.activity.sub" = "ฉบับร่าง ส่งแล้ว อนุมัติ เบิกจ่าย";
+"profile.nav.notifications" = "การแจ้งเตือน";
+"profile.nav.notifications.sub" = "การอนุมัติ การเตือน การเบิกจ่าย";
+"profile.nav.account" = "บัญชี";
+"profile.nav.account.sub" = "โปรไฟล์ อีเมล เอกลักษณ์เวิร์กสเปซ";
+"profile.nav.security" = "ความปลอดภัย";
+"profile.nav.security.sub" = "รหัสผ่าน เซสชัน การกู้คืน";
+"profile.nav.preferences" = "การตั้งค่า";
+"profile.nav.preferences.sub" = "ธีม ภาษา สกุลเงิน รูปแบบส่งออก";
+"profile.nav.reports" = "รายงานและส่งออก";
+"profile.nav.reports.sub" = "ส่งออก CSV ได้ · PDF เร็ว ๆ นี้";
+"profile.nav.help" = "ช่วยเหลือและสนับสนุน";
+"profile.nav.legal" = "ข้อกำหนดและข้อมูล";
+"profile.signout" = "ออกจากระบบ";
+
+/* === Notifications screen === */
+"notifications.title" = "การแจ้งเตือน";
+"notifications.filter.all" = "ทั้งหมด";
+"notifications.filter.approvals" = "การอนุมัติ";
+"notifications.filter.payments" = "การชำระเงิน";
+"notifications.filter.admin" = "ผู้ดูแล";
+"notifications.empty.title" = "ไม่มีการแจ้งเตือน";
+"notifications.empty.subtitle" = "การอนุมัติ การเบิกจ่าย และคำเชิญจะปรากฏที่นี่เมื่อพร้อม";
+"notifications.unread_summary" = "การแจ้งเตือนที่ยังไม่อ่าน %d รายการ";
+"notifications.unread_message" = "การอนุมัติ การเบิกจ่าย และการอัปเดตเวิร์กสเปซใหม่จะปรากฏที่นี่";
+"notifications.new_badge" = "ใหม่";
+"notifications.kind.approval" = "อนุมัติ";
+"notifications.kind.expense" = "ค่าใช้จ่าย";
+"notifications.kind.payment" = "ชำระเงิน";
+"notifications.kind.admin" = "ผู้ดูแล";
+
+/* === Account / security / preferences === */
+"account.title" = "บัญชี";
+"account.name" = "ชื่อ";
+"account.email" = "อีเมล";
+"account.workspace" = "เวิร์กสเปซ";
+"account.save" = "บันทึกบัญชี";
+"account.save_failed" = "บันทึกไม่สำเร็จ";
+"security.title" = "ความปลอดภัย";
+"security.change_password" = "เปลี่ยนรหัสผ่าน";
+"security.change_password.sub" = "ตั้งรหัสผ่านใหม่สำหรับบัญชีนี้";
+"security.reset_email" = "ส่งอีเมลรีเซ็ตรหัสผ่าน";
+"security.reset_email.sub" = "ส่งลิงก์รีเซ็ตไปยัง %@";
+"security.reset_email.sent" = "ส่งอีเมลรีเซ็ตรหัสผ่านไปยัง %@ แล้ว";
+"security.signout_all" = "ออกจากระบบทุกอุปกรณ์";
+"security.signout_all.sub" = "ทำให้เซสชันที่ใช้งานอยู่ทั้งหมดใช้ไม่ได้";
+"security.signout_all.done" = "ออกจากระบบทุกอุปกรณ์แล้ว";
+"security.failed" = "ดำเนินการไม่สำเร็จ";
+"security.password.new" = "ใหม่";
+"security.password.confirm" = "ยืนยัน";
+"security.password.mismatch" = "รหัสผ่านไม่ตรงกัน";
+"security.password.hint" = "อย่างน้อย 8 ตัวอักษร";
+"security.password.reenter" = "พิมพ์ซ้ำ";
+"preferences.title" = "การตั้งค่า";
+"preferences.language" = "ภาษา";
+"preferences.language.note" = "สลับภาษาแสดงผลของแอป การสแกนใบเสร็จยังตรวจจับภาษาบนใบเสร็จอัตโนมัติ";
+"preferences.workspace_currency" = "สกุลเงินเวิร์กสเปซ";
+"preferences.compact_lists" = "รายการแบบกระชับ";
+"preferences.compact_lists.sub" = "บันทึกบนอุปกรณ์นี้";
+"preferences.workspace_settings" = "การตั้งค่าเวิร์กสเปซ";
+"preferences.workspace_settings.message" = "สกุลเงินและกฎใบเสร็จตั้งค่าต่อเวิร์กสเปซและโครงการโดยผู้ดูแล";
+
+/* === Workspace settings === */
+"workspace.title" = "เวิร์กสเปซ";
+"workspace.tap_logo" = "แตะโลโก้เพื่ออัปโหลดภาพ หรือเว้นไว้เพื่อแสดงอักษรย่อของเวิร์กสเปซ";
+"workspace.name" = "ชื่อ";
+"workspace.name.placeholder" = "ชื่อเวิร์กสเปซ";
+"workspace.default_currency" = "สกุลเงินเริ่มต้น";
+"workspace.workspace_id" = "รหัสเวิร์กสเปซ";
+"workspace.save_changes" = "บันทึกการเปลี่ยนแปลง";
+"workspace.saving" = "กำลังบันทึก...";
+"workspace.saved" = "อัปเดตเวิร์กสเปซแล้ว";
+"workspace.update_failed" = "อัปเดตเวิร์กสเปซไม่สำเร็จ";
+"workspace.per_project_policy" = "นโยบายต่อโครงการ";
+"workspace.per_project_policy.message" = "เกณฑ์การอนุมัติและการส่งต่อตั้งไว้ในแต่ละโครงการ — เปิดจัดการโครงการเพื่อแก้ไข";
+
+/* === Manage projects === */
+"projects.title" = "จัดการโครงการ";
+"projects.new" = "โครงการใหม่";
+"projects.empty.title" = "ยังไม่มีโครงการ";
+"projects.empty.subtitle" = "สร้างโครงการแรกเพื่อจัดระเบียบค่าใช้จ่าย";
+"projects.budget" = "งบประมาณ";
+"projects.spent" = "ใช้แล้ว";
+"projects.archive" = "เก็บถาวร";
+"projects.unarchive" = "ยกเลิกเก็บถาวร";
+"projects.delete" = "ลบ";
+"projects.confirm_delete.title" = "ลบ \"%@\"?";
+"projects.confirm_delete.message" = "การลบจะซ่อนโครงการนี้ ค่าใช้จ่ายที่มีอยู่ยังคงป้ายโครงการเดิม";
+
+/* === Permissions === */
+"permissions.title" = "สิทธิ์การใช้งาน";
+"permissions.subtitle" = "%d สมาชิก · %d คำเชิญรอตอบรับ";
+"permissions.members" = "สมาชิก";
+"permissions.invites" = "คำเชิญรอตอบรับ";
+"permissions.invite_member" = "เชิญสมาชิก";
+"permissions.invite.email" = "อีเมล";
+"permissions.invite.role" = "บทบาท";
+"permissions.invite.send" = "ส่งคำเชิญ";
+"permissions.invite.sent" = "ส่งคำเชิญไปยัง %@ แล้ว";
+"permissions.role_capabilities" = "ความสามารถของบทบาท";
+"permissions.remove" = "นำออก";
+"permissions.cancel_invite" = "ยกเลิกคำเชิญ";
+"permissions.confirm_remove.title" = "นำ %@ ออก?";
+"permissions.confirm_remove.message" = "ผู้ใช้รายนี้จะเข้าถึงเวิร์กสเปซไม่ได้จนกว่าจะถูกเชิญใหม่";
+
+/* === Reports === */
+"reports.title" = "รายงาน";
+"reports.stat.expenses" = "ค่าใช้จ่าย";
+"reports.stat.spend" = "ใช้จ่าย";
+"reports.stat.pending" = "ค้างชำระ";
+"reports.empty.title" = "ยังไม่มีอะไรให้ส่งออก";
+"reports.empty.subtitle" = "ส่งค่าใช้จ่ายแรกของคุณ แล้วการส่งออก CSV จะพร้อมที่นี่";
+"reports.export_csv" = "ส่งออก CSV";
+"reports.share" = "แชร์ %@";
+"reports.share.subtitle" = "ส่งไปยังเมล ไฟล์ AirDrop, …";
+"reports.pdf_soon" = "แพ็คเกจ PDF & ใบเสร็จ";
+"reports.pdf_soon.message" = "เร็ว ๆ นี้ — ใช้ CSV ในโปรแกรมสเปรดชีตได้ก่อน";
+"reports.csv_columns" = "%d แถว — id, วันที่, โครงการ, หมวดหมู่, ร้านค้า, จำนวนเงิน, สกุลเงิน, สถานะ";
+
+/* === Help & legal === */
+"help.title" = "ช่วยเหลือ";
+"help.workflow_title" = "การอนุมัติทำงานอย่างไร";
+"help.workflow_body" = "ส่งคำขออนุมัติล่วงหน้าก่อนซื้อ หรือเบิกค่าใช้จ่ายหลังซื้อ คิวผู้จัดการล้างคำขอที่เกินเกณฑ์อนุมัติอัตโนมัติของโครงการ จากนั้นการเงินจัดการเบิกจ่าย";
+"help.contact" = "ติดต่อฝ่ายสนับสนุน";
+"legal.title" = "เกี่ยวกับ";
+"legal.app_name" = "Turfmapp Expenses";
+"legal.version" = "เวอร์ชัน %@";
+"legal.build" = "บิลด์";
+"legal.backend" = "แบ็คเอนด์";
+
+/* === System states === */
+"states.title" = "สถานะระบบ";
+"states.loading.title" = "กำลังโหลด";
+"states.loading.message" = "การ์ดโครงร่างจะปรากฏขณะข้อมูลเวิร์กสเปซซิงค์";
+"states.offline.title" = "ออฟไลน์";
+"states.offline.message" = "ผู้ใช้สามารถเก็บฉบับร่างไว้ในเครื่องและลองใหม่เมื่อเชื่อมต่อ";
+"states.failed.title" = "โหลดล้มเหลว";
+"states.failed.message" = "แสดงปุ่มลองใหม่โดยไม่เสียองค์กรที่เลือก";
+"states.empty.title" = "ว่างเปล่า";
+"states.empty.message" = "หน้าจอครั้งแรกจะอธิบายว่าจะสร้างหรือส่งอะไรต่อ";
+
+/* === Categories === */
+"category.travel" = "การเดินทาง";
+"category.meals" = "อาหาร";
+"category.software" = "ซอฟต์แวร์";
+"category.office" = "ออฟฟิศ";
+"category.other" = "อื่น ๆ";
+
+/* === Errors === */
+"error.sign_in_required" = "เข้าสู่ระบบก่อนใช้งานเวิร์กสเปซนี้";
+"error.verify_email" = "ตรวจสอบอีเมลเพื่อยืนยันบัญชี แล้วเข้าสู่ระบบ";
+"error.unexpected" = "เซิร์ฟเวอร์ส่งคำตอบที่ไม่คาดคิด";
+"error.invite.expired" = "คำเชิญหมดอายุแล้ว";
+"error.invite.wrong_email" = "คำเชิญนี้ไม่ได้ส่งถึงบัญชีของคุณ";
+"error.invite.not_found" = "ไม่พบคำเชิญ";
+"error.rate_limit" = "คำขอบ่อยเกินไป โปรดลองอีกครั้งภายหลัง";
+"error.network" = "เกิดข้อผิดพลาดเครือข่าย ตรวจสอบการเชื่อมต่อและลองใหม่";

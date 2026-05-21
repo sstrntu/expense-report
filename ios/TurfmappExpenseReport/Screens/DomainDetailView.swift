@@ -69,11 +69,11 @@ struct DomainDetailView: View {
             }
             .presentationDetents([.height(240)])
         }
-        .confirmationDialog("Delete \"\(expense.merchant)\"?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) { onDelete() }
-            Button("Cancel", role: .cancel) {}
+        .confirmationDialog(tr("detail.delete.title", expense.merchant), isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button(tr("common.delete"), role: .destructive) { onDelete() }
+            Button(tr("common.cancel"), role: .cancel) {}
         } message: {
-            Text("This cannot be undone.")
+            Text(tr("detail.delete.message"))
         }
     }
 
@@ -87,20 +87,20 @@ struct DomainDetailView: View {
             .buttonStyle(.plain)
             .glassSurface(corner: 999)
 
-            Text("Expense detail")
+            Text(tr("detail.title"))
                 .font(.system(size: 15, weight: .semibold))
 
             Spacer()
 
             Menu {
                 Button(action: onArchive) {
-                    Label(expense.isArchived ? "Unarchive" : "Archive",
+                    Label(expense.isArchived ? tr("common.unarchive") : tr("common.archive"),
                           systemImage: expense.isArchived ? "tray.and.arrow.up" : "archivebox")
                 }
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(tr("common.delete"), systemImage: "trash")
                 }
             } label: {
                 Image(systemName: "ellipsis")
@@ -127,7 +127,7 @@ struct DomainDetailView: View {
                         Text(expense.displayDate).font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    StatusPill(text: expense.status.displayLabel, tint: statusTint, leadingIcon: statusIcon)
+                    StatusPill(text: localizedStatusLabel(expense.status), tint: statusTint, leadingIcon: statusIcon)
                 }
                 Text(expense.amount.formatted)
                     .font(.system(size: 36, weight: .bold, design: .rounded))
@@ -139,15 +139,15 @@ struct DomainDetailView: View {
     private var detailsCard: some View {
         GlassCard(padding: 16) {
             VStack(spacing: 0) {
-                FormFieldRow(label: "Type", value: expense.kind.label, showChevron: false)
+                FormFieldRow(label: tr("detail.field.type"), value: localizedKindLabel(expense.kind), showChevron: false)
                 Divider().opacity(0.4)
-                FormFieldRow(label: "Category", value: categories.first { $0.id == expense.categoryId }?.name ?? expense.categoryLabel)
+                FormFieldRow(label: tr("detail.field.category"), value: categories.first { $0.id == expense.categoryId }?.name ?? expense.categoryLabel)
                 Divider().opacity(0.4)
-                FormFieldRow(label: "Project", value: projectName)
+                FormFieldRow(label: tr("detail.field.project"), value: projectName)
                 Divider().opacity(0.4)
-                FormFieldRow(label: "Submitted by", value: "Sira Sasitorn")
+                FormFieldRow(label: tr("detail.field.submitted_by"), value: "Sira Sasitorn")
                 Divider().opacity(0.4)
-                FormFieldRow(label: "Receipt", value: receiptLabel)
+                FormFieldRow(label: tr("detail.field.receipt"), value: receiptLabel)
             }
         }
     }
@@ -155,14 +155,14 @@ struct DomainDetailView: View {
     private var receiptPreviewCard: some View {
         GlassCard(padding: 0) {
             VStack(spacing: 0) {
-                receiptRow(title: "Submitted receipt", file: receiptLabel, tint: Tokens.slate500)
+                receiptRow(title: tr("detail.receipts.submitted"), file: receiptLabel, tint: Tokens.slate500)
                 if [.pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement, .reimbursed].contains(expense.status) {
                     Divider().opacity(0.4)
-                    receiptRow(title: "Purchase receipt", file: "purchase_receipt.pdf", tint: Tokens.purchased)
+                    receiptRow(title: tr("detail.receipts.purchase"), file: "purchase_receipt.pdf", tint: Tokens.purchased)
                 }
                 if expense.status == .reimbursed {
                     Divider().opacity(0.4)
-                    receiptRow(title: "Reimbursement proof", file: "reimbursement_proof.pdf", tint: Tokens.reimbursed)
+                    receiptRow(title: tr("detail.receipts.reimbursement"), file: "reimbursement_proof.pdf", tint: Tokens.reimbursed)
                 }
                 Divider().opacity(0.4)
                 Button { showReceiptSource = true } label: {
@@ -173,8 +173,8 @@ struct DomainDetailView: View {
                             .frame(width: 32, height: 32)
                             .background(Tokens.slate500.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Add receipt").font(.system(size: 13.5, weight: .semibold))
-                            Text("Take a photo or pick from library").font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text(tr("detail.add_receipt")).font(.system(size: 13.5, weight: .semibold))
+                            Text(tr("detail.add_receipt.subtitle")).font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -211,7 +211,7 @@ struct DomainDetailView: View {
     private var timelineCard: some View {
         GlassCard(padding: 14) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Timeline").font(.system(size: 13, weight: .semibold))
+                Text(tr("detail.timeline")).font(.system(size: 13, weight: .semibold))
                 if events.isEmpty {
                     timelineRow("Created", "No repository events yet", complete: true, tint: Tokens.slate500)
                 } else {
@@ -244,12 +244,12 @@ struct DomainDetailView: View {
     private var notesCard: some View {
         GlassCard(padding: 14) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Notes").font(.system(size: 13, weight: .semibold))
-                noteRow("Sira", "Submitted for \(projectName).", tint: Tokens.slate500)
+                Text(tr("detail.notes")).font(.system(size: 13, weight: .semibold))
+                noteRow("Sira", tr("detail.notes.submitted_for", projectName), tint: Tokens.slate500)
                 if expense.status == .rejected {
-                    noteRow("Reviewer", "Please add more context and a clearer business purpose.", tint: Tokens.rejected)
+                    noteRow(tr("detail.notes.author.reviewer"), tr("detail.notes.reviewer_rejected"), tint: Tokens.rejected)
                 } else if managerApproved {
-                    noteRow("Manager", "Approved under project policy.", tint: Tokens.approved)
+                    noteRow(tr("detail.notes.author.manager"), tr("detail.notes.manager_approved"), tint: Tokens.approved)
                 }
             }
         }
@@ -272,7 +272,7 @@ struct DomainDetailView: View {
             if role.canApproveExpenses {
                 HStack(spacing: 10) {
                     Button { showRejectSheet = true } label: {
-                        Label("Reject", systemImage: "xmark")
+                        Label(tr("detail.action.reject"), systemImage: "xmark")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Tokens.rejected)
                             .frame(maxWidth: .infinity).padding(15)
@@ -282,7 +282,7 @@ struct DomainDetailView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Tokens.rejected.opacity(0.4)))
 
                     Button(action: onApprove) {
-                        Label("Approve", systemImage: "checkmark")
+                        Label(tr("detail.action.approve"), systemImage: "checkmark")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity).padding(15)
@@ -292,9 +292,9 @@ struct DomainDetailView: View {
                 }
             } else {
                 VStack(spacing: 10) {
-                    statusInfoCard(icon: "clock", tint: Tokens.pending, title: "Awaiting approval", message: "A manager or admin needs to review this expense.")
+                    statusInfoCard(icon: "clock", tint: Tokens.pending, title: tr("detail.info.awaiting_approval.title"), message: tr("detail.info.awaiting_approval.message"))
                     Button(action: onCancel) {
-                        Label("Cancel Submission", systemImage: "xmark.circle")
+                        Label(tr("detail.action.cancel_submission"), systemImage: "xmark.circle")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Tokens.rejected)
                             .frame(maxWidth: .infinity).padding(15)
@@ -306,7 +306,7 @@ struct DomainDetailView: View {
         case .approved:
             if (role == .employee || role == .admin) && expense.kind == .preApproval {
                 Button { showPurchaseSheet = true } label: {
-                    Label("I Made the Purchase", systemImage: "bag.fill")
+                    Label(tr("detail.action.purchased"), systemImage: "bag.fill")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(16)
@@ -315,7 +315,7 @@ struct DomainDetailView: View {
                 .background(Tokens.purchased, in: RoundedRectangle(cornerRadius: 14))
             } else if role.canReimburseExpenses && expense.kind != .preApproval {
                 Button { showReimbursedSheet = true } label: {
-                    Label("Mark as Reimbursed", systemImage: "checkmark.circle.fill")
+                    Label(tr("detail.action.mark_reimbursed"), systemImage: "checkmark.circle.fill")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(16)
@@ -323,12 +323,12 @@ struct DomainDetailView: View {
                 .buttonStyle(.plain)
                 .background(Tokens.reimbursed, in: RoundedRectangle(cornerRadius: 14))
             } else {
-                statusInfoCard(icon: "clock", tint: Tokens.approved, title: "Approved", message: "Waiting for the next workflow step.")
+                statusInfoCard(icon: "clock", tint: Tokens.approved, title: tr("detail.info.approved.title"), message: tr("detail.info.approved.message"))
             }
         case .pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement:
             if role.canReimburseExpenses {
                 Button { showReimbursedSheet = true } label: {
-                    Label("Mark as Reimbursed", systemImage: "checkmark.circle.fill")
+                    Label(tr("detail.action.mark_reimbursed"), systemImage: "checkmark.circle.fill")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(16)
@@ -336,14 +336,14 @@ struct DomainDetailView: View {
                 .buttonStyle(.plain)
                 .background(Tokens.reimbursed, in: RoundedRectangle(cornerRadius: 14))
             } else {
-                statusInfoCard(icon: "clock", tint: Tokens.purchased, title: "Awaiting reimbursement", message: "Finance or an admin needs to process this expense.")
+                statusInfoCard(icon: "clock", tint: Tokens.purchased, title: tr("detail.info.awaiting_reimbursement.title"), message: tr("detail.info.awaiting_reimbursement.message"))
             }
         case .rejected:
             VStack(spacing: 10) {
-                statusInfoCard(icon: "xmark.circle", tint: Tokens.rejected, title: "Not approved", message: "Review the reason and resubmit if needed.")
+                statusInfoCard(icon: "xmark.circle", tint: Tokens.rejected, title: tr("detail.info.not_approved.title"), message: tr("detail.info.not_approved.message"))
                 if role == .employee {
                     Button(action: onResubmit) {
-                        Label("Resubmit Expense", systemImage: "arrow.clockwise")
+                        Label(tr("detail.action.resubmit"), systemImage: "arrow.clockwise")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity).padding(16)
@@ -353,9 +353,9 @@ struct DomainDetailView: View {
                 }
             }
         case .reimbursed:
-            statusInfoCard(icon: "checkmark.circle.fill", tint: Tokens.reimbursed, title: "Reimbursed", message: "Payment has been marked as sent.")
+            statusInfoCard(icon: "checkmark.circle.fill", tint: Tokens.reimbursed, title: tr("detail.info.reimbursed.title"), message: tr("detail.info.reimbursed.message"))
         case .draft, .submitted, .scanProcessing, .scanFailed, .cancelled, .archived:
-            statusInfoCard(icon: statusIcon, tint: statusTint, title: expense.status.displayLabel, message: "No action is currently available.")
+            statusInfoCard(icon: statusIcon, tint: statusTint, title: localizedStatusLabel(expense.status), message: tr("detail.info.no_action"))
         }
     }
 

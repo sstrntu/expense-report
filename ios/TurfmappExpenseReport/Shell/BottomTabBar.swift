@@ -14,23 +14,25 @@ struct TabItem {
 struct BottomTabBar: View {
     @Binding var selected: TabID
     let role: AppRole
+    // Subscribe so labels re-render immediately when the user switches language.
+    @ObservedObject private var localization = LocalizationManager.shared
 
     private var tabs: [TabItem] {
         if role != .employee {
             return [
-                TabItem(id: .home,      icon: "house.fill",     label: "Overview"),
-                TabItem(id: .dashboard, icon: "chart.bar.fill",  label: "Dashboard"),
+                TabItem(id: .home,      icon: "house.fill",     label: tr("tab.overview")),
+                TabItem(id: .dashboard, icon: "chart.bar.fill",  label: tr("tab.dashboard")),
                 TabItem(id: .add,       icon: "plus",            label: "",      isCenter: true),
-                TabItem(id: .review,    icon: "tray.fill",       label: "Review"),
-                TabItem(id: .profile,   icon: "person.fill",     label: "You"),
+                TabItem(id: .review,    icon: "tray.fill",       label: tr("tab.review")),
+                TabItem(id: .profile,   icon: "person.fill",     label: tr("tab.you")),
             ]
         }
         return [
-            TabItem(id: .home,      icon: "house.fill",     label: "Home"),
-            TabItem(id: .dashboard, icon: "chart.bar.fill",  label: "Dashboard"),
+            TabItem(id: .home,      icon: "house.fill",     label: tr("tab.home")),
+            TabItem(id: .dashboard, icon: "chart.bar.fill",  label: tr("tab.dashboard")),
             TabItem(id: .add,       icon: "plus",            label: "",      isCenter: true),
-            TabItem(id: .activity,  icon: "list.bullet",     label: "Activity"),
-            TabItem(id: .profile,   icon: "person.fill",     label: "You"),
+            TabItem(id: .activity,  icon: "list.bullet",     label: tr("tab.activity")),
+            TabItem(id: .profile,   icon: "person.fill",     label: tr("tab.you")),
         ]
     }
 

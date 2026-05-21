@@ -10,7 +10,7 @@ struct ProfileView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("You").font(.system(size: 26, weight: .bold))
+            Text(tr("profile.title")).font(.system(size: 26, weight: .bold))
                 .padding(.horizontal, 4).padding(.top, 4)
 
             let displayName = repositoryApp.currentUserProfile?.displayName ?? app.userName
@@ -26,7 +26,7 @@ struct ProfileView: View {
                             imageURL: avatarURL
                         )
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(displayName.isEmpty ? "Add your name" : displayName)
+                            Text(displayName.isEmpty ? tr("profile.add_name") : displayName)
                                 .font(.system(size: 17, weight: .bold))
                                 .foregroundStyle(Color.primary)
                             Text(roleSubtitle + " · \(app.userEmail)")
@@ -41,75 +41,75 @@ struct ProfileView: View {
             .buttonStyle(.plain)
 
             if role == .manager || role == .admin {
-                sectionHeader("Workspace admin")
+                sectionHeader(tr("profile.section.workspace_admin"))
                 GlassCard(padding: 0) {
                     VStack(spacing: 0) {
                         if role == .admin {
-                            navRow(icon: "building.2.fill", label: "Workspace",
-                                   sub: "Name, logo, and identity") { onNav("workspace") }
+                            navRow(icon: "building.2.fill", label: tr("profile.nav.workspace"),
+                                   sub: tr("profile.nav.workspace.sub")) { onNav("workspace") }
                             Divider().opacity(0.4)
                         }
-                        navRow(icon: "folder.fill",  label: "Manage projects",
-                               sub: "\(repositoryApp.projects.count) projects · \(money(repositoryApp.projects.filter { $0.budget.currency == repositoryApp.aggregationCurrency }.reduce(0) { $0 + $1.budget.decimalValue }, currency: repositoryApp.aggregationCurrency)) budget") { onNav("manageProjects") }
+                        let budget = money(repositoryApp.projects.filter { $0.budget.currency == repositoryApp.aggregationCurrency }.reduce(0) { $0 + $1.budget.decimalValue }, currency: repositoryApp.aggregationCurrency)
+                        navRow(icon: "folder.fill",  label: tr("profile.nav.manage_projects"),
+                               sub: tr("profile.nav.manage_projects.sub", repositoryApp.projects.count, budget)) { onNav("manageProjects") }
                         Divider().opacity(0.4)
-                        navRow(icon: "shield.fill",  label: "Permissions",
-                               sub: "\(repositoryApp.members.count) members · 4 roles")        { onNav("permissions") }
+                        navRow(icon: "shield.fill",  label: tr("profile.nav.permissions"),
+                               sub: tr("profile.nav.permissions.sub", repositoryApp.members.count)) { onNav("permissions") }
                     }
                 }
             }
 
             if role == .finance || role == .admin {
-                sectionHeader("Finance")
+                sectionHeader(tr("profile.section.finance"))
                 GlassCard(padding: 0) {
-                    navRow(icon: "banknote.fill", label: "Reimbursement queue",
-                           sub: "Mark expenses as paid, handle finance review") { onNav("review") }
+                    navRow(icon: "banknote.fill", label: tr("profile.nav.reimbursement_queue"),
+                           sub: tr("profile.nav.reimbursement_queue.sub")) { onNav("review") }
                 }
             }
 
-            sectionHeader("Account")
+            sectionHeader(tr("profile.section.account"))
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    navRow(icon: "list.bullet",    label: "My activity",
-                           sub: "Drafts, submitted, approved, reimbursed") { onNav("activity") }
+                    navRow(icon: "list.bullet",    label: tr("profile.nav.activity"),
+                           sub: tr("profile.nav.activity.sub")) { onNav("activity") }
                     Divider().opacity(0.4)
-                    navRow(icon: "bell.fill",      label: "Notifications",
-                           sub: "Approvals, reminders, reimbursements") { onNav("notifications") }
+                    navRow(icon: "bell.fill",      label: tr("profile.nav.notifications"),
+                           sub: tr("profile.nav.notifications.sub")) { onNav("notifications") }
                     Divider().opacity(0.4)
-                    navRow(icon: "person.crop.circle.fill", label: "Account",
-                           sub: "Profile, email, workspace identity") { onNav("account") }
+                    navRow(icon: "person.crop.circle.fill", label: tr("profile.nav.account"),
+                           sub: tr("profile.nav.account.sub")) { onNav("account") }
                     Divider().opacity(0.4)
-                    navRow(icon: "lock.fill", label: "Security",
-                           sub: "Password, sessions, recovery") { onNav("security") }
+                    navRow(icon: "lock.fill", label: tr("profile.nav.security"),
+                           sub: tr("profile.nav.security.sub")) { onNav("security") }
                     Divider().opacity(0.4)
-                    navRow(icon: "gearshape.fill", label: "Preferences",
-                           sub: "Theme, currency, export format",
-                           comingSoon: true) {}
+                    navRow(icon: "gearshape.fill", label: tr("profile.nav.preferences"),
+                           sub: tr("profile.nav.preferences.sub")) { onNav("preferences") }
                     Divider().opacity(0.4)
-                    navRow(icon: "doc.text.fill", label: "Reports & export",
-                           sub: "CSV export available · PDF coming soon") { onNav("reports") }
+                    navRow(icon: "doc.text.fill", label: tr("profile.nav.reports"),
+                           sub: tr("profile.nav.reports.sub")) { onNav("reports") }
                     Divider().opacity(0.4)
-                    navRow(icon: "questionmark.circle.fill", label: "Help & support") { onNav("help") }
+                    navRow(icon: "questionmark.circle.fill", label: tr("profile.nav.help")) { onNav("help") }
                     Divider().opacity(0.4)
-                    navRow(icon: "info.circle.fill", label: "Legal & about") { onNav("legal") }
+                    navRow(icon: "info.circle.fill", label: tr("profile.nav.legal")) { onNav("legal") }
                 }
             }
 
-            sectionHeader("Access")
+            sectionHeader(tr("profile.section.access"))
             GlassCard(padding: 14) {
                 VStack(alignment: .leading, spacing: 8) {
-                    roleScopeRow("Employee", "Submit expenses and track reimbursement status", icon: "person.fill", active: role == .employee)
+                    roleScopeRow(tr("role.employee"), tr("role.employee.description"), icon: "person.fill", active: role == .employee)
                     Divider().opacity(0.4)
-                    roleScopeRow("Manager", "Approve or reject expenses above the auto-approve threshold", icon: "checkmark.shield.fill", active: role == .manager)
+                    roleScopeRow(tr("role.manager"), tr("role.manager.description"), icon: "checkmark.shield.fill", active: role == .manager)
                     Divider().opacity(0.4)
-                    roleScopeRow("Finance", "Mark expenses as reimbursed and handle finance review", icon: "banknote.fill", active: role == .finance)
+                    roleScopeRow(tr("role.finance"), tr("role.finance.description"), icon: "banknote.fill", active: role == .finance)
                     Divider().opacity(0.4)
-                    roleScopeRow("Admin", "Full access — invite members, remove users, configure workspace", icon: "crown.fill", active: role == .admin)
+                    roleScopeRow(tr("role.admin"), tr("role.admin.description"), icon: "crown.fill", active: role == .admin)
                 }
             }
 
             GlassCard(padding: 0) {
                 navRow(icon: "rectangle.portrait.and.arrow.right",
-                       label: "Sign out", tint: Tokens.rejected, chevron: false) { onSignOut() }
+                       label: tr("profile.signout"), tint: Tokens.rejected, chevron: false) { onSignOut() }
             }
         }
         .padding(.horizontal, 16)
@@ -136,10 +136,10 @@ struct ProfileView: View {
 
     private var roleSubtitle: String {
         switch role {
-        case .employee: return "Member"
-        case .manager: return "Manager"
-        case .finance: return "Finance"
-        case .admin: return "Workspace admin"
+        case .employee: return tr("role.member")
+        case .manager: return tr("role.manager")
+        case .finance: return tr("role.finance")
+        case .admin: return tr("role.workspace_admin")
         }
     }
 
@@ -168,7 +168,7 @@ struct ProfileView: View {
                             .font(.system(size: 13.5, weight: .medium))
                             .foregroundStyle(comingSoon ? Color.secondary : (tint ?? .primary))
                         if comingSoon {
-                            Text("Coming soon")
+                            Text(tr("common.coming_soon"))
                                 .font(.system(size: 9, weight: .semibold))
                                 .tracking(0.4)
                                 .foregroundStyle(.secondary)
@@ -248,12 +248,12 @@ struct NotificationsView: View {
     }
 
     var body: some View {
-        settingsContainer(title: "Notifications", onBack: onBack) {
+        settingsContainer(title: tr("notifications.title"), onBack: onBack) {
             HStack(spacing: 8) {
-                filterChip("All", selected: filter == .all) { filter = .all }
-                filterChip("Approvals", selected: filter == .approvals) { filter = .approvals }
-                filterChip("Payments", selected: filter == .payments) { filter = .payments }
-                filterChip("Admin", selected: filter == .admin) { filter = .admin }
+                filterChip(tr("notifications.filter.all"), selected: filter == .all) { filter = .all }
+                filterChip(tr("notifications.filter.approvals"), selected: filter == .approvals) { filter = .approvals }
+                filterChip(tr("notifications.filter.payments"), selected: filter == .payments) { filter = .payments }
+                filterChip(tr("notifications.filter.admin"), selected: filter == .admin) { filter = .admin }
             }
 
             GlassCard(padding: 0) {
@@ -270,8 +270,8 @@ struct NotificationsView: View {
             }
 
             infoBanner(icon: "bell.badge.fill", tint: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color,
-                       title: "\(unreadCount) unread notifications",
-                       message: "New approval, reimbursement, and workspace updates will appear here.")
+                       title: tr("notifications.unread_summary", unreadCount),
+                       message: tr("notifications.unread_message"))
 
         }
         .sheet(item: $selectedNotification) { item in
@@ -285,9 +285,9 @@ struct NotificationsView: View {
             Image(systemName: "bell.slash")
                 .font(.system(size: 24, weight: .semibold))
                 .foregroundStyle(.secondary)
-            Text("No notifications")
+            Text(tr("notifications.empty.title"))
                 .font(.system(size: 15, weight: .semibold))
-            Text("Approval, reimbursement, and invite updates will appear here when they are available.")
+            Text(tr("notifications.empty.subtitle"))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -327,7 +327,7 @@ struct NotificationsView: View {
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(item.time).font(.system(size: 10.5, weight: .medium)).foregroundStyle(.tertiary)
                     if item.unread {
-                        Text("New").font(.system(size: 9, weight: .semibold)).foregroundStyle(Tokens.pending)
+                        Text(tr("notifications.new_badge")).font(.system(size: 9, weight: .semibold)).foregroundStyle(Tokens.pending)
                     }
                 }
             }
@@ -379,12 +379,13 @@ enum NotificationFilter {
 enum NotificationKind {
     case approval, expense, payment, admin
 
+    @MainActor
     var label: String {
         switch self {
-        case .approval: return "Approval"
-        case .expense: return "Expense"
-        case .payment: return "Payment"
-        case .admin: return "Admin"
+        case .approval: return tr("notifications.kind.approval")
+        case .expense: return tr("notifications.kind.expense")
+        case .payment: return tr("notifications.kind.payment")
+        case .admin: return tr("notifications.kind.admin")
         }
     }
 }
@@ -432,7 +433,7 @@ struct AccountSettingsView: View {
         let displayName = repositoryApp.currentUserProfile?.displayName ?? app.userName
         let avatarURL = repositoryApp.currentUserProfile?.avatarUrl.flatMap(URL.init(string:))
 
-        settingsContainer(title: "Account", onBack: onBack) {
+        settingsContainer(title: tr("account.title"), onBack: onBack) {
             GlassCard(padding: 18) {
                 HStack(spacing: 14) {
                     PhotosPicker(selection: $avatarPick, matching: .images) {
@@ -460,7 +461,7 @@ struct AccountSettingsView: View {
                     }
                     .buttonStyle(.plain)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(displayName.isEmpty ? "Add your name" : displayName)
+                        Text(displayName.isEmpty ? tr("profile.add_name") : displayName)
                             .font(.system(size: 17, weight: .bold))
                         Text(app.userEmail).font(.system(size: 12)).foregroundStyle(.secondary)
                     }
@@ -482,17 +483,17 @@ struct AccountSettingsView: View {
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
-                    editableSetting("Name", text: $name)
+                    editableSetting(tr("account.name"), text: $name)
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Email", value: app.userEmail, showChevron: false)
+                    FormFieldRow(label: tr("account.email"), value: app.userEmail, showChevron: false)
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Workspace", value: repositoryApp.selectedWorkspace?.name ?? app.company.name, showChevron: false)
+                    FormFieldRow(label: tr("account.workspace"), value: repositoryApp.selectedWorkspace?.name ?? app.company.name, showChevron: false)
                 }
             }
 
             if let lastError = repositoryApp.lastError {
                 infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
-                           title: "Could not save", message: lastError)
+                           title: tr("account.save_failed"), message: lastError)
             }
 
             Button {
@@ -504,7 +505,7 @@ struct AccountSettingsView: View {
                     }
                 }
             } label: {
-                Text("Save account").primaryActionLabel()
+                Text(tr("account.save")).primaryActionLabel()
             }
             .buttonStyle(.plain)
         }
@@ -540,22 +541,22 @@ struct SecuritySettingsView: View {
     @State private var statusMessage: String?
 
     var body: some View {
-        settingsContainer(title: "Security", onBack: onBack) {
+        settingsContainer(title: tr("security.title"), onBack: onBack) {
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
                     Button { showPasswordSheet = true } label: {
-                        securityRow("Change password", "Set a new password for this account", "key.fill", chevron: true)
+                        securityRow(tr("security.change_password"), tr("security.change_password.sub"), "key.fill", chevron: true)
                     }
                     .buttonStyle(.plain)
                     Divider().opacity(0.4)
                     Button {
                         Task {
                             if await repositoryApp.requestPasswordReset(email: app.userEmail) {
-                                await MainActor.run { statusMessage = "Password-reset email sent to \(app.userEmail)." }
+                                await MainActor.run { statusMessage = tr("security.reset_email.sent", app.userEmail) }
                             }
                         }
                     } label: {
-                        securityRow("Send password reset email", "Email a reset link to \(app.userEmail)", "envelope.fill", chevron: true)
+                        securityRow(tr("security.reset_email"), tr("security.reset_email.sub", app.userEmail), "envelope.fill", chevron: true)
                     }
                     .buttonStyle(.plain)
                     Divider().opacity(0.4)
@@ -564,13 +565,13 @@ struct SecuritySettingsView: View {
                             let ok = await repositoryApp.signOutAllSessions()
                             if ok {
                                 await MainActor.run {
-                                    statusMessage = "Signed out of all devices."
+                                    statusMessage = tr("security.signout_all.done")
                                     app.signOut()
                                 }
                             }
                         }
                     } label: {
-                        securityRow("Sign out of all devices", "Invalidates every active session", "rectangle.portrait.and.arrow.right.fill", chevron: true, tint: Tokens.rejected)
+                        securityRow(tr("security.signout_all"), tr("security.signout_all.sub"), "rectangle.portrait.and.arrow.right.fill", chevron: true, tint: Tokens.rejected)
                     }
                     .buttonStyle(.plain)
                 }
@@ -578,12 +579,12 @@ struct SecuritySettingsView: View {
 
             if let statusMessage {
                 infoBanner(icon: "checkmark.seal.fill", tint: Tokens.approved,
-                           title: "Done", message: statusMessage)
+                           title: tr("common.done"), message: statusMessage)
             }
 
             if let lastError = repositoryApp.lastError {
                 infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
-                           title: "Could not complete", message: lastError)
+                           title: tr("security.failed"), message: lastError)
             }
         }
         .sheet(isPresented: $showPasswordSheet) {
@@ -591,7 +592,7 @@ struct SecuritySettingsView: View {
                 Task {
                     if await repositoryApp.updatePassword(newPassword) {
                         await MainActor.run {
-                            statusMessage = "Password updated."
+                            statusMessage = tr("common.success")
                             showPasswordSheet = false
                         }
                     }
@@ -634,15 +635,15 @@ struct ChangePasswordSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Change password").font(.system(size: 20, weight: .bold))
+            Text(tr("security.change_password")).font(.system(size: 20, weight: .bold))
                 .padding(.horizontal, 20).padding(.top, 24)
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
                     HStack {
-                        Text("New").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Text(tr("security.password.new")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                         Spacer()
-                        SecureField("8+ characters", text: $newPassword)
+                        SecureField(tr("security.password.hint"), text: $newPassword)
                             .font(.system(size: 13.5, weight: .medium))
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 220)
@@ -650,9 +651,9 @@ struct ChangePasswordSheet: View {
                     .padding(.vertical, 11)
                     Divider().opacity(0.4)
                     HStack {
-                        Text("Confirm").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Text(tr("security.password.confirm")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                         Spacer()
-                        SecureField("Re-enter", text: $confirm)
+                        SecureField(tr("security.password.reenter"), text: $confirm)
                             .font(.system(size: 13.5, weight: .medium))
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 220)
@@ -663,7 +664,7 @@ struct ChangePasswordSheet: View {
             .padding(.horizontal, 20)
 
             if !confirm.isEmpty && newPassword != confirm {
-                Text("Passwords don't match.")
+                Text(tr("security.password.mismatch"))
                     .font(.system(size: 12)).foregroundStyle(Tokens.rejected)
                     .padding(.horizontal, 20)
             }
@@ -673,7 +674,7 @@ struct ChangePasswordSheet: View {
             Button {
                 onSubmit(newPassword)
             } label: {
-                Text("Save").primaryActionLabel()
+                Text(tr("common.save")).primaryActionLabel()
             }
             .buttonStyle(.plain)
             .opacity(canSubmit ? 1 : 0.5)
@@ -686,23 +687,46 @@ struct ChangePasswordSheet: View {
 
 struct AppPreferencesView: View {
     @EnvironmentObject var repositoryApp: RepositoryAppState
+    @ObservedObject private var localization = LocalizationManager.shared
     var onBack: () -> Void
     @AppStorage("pref.compactLists") private var compactMode = false
 
     var body: some View {
-        settingsContainer(title: "Preferences", onBack: onBack) {
+        settingsContainer(title: tr("preferences.title"), onBack: onBack) {
+            // Language picker — primary control, sits at the top so users
+            // can find it without scrolling.
+            GlassCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(tr("preferences.language"))
+                        .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                    Picker(tr("preferences.language"), selection: Binding(
+                        get: { localization.language },
+                        set: { localization.setLanguage($0) }
+                    )) {
+                        ForEach(LocalizationManager.Language.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    Text(tr("preferences.language.note"))
+                        .font(.system(size: 11)).foregroundStyle(.tertiary)
+                }
+            }
+
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
-                    FormFieldRow(label: "Workspace currency",
+                    FormFieldRow(label: tr("preferences.workspace_currency"),
                                  value: repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD",
                                  showChevron: false)
                     Divider().opacity(0.4)
-                    ToggleRow(label: "Compact lists", sub: "Saved on this device", isOn: $compactMode)
+                    ToggleRow(label: tr("preferences.compact_lists"),
+                              sub: tr("preferences.compact_lists.sub"),
+                              isOn: $compactMode)
                 }
             }
             infoBanner(icon: "info.circle.fill", tint: Tokens.slate500,
-                       title: "Workspace settings",
-                       message: "Currency and receipt rules are configured per workspace and project by an admin.")
+                       title: tr("preferences.workspace_settings"),
+                       message: tr("preferences.workspace_settings.message"))
         }
     }
 }
@@ -715,26 +739,26 @@ struct ReportsExportView: View {
     @State private var csvFile: URL?
 
     var body: some View {
-        settingsContainer(title: "Reports", onBack: onBack) {
+        settingsContainer(title: tr("reports.title"), onBack: onBack) {
             GlassCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(repositoryApp.selectedWorkspace?.name ?? app.company.name).font(.system(size: 15, weight: .bold))
                     HStack {
-                        reportMetric("Expenses", "\(repositoryApp.expenses.count)")
+                        reportMetric(tr("reports.stat.expenses"), "\(repositoryApp.expenses.count)")
                         Spacer()
-                        reportMetric("Spend",
+                        reportMetric(tr("reports.stat.spend"),
                             money(repositoryApp.expensesInDefaultCurrency.reduce(0) { $0 + $1.amount.decimalValue },
                                   currency: repositoryApp.aggregationCurrency))
                         Spacer()
-                        reportMetric("Pending", "\(repositoryApp.managerQueue.count)")
+                        reportMetric(tr("reports.stat.pending"), "\(repositoryApp.managerQueue.count)")
                     }
                 }
             }
 
             if repositoryApp.expenses.isEmpty {
                 infoBanner(icon: "tray", tint: Tokens.slate500,
-                           title: "Nothing to export yet",
-                           message: "Submit your first expense and the CSV export will be ready here.")
+                           title: tr("reports.empty.title"),
+                           message: tr("reports.empty.subtitle"))
             } else {
                 Button { csvFile = makeCSVFile() } label: {
                     HStack(spacing: 12) {
@@ -743,9 +767,9 @@ struct ReportsExportView: View {
                             .frame(width: 30, height: 30)
                             .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 9))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Export CSV").font(.system(size: 13.5, weight: .semibold))
+                            Text(tr("reports.export_csv")).font(.system(size: 13.5, weight: .semibold))
                                 .foregroundStyle(Color.primary)
-                            Text("\(repositoryApp.expenses.count) rows — id, date, project, category, merchant, amount, currency, status")
+                            Text(tr("reports.csv_columns", repositoryApp.expenses.count))
                                 .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
                         }
                         Spacer()
@@ -764,10 +788,10 @@ struct ReportsExportView: View {
                                 .frame(width: 30, height: 30)
                                 .background(Tokens.approved.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("Share \(csvFile.lastPathComponent)")
+                                Text(tr("reports.share", csvFile.lastPathComponent))
                                     .font(.system(size: 13.5, weight: .semibold))
                                     .foregroundStyle(Color.primary)
-                                Text("Send to Mail, Files, AirDrop, …")
+                                Text(tr("reports.share.subtitle"))
                                     .font(.system(size: 11)).foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -782,8 +806,8 @@ struct ReportsExportView: View {
             }
 
             infoBanner(icon: "info.circle.fill", tint: Tokens.slate500,
-                       title: "PDF & receipt bundle",
-                       message: "Coming soon — for now use the CSV in any spreadsheet tool.")
+                       title: tr("reports.pdf_soon"),
+                       message: tr("reports.pdf_soon.message"))
         }
     }
 
@@ -835,11 +859,11 @@ struct HelpSupportView: View {
     var onBack: () -> Void
 
     var body: some View {
-        settingsContainer(title: "Help", onBack: onBack) {
+        settingsContainer(title: tr("help.title"), onBack: onBack) {
             GlassCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("How approvals work").font(.system(size: 13.5, weight: .semibold))
-                    Text("Submit a pre-approval before purchase, or a reimbursement claim afterwards. The manager queue clears requests above the project's auto-approve threshold; finance then handles reimbursement.")
+                    Text(tr("help.workflow_title")).font(.system(size: 13.5, weight: .semibold))
+                    Text(tr("help.workflow_body"))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
@@ -852,7 +876,7 @@ struct HelpSupportView: View {
                             .frame(width: 30, height: 30)
                             .background(Tokens.slate500.opacity(0.1), in: RoundedRectangle(cornerRadius: 9))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Contact support").font(.system(size: 13.5, weight: .semibold))
+                            Text(tr("help.contact")).font(.system(size: 13.5, weight: .semibold))
                                 .foregroundStyle(Color.primary)
                             Text("support@turfmapp.io")
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
@@ -872,11 +896,11 @@ struct SystemStatesView: View {
     var onBack: () -> Void
 
     var body: some View {
-        settingsContainer(title: "System states", onBack: onBack) {
-            stateCard(icon: "hourglass", title: "Loading", message: "Skeleton cards appear while workspace data syncs.", tint: Tokens.slate500)
-            stateCard(icon: "wifi.slash", title: "Offline", message: "Users can keep drafts locally and retry when connected.", tint: Tokens.pending)
-            stateCard(icon: "exclamationmark.triangle.fill", title: "Failed to load", message: "Show a retry action without losing the selected organization.", tint: Tokens.rejected)
-            stateCard(icon: "tray", title: "Empty", message: "First-run screens explain what to create or submit next.", tint: Tokens.approved)
+        settingsContainer(title: tr("states.title"), onBack: onBack) {
+            stateCard(icon: "hourglass", title: tr("states.loading.title"), message: tr("states.loading.message"), tint: Tokens.slate500)
+            stateCard(icon: "wifi.slash", title: tr("states.offline.title"), message: tr("states.offline.message"), tint: Tokens.pending)
+            stateCard(icon: "exclamationmark.triangle.fill", title: tr("states.failed.title"), message: tr("states.failed.message"), tint: Tokens.rejected)
+            stateCard(icon: "tray", title: tr("states.empty.title"), message: tr("states.empty.message"), tint: Tokens.approved)
         }
     }
 
@@ -901,18 +925,18 @@ struct LegalAboutView: View {
     var onBack: () -> Void
 
     var body: some View {
-        settingsContainer(title: "About", onBack: onBack) {
+        settingsContainer(title: tr("legal.title"), onBack: onBack) {
             GlassCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Turfmapp Expenses").font(.system(size: 18, weight: .bold))
-                    Text("Version 1.0").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(tr("legal.app_name")).font(.system(size: 18, weight: .bold))
+                    Text(tr("legal.version", "1.0")).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    FormFieldRow(label: "Build", value: "1.0 (1)", showChevron: false)
+                    FormFieldRow(label: tr("legal.build"), value: "1.0 (1)", showChevron: false)
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Backend", value: "Supabase", showChevron: false)
+                    FormFieldRow(label: tr("legal.backend"), value: "Supabase", showChevron: false)
                 }
             }
         }
@@ -937,7 +961,7 @@ struct WorkspaceSettingsView: View {
         let workspace = repositoryApp.selectedWorkspace
         let logoURL = workspace?.logoUrl.flatMap(URL.init(string:))
 
-        settingsContainer(title: "Workspace", onBack: onBack) {
+        settingsContainer(title: tr("workspace.title"), onBack: onBack) {
             GlassCard(padding: 18) {
                 HStack(spacing: 14) {
                     PhotosPicker(selection: $logoPick, matching: .images) {
@@ -969,7 +993,7 @@ struct WorkspaceSettingsView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(workspace?.name ?? app.company.name)
                             .font(.system(size: 17, weight: .bold))
-                        Text("Tap the logo to upload an image, or leave it to show the workspace's initials.")
+                        Text(tr("workspace.tap_logo"))
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
@@ -992,15 +1016,15 @@ struct WorkspaceSettingsView: View {
 
             if let lastError = repositoryApp.lastError {
                 infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
-                           title: "Could not update workspace", message: lastError)
+                           title: tr("workspace.update_failed"), message: lastError)
             }
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
                     HStack {
-                        Text("Name").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Text(tr("workspace.name")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                         Spacer()
-                        TextField("Workspace name", text: $nameDraft)
+                        TextField(tr("workspace.name.placeholder"), text: $nameDraft)
                             .font(.system(size: 13.5, weight: .medium))
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 220)
@@ -1008,9 +1032,9 @@ struct WorkspaceSettingsView: View {
                     .padding(.vertical, 11)
                     Divider().opacity(0.4)
                     HStack {
-                        Text("Default currency").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Text(tr("workspace.default_currency")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                         Spacer()
-                        Picker("Currency", selection: $currencyDraft) {
+                        Picker(tr("workspace.default_currency"), selection: $currencyDraft) {
                             ForEach(Self.currencyOptions, id: \.self) { c in
                                 Text(c).tag(c)
                             }
@@ -1020,7 +1044,7 @@ struct WorkspaceSettingsView: View {
                     }
                     .padding(.vertical, 8)
                     Divider().opacity(0.4)
-                    FormFieldRow(label: "Workspace ID",
+                    FormFieldRow(label: tr("workspace.workspace_id"),
                                  value: String((workspace?.id ?? "").prefix(8)) + "…",
                                  showChevron: false)
                 }
@@ -1028,7 +1052,7 @@ struct WorkspaceSettingsView: View {
 
             if let saveStatus {
                 infoBanner(icon: "checkmark.seal.fill", tint: Tokens.approved,
-                           title: "Saved", message: saveStatus)
+                           title: tr("common.success"), message: saveStatus)
             }
 
             Button {
@@ -1039,11 +1063,11 @@ struct WorkspaceSettingsView: View {
                     let ok = await repositoryApp.updateWorkspace(name: trimmed, defaultCurrency: currencyDraft)
                     await MainActor.run {
                         savingDetails = false
-                        if ok { saveStatus = "Workspace updated." }
+                        if ok { saveStatus = tr("workspace.saved") }
                     }
                 }
             } label: {
-                Text(savingDetails ? "Saving..." : "Save changes").primaryActionLabel()
+                Text(savingDetails ? tr("workspace.saving") : tr("workspace.save_changes")).primaryActionLabel()
             }
             .buttonStyle(.plain)
             .opacity((nameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
@@ -1054,8 +1078,8 @@ struct WorkspaceSettingsView: View {
                       savingDetails)
 
             infoBanner(icon: "info.circle.fill", tint: Tokens.slate500,
-                       title: "Per-project policy",
-                       message: "Approval thresholds and routing live on individual projects — open Manage projects to edit those.")
+                       title: tr("workspace.per_project_policy"),
+                       message: tr("workspace.per_project_policy.message"))
         }
         .onAppear {
             nameDraft = workspace?.name ?? ""

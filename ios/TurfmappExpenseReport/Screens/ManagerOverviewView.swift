@@ -48,8 +48,8 @@ struct ManagerOverviewView: View {
     }
 
     private var spendDeltaDescription: String {
-        guard let delta = spendDeltaVsLastMonth else { return "No prior month" }
-        return String(format: "%+.0f%% vs LM", delta)
+        guard let delta = spendDeltaVsLastMonth else { return tr("overview.no_prior_month") }
+        return tr("overview.delta.vs_lm", String(format: "%+.0f", delta))
     }
 
     private var overdueApprovalCount: Int {
@@ -67,9 +67,9 @@ struct ManagerOverviewView: View {
 
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(app.role == .admin ? "Admin view" : app.role == .finance ? "Finance view" : "Manager view")
+                Text(app.role == .admin ? tr("overview.admin_view") : app.role == .finance ? tr("overview.finance_view") : tr("overview.manager_view"))
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
-                Text("Overview").font(.system(size: 26, weight: .bold))
+                Text(tr("overview.title")).font(.system(size: 26, weight: .bold))
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
@@ -77,20 +77,20 @@ struct ManagerOverviewView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("AWAITING YOUR APPROVAL")
+                            Text(tr("overview.awaiting.label"))
                                 .font(.system(size: 11, weight: .semibold)).tracking(0.6).foregroundStyle(.secondary)
                             Text("\(pendingCount)")
                                 .font(.system(size: 36, weight: .bold))
-                            Text("\(money(pendingTotal, currency: workspaceCurrency)) total")
+                            Text(tr("overview.awaiting.total", money(pendingTotal, currency: workspaceCurrency)))
                                 .font(.system(size: 13)).foregroundStyle(.secondary)
                         }
                         Spacer()
                         if overdueApprovalCount > 0 {
-                            StatusPill(text: "\(overdueApprovalCount) over 24h", tint: Tokens.pending, leadingIcon: "clock")
+                            StatusPill(text: tr("overview.over_24h", overdueApprovalCount), tint: Tokens.pending, leadingIcon: "clock")
                         }
                     }
                     Button(action: onGoToReview) {
-                        Text("Open review queue").primaryActionLabel()
+                        Text(tr("overview.open_queue")).primaryActionLabel()
                     }
                     .buttonStyle(.plain)
                     .padding(.top, 4)
@@ -106,10 +106,10 @@ struct ManagerOverviewView: View {
                                 .frame(width: 32, height: 32)
                                 .background(Tokens.pending.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("\(repositoryApp.draftExpenses.count) draft\(repositoryApp.draftExpenses.count == 1 ? "" : "s")")
+                                Text(tr(repositoryApp.draftExpenses.count == 1 ? "overview.drafts.count" : "overview.drafts.count.plural", repositoryApp.draftExpenses.count))
                                     .font(.system(size: 13.5, weight: .semibold))
                                     .foregroundStyle(Color.primary)
-                                Text("Tap to continue editing.")
+                                Text(tr("overview.drafts.continue"))
                                     .font(.system(size: 11)).foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -123,9 +123,9 @@ struct ManagerOverviewView: View {
             }
 
             HStack(spacing: 10) {
-                kpiCard(label: "FINANCE QUEUE", value: "\(financeCount)", delta: money(financeTotal, currency: workspaceCurrency), positive: true)
+                kpiCard(label: tr("overview.finance_queue"), value: "\(financeCount)", delta: money(financeTotal, currency: workspaceCurrency), positive: true)
                 kpiCard(
-                    label: "TEAM SPEND MTD",
+                    label: tr("overview.team_spend_mtd"),
                     value: money(teamSpendMTD, currency: workspaceCurrency),
                     delta: spendDeltaDescription,
                     positive: (spendDeltaVsLastMonth ?? 0) >= 0
@@ -135,10 +135,10 @@ struct ManagerOverviewView: View {
             if repositoryApp.convertedForeignExpenseCount > 0 || repositoryApp.unconvertibleExpenseCount > 0 {
                 VStack(alignment: .leading, spacing: 2) {
                     if repositoryApp.convertedForeignExpenseCount > 0 {
-                        Text("\(repositoryApp.convertedForeignExpenseCount) expense(s) converted to \(workspaceCurrency) at approximate rates.")
+                        Text(tr("dashboard.foreign.converted", repositoryApp.convertedForeignExpenseCount, workspaceCurrency))
                     }
                     if repositoryApp.unconvertibleExpenseCount > 0 {
-                        Text("\(repositoryApp.unconvertibleExpenseCount) expense(s) excluded — currency not supported.")
+                        Text(tr("dashboard.foreign.excluded", repositoryApp.unconvertibleExpenseCount))
                     }
                 }
                 .font(.system(size: 11))
@@ -146,13 +146,13 @@ struct ManagerOverviewView: View {
                 .padding(.horizontal, 4)
             }
 
-            Text("Project budgets")
+            Text(tr("overview.project_budgets"))
                 .font(.system(size: 13, weight: .semibold))
                 .padding(.horizontal, 4).padding(.top, 6)
 
             GlassCard(padding: 14) {
                 if activeProjects.isEmpty {
-                    Text("No projects yet. Create one in You ▸ Manage projects.")
+                    Text(tr("overview.no_projects"))
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -29,7 +29,7 @@ struct RootShell: View {
     private var launchSplash: some View {
         VStack(spacing: 12) {
             ProgressView()
-            Text("Loading…").font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(tr("shell.loading")).font(.system(size: 12)).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .appBackground()
@@ -442,16 +442,16 @@ struct AuthView: View {
             Spacer(minLength: 40)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(mode.title)
+                Text(tr(mode.titleKey))
                     .font(.system(size: 34, weight: .bold))
-                Text("Track approvals, purchases, and reimbursements across your workspace.")
+                Text(tr("auth.subtitle"))
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
 
             Picker("Mode", selection: $mode) {
                 ForEach(AuthMode.allCases, id: \.self) { item in
-                    Text(item.title).tag(item)
+                    Text(tr(item.titleKey)).tag(item)
                 }
             }
             .pickerStyle(.segmented)
@@ -462,27 +462,27 @@ struct AuthView: View {
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
-                    authField("Email", text: $email, keyboard: .emailAddress)
+                    authField(tr("auth.email"), text: $email, keyboard: .emailAddress)
                     Divider().opacity(0.4)
-                    secureField("Password", text: $password)
+                    secureField(tr("auth.password"), text: $password)
                 }
             }
 
             if showReset {
                 infoBanner(icon: "envelope.fill", tint: Tokens.aiPurple,
-                           title: "Password reset sent",
-                           message: "Check \(email.isEmpty ? "your email" : email) for a reset link.")
+                           title: tr("auth.reset_sent.title"),
+                           message: tr("auth.reset_sent.message", email.isEmpty ? tr("auth.reset_sent.fallback") : email))
             }
 
             if showVerification {
                 infoBanner(icon: "checkmark.seal.fill", tint: Tokens.approved,
-                           title: "Verification required",
-                           message: "Check your email to confirm this account, then sign in.")
+                           title: tr("auth.verification.title"),
+                           message: tr("auth.verification.message"))
             }
 
             if let lastError = repositoryApp.lastError {
                 infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
-                           title: "Authentication failed",
+                           title: tr("auth.failed.title"),
                            message: lastError)
             }
 
@@ -506,14 +506,14 @@ struct AuthView: View {
                     }
                 }
             } label: {
-                Text(mode.actionTitle).primaryActionLabel()
+                Text(tr(mode.actionKey)).primaryActionLabel()
             }
             .buttonStyle(.plain)
             .disabled(email.isEmpty || password.isEmpty)
 
             HStack {
                 if mode == .login {
-                    Button("Forgot password?") {
+                    Button(tr("auth.forgot")) {
                         Task {
                             let sent = await repositoryApp.requestPasswordReset(email: email)
                             await MainActor.run { showReset = sent }
@@ -521,10 +521,10 @@ struct AuthView: View {
                     }
                     .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 } else {
-                    Button("Back to sign in") { mode = .login }
+                    Button(tr("auth.back_to_signin")) { mode = .login }
                 }
                 Spacer()
-                Button(mode == .login ? "Create account" : "Use sign in") {
+                Button(mode == .login ? tr("auth.switch_to_signup") : tr("auth.switch_to_signin")) {
                     mode = mode == .login ? .signup : .login
                     showReset = false
                     showVerification = false
@@ -568,17 +568,17 @@ struct AuthView: View {
 enum AuthMode: CaseIterable {
     case login, signup
 
-    var title: String {
+    var titleKey: String {
         switch self {
-        case .login: return "Sign in"
-        case .signup: return "Create account"
+        case .login: return "auth.signin.title"
+        case .signup: return "auth.signup.title"
         }
     }
 
-    var actionTitle: String {
+    var actionKey: String {
         switch self {
-        case .login: return "Sign in"
-        case .signup: return "Create account"
+        case .login: return "auth.signin.action"
+        case .signup: return "auth.signup.action"
         }
     }
 }
@@ -592,22 +592,22 @@ struct ProfileSetupView: View {
         VStack(alignment: .leading, spacing: 16) {
             Spacer(minLength: 32)
 
-            Text("Set up profile").font(.system(size: 32, weight: .bold))
-            Text("Create the identity teammates will see on requests, approvals, and reimbursement records.")
+            Text(tr("setup.profile.title")).font(.system(size: 32, weight: .bold))
+            Text(tr("setup.profile.subtitle"))
                 .font(.system(size: 14)).foregroundStyle(.secondary)
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
-                    setupField("Full name", text: $name)
+                    setupField(tr("setup.profile.fullname"), text: $name)
                     Divider().opacity(0.4)
-                    setupField("Nickname", text: $nickname)
+                    setupField(tr("setup.profile.nickname"), text: $nickname)
                 }
             }
 
             Button {
                 app.completeProfile(name: name, nickname: nickname)
             } label: {
-                Text("Continue").primaryActionLabel()
+                Text(tr("common.continue")).primaryActionLabel()
             }
             .buttonStyle(.plain)
 
@@ -640,14 +640,14 @@ struct WorkspaceSetupView: View {
         VStack(alignment: .leading, spacing: 16) {
             Spacer(minLength: 32)
 
-            Text("Workspace").font(.system(size: 32, weight: .bold))
-            Text("Create an organization or join one by invite before submitting expenses.")
+            Text(tr("setup.workspace.title")).font(.system(size: 32, weight: .bold))
+            Text(tr("setup.workspace.subtitle"))
                 .font(.system(size: 14)).foregroundStyle(.secondary)
 
             GlassCard(padding: 16) {
-                Picker("Workspace", selection: $mode) {
-                    Text("Create").tag(WorkspaceMode.create)
-                    Text("Join").tag(WorkspaceMode.join)
+                Picker(tr("setup.workspace.title"), selection: $mode) {
+                    Text(tr("setup.workspace.mode.create")).tag(WorkspaceMode.create)
+                    Text(tr("setup.workspace.mode.join")).tag(WorkspaceMode.join)
                 }
                 .pickerStyle(.segmented)
             }
@@ -655,28 +655,28 @@ struct WorkspaceSetupView: View {
             GlassCard(padding: 16) {
                 if mode == .create {
                     VStack(spacing: 0) {
-                        setupField("Organization", text: $workspaceName)
+                        setupField(tr("setup.workspace.org_name"), text: $workspaceName)
                         Divider().opacity(0.4)
-                        FormFieldRow(label: "Default currency", value: "USD", showChevron: false)
+                        FormFieldRow(label: tr("setup.workspace.default_currency"), value: "USD", showChevron: false)
                     }
                 } else {
                     VStack(spacing: 0) {
-                        setupField("Invite code", text: $inviteCode)
+                        setupField(tr("setup.workspace.invite_code"), text: $inviteCode)
                         Divider().opacity(0.4)
-                        FormFieldRow(label: "Status", value: inviteCode.isEmpty ? "Waiting for invite" : "Ready to join", showChevron: false)
+                        FormFieldRow(label: tr("setup.workspace.status"), value: inviteCode.isEmpty ? tr("setup.workspace.waiting_invite") : tr("setup.workspace.ready_join"), showChevron: false)
                     }
                 }
             }
 
             if let lastError = repositoryApp.lastError {
                 infoBanner(icon: "exclamationmark.shield.fill", tint: Tokens.rejected,
-                           title: "Workspace setup failed",
+                           title: tr("setup.workspace.failed.title"),
                            message: lastError)
             }
 
             infoBanner(icon: "person.2.badge.gearshape.fill", tint: Tokens.slate500,
-                       title: "Invite required",
-                       message: "If an invite is not accepted yet, this screen keeps the user out of the workspace.")
+                       title: tr("setup.workspace.invite_required.title"),
+                       message: tr("setup.workspace.invite_required.message"))
 
             Button {
                 Task {
@@ -693,7 +693,7 @@ struct WorkspaceSetupView: View {
                     }
                 }
             } label: {
-                Text(mode == .create ? "Create workspace" : "Join workspace").primaryActionLabel()
+                Text(mode == .create ? tr("setup.workspace.create_action") : tr("setup.workspace.join_action")).primaryActionLabel()
             }
             .buttonStyle(.plain)
             .disabled(mode == .join && inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

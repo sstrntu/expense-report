@@ -1,28 +1,54 @@
 import SwiftUI
 
+/// Filter keys for the Activity screen. Stored as enum so the active filter
+/// stays stable when the user switches language mid-session (the rawValue
+/// matches the .strings key, looked up at render time).
+enum ActivityFilter: String, CaseIterable, Hashable {
+    case all
+    case awaitingApproval
+    case approved
+    case awaitingReimbursement
+    case reimbursed
+    case rejected
+    case archived
+
+    var stringsKey: String {
+        switch self {
+        case .all: return "activity.filter.all"
+        case .awaitingApproval: return "activity.filter.awaiting_approval"
+        case .approved: return "activity.filter.approved"
+        case .awaitingReimbursement: return "activity.filter.awaiting_reimbursement"
+        case .reimbursed: return "activity.filter.reimbursed"
+        case .rejected: return "activity.filter.rejected"
+        case .archived: return "activity.filter.archived"
+        }
+    }
+}
+
 struct ActivityView: View {
     @EnvironmentObject var repositoryApp: RepositoryAppState
-    @State private var filter: String = "All"
+    @ObservedObject private var localization = LocalizationManager.shared
+    @State private var filter: ActivityFilter = .all
     @State private var searchText = ""
-    @State private var projectFilter = "All projects"
+    /// Empty string acts as the "All projects" sentinel — easier than juggling
+    /// optionals across the filter chain.
+    @State private var projectFilter: String = ""
     @State private var expenseToDelete: DomainExpense? = nil
     var onOpen: (DomainExpense) -> Void
     /// Provided only when pushed as a stack screen (e.g. from You → My activity).
     /// When nil the view assumes it's the root of the Activity tab.
     var onBack: (() -> Void)? = nil
 
-    private let filters = ["All", "Awaiting Approval", "Approved", "Awaiting Reimbursement", "Reimbursed", "Rejected", "Archived"]
-
     private var filtered: [DomainExpense] {
         let pool = repositoryApp.expenses.filter { expense in
             switch filter {
-            case "Archived": return expense.isArchived || expense.status == .archived
-            case "Awaiting Approval": return expense.status == .pendingManagerApproval
-            case "Approved": return expense.status == .approved
-            case "Awaiting Reimbursement": return [.pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement].contains(expense.status)
-            case "Reimbursed": return expense.status == .reimbursed
-            case "Rejected": return expense.status == .rejected
-            default: return !expense.isArchived && expense.status != .archived
+            case .archived: return expense.isArchived || expense.status == .archived
+            case .awaitingApproval: return expense.status == .pendingManagerApproval
+            case .approved: return expense.status == .approved
+            case .awaitingReimbursement: return [.pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement].contains(expense.status)
+            case .reimbursed: return expense.status == .reimbursed
+            case .rejected: return expense.status == .rejected
+            case .all: return !expense.isArchived && expense.status != .archived
             }
         }
 
@@ -30,8 +56,9 @@ struct ActivityView: View {
             let matchesSearch = searchText.isEmpty ||
                 expense.merchant.localizedCaseInsensitiveContains(searchText) ||
                 repositoryApp.categoryName(forId: expense.categoryId).localizedCaseInsensitiveContains(searchText) ||
+                repositoryApp.displayCategoryName(forId: expense.categoryId).localizedCaseInsensitiveContains(searchText) ||
                 expense.projectName(in: repositoryApp.projects).localizedCaseInsensitiveContains(searchText)
-            let matchesProject = projectFilter == "All projects" || expense.projectName(in: repositoryApp.projects) == projectFilter
+            let matchesProject = projectFilter.isEmpty || expense.projectName(in: repositoryApp.projects) == projectFilter
             return matchesSearch && matchesProject
         }
     }
@@ -48,7 +75,7 @@ struct ActivityView: View {
                     .buttonStyle(.plain)
                     .glassSurface(corner: 999)
                 }
-                Text("Activity").font(.system(size: 26, weight: .bold))
+                Text(tr("activity.title")).font(.system(size: 26, weight: .bold))
                 Spacer()
             }
             .padding(.horizontal, 4).padding(.top, 4)
@@ -57,8 +84,8 @@ struct ActivityView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(filters, id: \.self) { f in
-                        Button(f) { filter = f }
+                    ForEach(ActivityFilter.allCases, id: \.self) { f in
+                        Button(tr(f.stringsKey)) { filter = f }
                             .buttonStyle(FilterChipStyle(active: filter == f))
                     }
                 }
@@ -69,19 +96,19 @@ struct ActivityView: View {
             let thisWeek = filtered.count > 2 ? Array(filtered[2..<min(5, filtered.count)]) : []
             let earlier  = filtered.count > 5 ? Array(filtered.suffix(from: 5)) : []
 
-            if !today.isEmpty    { section(title: "Today",     items: today) }
-            if !thisWeek.isEmpty { section(title: "This week", items: thisWeek) }
-            if !earlier.isEmpty  { section(title: "Earlier",   items: earlier) }
+            if !today.isEmpty    { section(title: tr("activity.section.today"),     items: today) }
+            if !thisWeek.isEmpty { section(title: tr("activity.section.this_week"), items: thisWeek) }
+            if !earlier.isEmpty  { section(title: tr("activity.section.earlier"),   items: earlier) }
 
             if filtered.isEmpty {
                 GlassCard(padding: 24) {
                     VStack(spacing: 8) {
-                        Image(systemName: filter == "Archived" ? "archivebox" : "magnifyingglass")
+                        Image(systemName: filter == .archived ? "archivebox" : "magnifyingglass")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(.secondary)
-                        Text(filter == "Archived" ? "No archived expenses" : repositoryApp.expenses.isEmpty ? "No expenses yet" : "No matching expenses")
+                        Text(emptyTitle)
                             .font(.system(size: 14, weight: .semibold))
-                        Text(filter == "Archived" ? "Archive expenses to remove them from your main view." : repositoryApp.expenses.isEmpty ? "New expenses will appear here after submission." : "Adjust search, project, or status filters.")
+                        Text(emptySubtitle)
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -94,14 +121,26 @@ struct ActivityView: View {
         .padding(.bottom, 100)
         .alert(item: $expenseToDelete) { expense in
             Alert(
-                title: Text("Delete \"\(expense.merchant)\"?"),
-                message: Text("This cannot be undone."),
-                primaryButton: .destructive(Text("Delete")) {
+                title: Text(tr("activity.delete.title", expense.merchant)),
+                message: Text(tr("activity.delete.message")),
+                primaryButton: .destructive(Text(tr("common.delete"))) {
                     Task { await repositoryApp.deleteExpense(id: expense.id) }
                 },
-                secondaryButton: .cancel()
+                secondaryButton: .cancel(Text(tr("common.cancel")))
             )
         }
+    }
+
+    private var emptyTitle: String {
+        if filter == .archived { return tr("activity.empty.archived.title") }
+        if repositoryApp.expenses.isEmpty { return tr("activity.empty.fresh.title") }
+        return tr("activity.empty.filtered.title")
+    }
+
+    private var emptySubtitle: String {
+        if filter == .archived { return tr("activity.empty.archived.subtitle") }
+        if repositoryApp.expenses.isEmpty { return tr("activity.empty.fresh.subtitle") }
+        return tr("activity.empty.filtered.subtitle")
     }
 
     private var searchAndProjectFilters: some View {
@@ -109,7 +148,7 @@ struct ActivityView: View {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search merchant, category, project", text: $searchText)
+                TextField(tr("activity.search.placeholder"), text: $searchText)
                     .font(.system(size: 13.5, weight: .medium))
                     .textInputAutocapitalization(.never)
             }
@@ -118,19 +157,19 @@ struct ActivityView: View {
 
             HStack(spacing: 8) {
                 Menu {
-                    Button("All projects") { projectFilter = "All projects" }
+                    Button(tr("activity.all_projects")) { projectFilter = "" }
                     ForEach(repositoryApp.projects) { project in
                         Button(project.name) { projectFilter = project.name }
                     }
                 } label: {
-                    Label(projectFilter, systemImage: "folder.fill")
+                    Label(projectFilter.isEmpty ? tr("activity.all_projects") : projectFilter, systemImage: "folder.fill")
                         .font(.system(size: 12, weight: .semibold))
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(Color.primary.opacity(0.06), in: Capsule())
                 }
                 .buttonStyle(.plain)
 
-                Label("All time", systemImage: "calendar")
+                Label(tr("activity.all_time"), systemImage: "calendar")
                     .font(.system(size: 12, weight: .semibold))
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .background(Color.primary.opacity(0.06), in: Capsule())
@@ -157,13 +196,13 @@ struct ActivityView: View {
                                 Button {
                                     Task { await repositoryApp.archiveExpense(id: e.id) }
                                 } label: {
-                                    Label(e.isArchived ? "Unarchive" : "Archive",
+                                    Label(e.isArchived ? tr("common.unarchive") : tr("common.archive"),
                                           systemImage: e.isArchived ? "tray.and.arrow.up" : "archivebox")
                                 }
                                 Button(role: .destructive) {
                                     expenseToDelete = e
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    Label(tr("common.delete"), systemImage: "trash")
                                 }
                             }
                     }

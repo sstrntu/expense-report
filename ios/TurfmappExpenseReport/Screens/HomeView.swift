@@ -34,7 +34,7 @@ struct HomeView: View {
 
     private var greeting: String {
         let name = app.userName.split(separator: " ").first.map(String.init) ?? ""
-        return name.isEmpty ? "Welcome back" : "Hello, \(name)"
+        return name.isEmpty ? tr("home.greeting.welcome") : tr("home.greeting.hello", name)
     }
 
     var body: some View {
@@ -48,7 +48,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(greeting).font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
-                Text("This month").font(.system(size: 26, weight: .bold))
+                Text(tr("home.this_month")).font(.system(size: 26, weight: .bold))
             }
             .padding(.horizontal, 4)
             .padding(.top, 4)
@@ -66,10 +66,10 @@ struct HomeView: View {
                                 .frame(width: 32, height: 32)
                                 .background(Tokens.pending.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("\(repositoryApp.draftExpenses.count) draft\(repositoryApp.draftExpenses.count == 1 ? "" : "s")")
+                                Text(tr(repositoryApp.draftExpenses.count == 1 ? "home.drafts.count" : "home.drafts.count.plural", repositoryApp.draftExpenses.count))
                                     .font(.system(size: 13.5, weight: .semibold))
                                     .foregroundStyle(Color.primary)
-                                Text("Tap to continue editing.")
+                                Text(tr("home.drafts.continue"))
                                     .font(.system(size: 11)).foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -82,10 +82,10 @@ struct HomeView: View {
                 .buttonStyle(.plain)
             }
 
-            sectionHeader(title: "Recent activity", action: "See all") { selectedTab = .activity }
+            sectionHeader(title: tr("home.recent"), action: tr("home.see_all")) { selectedTab = .activity }
             recentList
 
-            Text("Project budgets")
+            Text(tr("overview.project_budgets"))
                 .font(.system(size: 13, weight: .semibold))
                 .padding(.horizontal, 4).padding(.top, 6)
             projectsCard
@@ -99,7 +99,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("REIMBURSABLE").font(.system(size: 11, weight: .semibold)).tracking(0.6).foregroundStyle(.secondary)
+                        Text(tr("home.reimbursable")).font(.system(size: 11, weight: .semibold)).tracking(0.6).foregroundStyle(.secondary)
                         Text(money(pending + approved, currency: workspaceCurrency)).font(.system(size: 36, weight: .bold)).tracking(-1)
                     }
                     Spacer()
@@ -111,11 +111,11 @@ struct HomeView: View {
                 }
 
                 HStack {
-                    miniStat("Pending",  money(pending, currency: workspaceCurrency))
+                    miniStat(tr("home.stat.pending"),  money(pending, currency: workspaceCurrency))
                     Spacer()
-                    miniStat("Approved", money(approved, currency: workspaceCurrency))
+                    miniStat(tr("home.stat.approved"), money(approved, currency: workspaceCurrency))
                     Spacer()
-                    miniStat("Rejected", money(rejected, currency: workspaceCurrency))
+                    miniStat(tr("home.stat.rejected"), money(rejected, currency: workspaceCurrency))
                 }
             }
         }
@@ -130,8 +130,8 @@ struct HomeView: View {
                 }.frame(width: 40, height: 40)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("New Expense").font(.system(size: 14, weight: .semibold))
-                    Text("Submit before making the purchase")
+                    Text(tr("home.new_expense")).font(.system(size: 14, weight: .semibold))
+                    Text(tr("home.new_expense.subtitle"))
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -294,7 +294,7 @@ struct DomainProjectRow: View {
             HStack {
                 Text(project.name).font(.system(size: 12.5, weight: .medium))
                 if isOverBudget {
-                    StatusPill(text: "Over budget", tint: Tokens.rejected, leadingIcon: "exclamationmark.triangle.fill")
+                    StatusPill(text: tr("overview.budget.over"), tint: Tokens.rejected, leadingIcon: "exclamationmark.triangle.fill")
                 }
                 Spacer()
                 Text("\(MoneyAmount.format(amount: committed, currency: project.budget.currency)) / \(project.budget.formatted)")
@@ -331,8 +331,8 @@ struct DomainProjectRow: View {
 
             if pending > 0 || isOverBudget {
                 HStack(spacing: 10) {
-                    breakdownChip(label: "Paid", value: paid, tint: Tokens.slate500)
-                    breakdownChip(label: "Pending", value: pending, tint: Tokens.purchased)
+                    breakdownChip(label: tr("overview.budget.paid"), value: paid, tint: Tokens.slate500)
+                    breakdownChip(label: tr("overview.budget.pending"), value: pending, tint: Tokens.purchased)
                     Spacer()
                 }
             }

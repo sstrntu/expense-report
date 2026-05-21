@@ -363,9 +363,9 @@ struct ReceiptPreviewSheet: View {
                         Image(systemName: "doc.text.image.fill")
                             .font(.system(size: 42))
                             .foregroundStyle(receipt.tint)
-                        Text("Receipt preview")
+                        Text(tr("detail.receipt_preview.title"))
                             .font(.system(size: 15, weight: .semibold))
-                        Text("Inspect the uploaded proof here, with zoom, share, and retry actions in a full release.")
+                        Text(tr("detail.receipt_preview.subtitle"))
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -397,17 +397,17 @@ struct PurchaseConfirmSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Confirm Purchase")
+            Text(tr("detail.purchase_sheet.title"))
                 .font(.system(size: 20, weight: .bold))
                 .padding(.horizontal, 20).padding(.top, 24)
 
-            Text("Confirm that you've made this purchase. Attach your receipt so the team can process reimbursement.")
+            Text(tr("detail.purchase_sheet.subtitle"))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 20)
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Final amount")
+                Text(tr("detail.purchase_sheet.final_amount"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 20)
@@ -428,7 +428,7 @@ struct PurchaseConfirmSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Receipt")
+                Text(tr("detail.purchase_sheet.receipt"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 20)
@@ -440,7 +440,7 @@ struct PurchaseConfirmSheet: View {
                         Image(systemName: receiptName != nil ? "doc.fill" : "paperclip")
                             .font(.system(size: 16))
                             .foregroundStyle(receiptName != nil ? Tokens.purchased : .secondary)
-                        Text(receiptName ?? "Attach receipt")
+                        Text(receiptName ?? tr("detail.add_receipt"))
                             .font(.system(size: 14))
                             .foregroundStyle(receiptName != nil ? Color.primary : .secondary)
                         Spacer()
@@ -465,7 +465,7 @@ struct PurchaseConfirmSheet: View {
                 onConfirm(finalAmount, receiptName)
                 dismiss()
             } label: {
-                Text("Confirm Purchase")
+                Text(tr("detail.purchase_sheet.title"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity).padding(16)
@@ -491,16 +491,16 @@ struct RejectReasonSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Reject request")
+            Text(tr("detail.reject_sheet.title"))
                 .font(.system(size: 20, weight: .bold))
                 .padding(.horizontal, 20).padding(.top, 24)
 
-            Text("Add a reason so the employee knows what to fix before resubmitting.")
+            Text(tr("detail.reject_sheet.subtitle"))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 20)
 
-            TextField("Reason", text: $reason, axis: .vertical)
+            TextField(tr("detail.reject_sheet.reason_placeholder"), text: $reason, axis: .vertical)
                 .font(.system(size: 14))
                 .lineLimit(3, reservesSpace: true)
                 .padding(14)
@@ -513,7 +513,7 @@ struct RejectReasonSheet: View {
                 onReject(trimmedReason)
                 dismiss()
             } label: {
-                Text("Reject expense")
+                Text(tr("sheet.reject.title"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity).padding(16)
@@ -546,12 +546,12 @@ struct MarkAsPaidSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Mark as Reimbursed")
+            Text(tr("detail.paid_sheet.title"))
                 .font(.system(size: 20, weight: .bold))
                 .padding(.horizontal, 20).padding(.top, 24)
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Payment method")
+                Text(tr("detail.paid_sheet.method"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 20)
@@ -565,7 +565,7 @@ struct MarkAsPaidSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Payment receipt")
+                Text(tr("detail.paid_sheet.receipt"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 20)
@@ -628,7 +628,7 @@ struct MarkAsPaidSheet: View {
                 Image(systemName: method.icon)
                     .font(.system(size: 22))
                     .foregroundStyle(selected ? .white : Color.primary)
-                Text(method.rawValue)
+                Text(method.localizedLabel)
                     .font(.system(size: 11, weight: .semibold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(selected ? .white : Color.primary)

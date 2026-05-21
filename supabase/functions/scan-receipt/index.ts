@@ -2,6 +2,13 @@
 // Extracts merchant/amount/currency/date/category from a receipt via OpenAI
 // vision and persists into turfmapp_expenses.receipt_scans/_fields.
 //
+// Supports multilingual receipts. Specifically handles:
+//  - Thai receipts (ใบเสร็จ, ใบกำกับภาษี): keeps merchant names in original
+//    script, converts Buddhist Era (พ.ศ.) dates to Gregorian by subtracting
+//    543 years, recognizes บาท as THB.
+//  - English receipts (default behaviour).
+//  - Numbers with thai-localized digits (๐-๙) and comma separators.
+//
 // Required secret: OPENAI_API_KEY. Optional: OPENAI_MODEL (default gpt-4o-mini),
 // SUPABASE_STORAGE_RECEIPT_BUCKET (default receipts).
 
@@ -33,6 +40,37 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+/// Convert Thai digits (๐-๙) to ASCII digits. Idempotent on Latin digits.
+function thaiToArabicDigits(s: string): string {
+  return s.replace(/[๐-๙]/g, (d) => String("๐๑๒๓๔๕๖๗๘๙".indexOf(d)));
+}
+
+/// If the year part of an ISO date string is in the Thai Buddhist Era (>= 2400,
+/// i.e. > Gregorian 1857), subtract 543 to convert to Gregorian. Receipts
+/// dated 2567 → 2024, 2568 → 2025, etc. Best-effort: leaves invalid input alone.
+function normalizeBuddhistDate(date: string): string {
+  const ascii = thaiToArabicDigits(date.trim());
+  const m = ascii.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (!m) return ascii;
+  let year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const day = parseInt(m[3], 10);
+  // Buddhist Era is current Gregorian + 543. Heuristic: anything above 2400
+  // is almost certainly B.E. (2400 BE = 1857 AD, before photography existed).
+  if (year >= 2400) year -= 543;
+  const mm = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return `${year}-${mm}-${dd}`;
+}
+
+/// Strip non-numeric junk and Thai digits from a money string.
+function normalizeAmount(raw: string): string {
+  const ascii = thaiToArabicDigits(raw).replace(/[,\s฿$€£¥]/g, "");
+  // Keep first valid decimal number we find.
+  const m = ascii.match(/-?\d+(?:\.\d+)?/);
+  return m ? m[0] : ascii;
 }
 
 Deno.serve(async (req) => {
@@ -135,11 +173,17 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content:
-              "You extract structured data from receipts. Respond ONLY with a JSON object " +
-              'with keys: merchant (string), amount (string, numeric only e.g. "47.23"), ' +
-              'currency (ISO 4217, e.g. "USD"), date (YYYY-MM-DD), category (one of ' +
-              "Meals, Travel, Software, Office, Other). Use an empty string if unknown.",
+            content: [
+              "You extract structured data from receipts and tax invoices in any language.",
+              "Respond ONLY with a JSON object containing these keys:",
+              "  merchant   — Business/store name, copied verbatim in its original script (English OR Thai). Do NOT transliterate.",
+              "  amount     — Final total paid, as a plain numeric string with optional decimal. Convert Thai digits (๐-๙) to ASCII. Strip currency symbols, commas, and the word บาท.",
+              "  currency   — ISO 4217 code (e.g. USD, THB, EUR). For Thai receipts default to THB if บาท or ฿ appears.",
+              "  date       — Purchase date in YYYY-MM-DD. If the receipt uses Buddhist Era (พ.ศ., a 4-digit year ≥ 2400), KEEP the Buddhist year as-is — server code will convert it.",
+              "  category   — One of: Meals, Travel, Software, Office, Other. Choose based on the items/business type.",
+              "  language   — Either 'en' or 'th' depending on the receipt's primary language.",
+              "Use an empty string for any field you cannot determine.",
+            ].join(" "),
           },
           {
             role: "user",
@@ -162,18 +206,27 @@ Deno.serve(async (req) => {
     return await fail(`Scan failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  const value = (key: string) => String(extracted[key] ?? "").trim();
+  // Post-process Thai-specific fields before persisting.
+  const language = String(extracted["language"] ?? "").trim().toLowerCase();
+  const rawValue = (key: string) => String(extracted[key] ?? "").trim();
+  const normalizedAmount = normalizeAmount(rawValue("amount"));
+  const normalizedDate = normalizeBuddhistDate(rawValue("date"));
+  const currencyRaw = rawValue("currency").toUpperCase();
+  // If the model misses currency on a Thai receipt, default to THB.
+  const currency = currencyRaw || (language === "th" ? "THB" : "USD");
+
   const rows = [
-    { field_name: "merchant", extracted_value: value("merchant") },
-    { field_name: "amount", extracted_value: value("amount") },
-    { field_name: "currency", extracted_value: value("currency") || "USD" },
-    { field_name: "date", extracted_value: value("date") },
-    { field_name: "category", extracted_value: value("category") },
+    { field_name: "merchant", extracted_value: rawValue("merchant"), normalized_value: rawValue("merchant") || null },
+    { field_name: "amount", extracted_value: rawValue("amount"), normalized_value: normalizedAmount || null },
+    { field_name: "currency", extracted_value: rawValue("currency"), normalized_value: currency },
+    { field_name: "date", extracted_value: rawValue("date"), normalized_value: normalizedDate || null },
+    { field_name: "category", extracted_value: rawValue("category"), normalized_value: rawValue("category") || null },
+    { field_name: "language", extracted_value: language, normalized_value: language || null },
   ].map((r) => ({
     receipt_scan_id: scanId,
     field_name: r.field_name,
     extracted_value: r.extracted_value,
-    normalized_value: r.extracted_value || null,
+    normalized_value: r.normalized_value,
     confidence: r.extracted_value ? "high" : "low",
     confirmed_by_user: false,
   }));

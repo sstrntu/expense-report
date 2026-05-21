@@ -10,6 +10,35 @@ extension DomainWorkspace {
     }
 }
 
+/// Localized labels for expense workflow statuses. `displayLabel` on the raw
+/// enum stays English-only so server-side logs/tests keep stable strings.
+@MainActor
+func localizedStatusLabel(_ status: ExpenseWorkflowStatus) -> String {
+    switch status {
+    case .draft: return tr("status.draft")
+    case .submitted: return tr("status.submitted")
+    case .scanProcessing: return tr("status.scan_processing")
+    case .scanFailed: return tr("status.scan_failed")
+    case .pendingManagerApproval: return tr("status.pending_manager_approval")
+    case .pendingFinanceReview: return tr("status.pending_finance_review")
+    case .approved: return tr("status.approved")
+    case .rejected: return tr("status.rejected")
+    case .purchaseConfirmed: return tr("status.purchase_confirmed")
+    case .readyForReimbursement: return tr("status.ready_for_reimbursement")
+    case .reimbursed: return tr("status.reimbursed")
+    case .cancelled: return tr("status.cancelled")
+    case .archived: return tr("status.archived")
+    }
+}
+
+@MainActor
+func localizedKindLabel(_ kind: ExpenseKind) -> String {
+    switch kind {
+    case .preApproval: return tr("kind.pre_approval")
+    case .reimbursementClaim: return tr("kind.reimbursement_claim")
+    }
+}
+
 extension WorkspaceRole {
     var label: String {
         rawValue.capitalized

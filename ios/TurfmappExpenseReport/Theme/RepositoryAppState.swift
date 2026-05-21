@@ -131,6 +131,22 @@ final class RepositoryAppState: ObservableObject {
         categories.first { $0.id == id }?.name ?? id.capitalized
     }
 
+    /// Translates well-known seeded category names (Travel/Meals/Software/Office/Other)
+    /// into the user's selected language. User-created categories are returned
+    /// verbatim — the workspace owner names them as they wish.
+    @MainActor
+    func displayCategoryName(forId id: String) -> String {
+        let raw = categoryName(forId: id)
+        switch raw {
+        case "Travel":   return tr("category.travel")
+        case "Meals":    return tr("category.meals")
+        case "Software": return tr("category.software")
+        case "Office":   return tr("category.office")
+        case "Other":    return tr("category.other")
+        default:         return raw
+        }
+    }
+
     func bootstrap() async {
         await loadCurrentUserProfile()
         await loadWorkspaces(selecting: selectedWorkspace?.id ?? UserDefaults.standard.string(forKey: selectedWorkspaceDefaultsKey))

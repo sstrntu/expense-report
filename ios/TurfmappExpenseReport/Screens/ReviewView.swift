@@ -36,8 +36,12 @@ struct ReviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Review").font(.system(size: 26, weight: .bold))
-                Text("\(pending.count) approval\(pending.count == 1 ? "" : "s") · \(financeQueue.count) reimbursement\(financeQueue.count == 1 ? "" : "s") · \(awaitingPurchase.count) awaiting purchase")
+                Text(tr("review.title")).font(.system(size: 26, weight: .bold))
+                // Plural-aware via Localizable.strings — Thai doesn't pluralize the
+                // same way English does, so we use the same key with %d and let
+                // each language's translation handle its own grammar.
+                Text(tr(pending.count == 1 && financeQueue.count == 1 ? "review.summary" : "review.summary.plural",
+                        pending.count, financeQueue.count, awaitingPurchase.count))
                     .font(.system(size: 13)).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 4).padding(.top, 4)
@@ -50,7 +54,7 @@ struct ReviewView: View {
                         }
                     }
                 } label: {
-                    Label("Approve all visible", systemImage: "checkmark.circle.fill")
+                    Label(tr("review.approve_all"), systemImage: "checkmark.circle.fill")
                         .font(.system(size: 13.5, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(14)
@@ -63,20 +67,20 @@ struct ReviewView: View {
                 GlassCard(padding: 24) {
                     VStack(spacing: 6) {
                         Image(systemName: "checkmark.circle").font(.system(size: 28)).foregroundStyle(Tokens.approved)
-                        Text("All caught up").font(.system(size: 14, weight: .semibold))
-                        Text("No approvals or reimbursements waiting").font(.system(size: 12)).foregroundStyle(.secondary)
+                        Text(tr("review.empty.title")).font(.system(size: 14, weight: .semibold))
+                        Text(tr("review.empty.subtitle")).font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                 }
             } else {
                 if !pending.isEmpty {
-                    queueSection(title: "Manager approval", items: pending, tint: Tokens.pending)
+                    queueSection(title: tr("review.section.manager"), items: pending, tint: Tokens.pending)
                 }
                 if !financeQueue.isEmpty {
-                    queueSection(title: "Finance reimbursement", items: financeQueue, tint: Tokens.reimbursed)
+                    queueSection(title: tr("review.section.finance"), items: financeQueue, tint: Tokens.reimbursed)
                 }
                 if !awaitingPurchase.isEmpty {
-                    queueSection(title: "Awaiting purchase", items: awaitingPurchase, tint: Tokens.purchased)
+                    queueSection(title: tr("review.section.awaiting_purchase"), items: awaitingPurchase, tint: Tokens.purchased)
                 }
             }
 
@@ -103,7 +107,7 @@ struct ReviewView: View {
     private var pastActivitySection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("PAST & ARCHIVED")
+                Text(tr("review.section.past"))
                     .font(.system(size: 11, weight: .semibold)).tracking(0.6)
                     .foregroundStyle(.tertiary)
                 Spacer()
@@ -127,7 +131,7 @@ struct ReviewView: View {
                                     .background(Tokens.slate500.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(item.project.name).font(.system(size: 13.5, weight: .semibold))
-                                    Text("\(item.count) past · reimbursed, cancelled, rejected, archived")
+                                    Text(tr("review.past.count", item.count))
                                         .font(.system(size: 11)).foregroundStyle(.secondary)
                                 }
                                 Spacer()
@@ -166,9 +170,9 @@ struct ReviewView: View {
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(e.merchant).font(.system(size: 13.5, weight: .semibold))
-                                Text("\(repositoryApp.categoryName(forId: e.categoryId)) · \(e.displayDate)")
+                                Text("\(repositoryApp.displayCategoryName(forId: e.categoryId)) · \(e.displayDate)")
                                     .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                                StatusPill(text: e.status.displayLabel, tint: tint)
+                                StatusPill(text: localizedStatusLabel(e.status), tint: tint)
                             }
                             .contentShape(Rectangle())
                             .onTapGesture { onOpen(e) }
@@ -236,7 +240,7 @@ struct ProjectHistorySheet: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(projectName).font(.system(size: 20, weight: .bold))
-                    Text("Past & archived expenses").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(tr("review.history.subtitle")).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button { dismiss() } label: {
@@ -248,8 +252,8 @@ struct ProjectHistorySheet: View {
             .padding(.top, 24).padding(.horizontal, 20)
 
             HStack(spacing: 10) {
-                summaryTile(label: "ENTRIES", value: "\(totals.count)")
-                summaryTile(label: "TOTAL",
+                summaryTile(label: tr("review.history.entries"), value: "\(totals.count)")
+                summaryTile(label: tr("review.history.total"),
                             value: money(totals.amount, currency: repositoryApp.aggregationCurrency))
             }
             .padding(.horizontal, 20)
@@ -259,8 +263,8 @@ struct ProjectHistorySheet: View {
                     VStack(spacing: 8) {
                         Image(systemName: "archivebox")
                             .font(.system(size: 24, weight: .semibold)).foregroundStyle(.secondary)
-                        Text("No past or archived expenses").font(.system(size: 14, weight: .semibold))
-                        Text("Reimbursed, cancelled, rejected, or archived expenses for this project will show here.")
+                        Text(tr("review.history.empty.title")).font(.system(size: 14, weight: .semibold))
+                        Text(tr("review.history.empty.subtitle"))
                             .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)

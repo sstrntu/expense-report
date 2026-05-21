@@ -81,9 +81,9 @@ struct SubmitView: View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(expenseKind == .preApproval ? "New Approval" : "New Reimbursement")
+                    Text(expenseKind == .preApproval ? tr("submit.title.pre_approval") : tr("submit.title.reimbursement"))
                         .font(.system(size: 26, weight: .bold))
-                    Text(expenseKind == .preApproval ? "Ask before buying" : "Get reimbursed for a purchase")
+                    Text(expenseKind == .preApproval ? tr("submit.subtitle.pre_approval") : tr("submit.subtitle.reimbursement"))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -114,20 +114,20 @@ struct SubmitView: View {
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
-                    editableRow(label: "Vendor",  placeholder: "Merchant name", text: $vendor)
+                    editableRow(label: tr("submit.field.vendor"),  placeholder: tr("submit.field.vendor.placeholder"), text: $vendor)
                     Divider().opacity(0.4)
                     amountRow
                     Divider().opacity(0.4)
                     workflowDateRow
                     Divider().opacity(0.4)
-                    pickerRow(label: "Category", value: category, options: workspaceCategories.map(\.name)) { picked in
+                    pickerRow(label: tr("submit.field.category"), value: category, options: workspaceCategories.map(\.name)) { picked in
                         selectedCategoryId = workspaceCategories.first { $0.name == picked }?.id
                         aiFields.remove("Category")
                     }
                     Divider().opacity(0.4)
                     projectRow
                     Divider().opacity(0.4)
-                    editableRow(label: "Purpose", placeholder: "Team lunch — design review", text: $purpose)
+                    editableRow(label: tr("submit.field.purpose"), placeholder: tr("submit.field.purpose.placeholder"), text: $purpose)
                 }
             }
 
@@ -139,7 +139,7 @@ struct SubmitView: View {
                 infoBanner(
                     icon: "exclamationmark.shield.fill",
                     tint: Tokens.rejected,
-                    title: "Cannot submit expense",
+                    title: tr("submit.action.cannot_submit"),
                     message: lastError
                 )
             }
@@ -151,7 +151,7 @@ struct SubmitView: View {
             Button {
                 submitExpense()
             } label: {
-                Text(isSubmitting ? "Submitting..." : submitLabel).primaryActionLabel()
+                Text(isSubmitting ? tr("submit.action.save_draft.saving") : submitLabel).primaryActionLabel()
             }
             .buttonStyle(.plain)
             .opacity(canSubmit && !isSubmitting ? 1 : 0.5)
@@ -161,7 +161,7 @@ struct SubmitView: View {
                 infoBanner(
                     icon: "exclamationmark.triangle.fill",
                     tint: Tokens.rejected,
-                    title: "Couldn't save draft",
+                    title: tr("account.save_failed"),
                     message: saveDraftError
                 )
             }
@@ -169,7 +169,7 @@ struct SubmitView: View {
             Button {
                 saveDraft()
             } label: {
-                Text(isSavingDraft ? "Saving..." : "Save Draft").secondaryActionLabel()
+                Text(isSavingDraft ? tr("submit.action.save_draft.saving") : tr("submit.action.save_draft")).secondaryActionLabel()
             }
             .buttonStyle(.plain)
             .opacity((vendor.isEmpty && amountText.isEmpty && purpose.isEmpty) || isSavingDraft ? 0.5 : 1)
@@ -190,10 +190,10 @@ struct SubmitView: View {
             .presentationDetents([.medium])
         }
         .confirmationDialog("Discard this expense?", isPresented: $showDiscardConfirm, titleVisibility: .visible) {
-            Button("Discard draft", role: .destructive) { onClose() }
-            Button("Keep editing", role: .cancel) {}
+            Button(tr("submit.discard.action"), role: .destructive) { onClose() }
+            Button(tr("submit.discard.keep"), role: .cancel) {}
         } message: {
-            Text("Your vendor, amount, purpose, and receipt details have not been submitted.")
+            Text(tr("submit.discard.message"))
         }
     }
 
@@ -201,9 +201,9 @@ struct SubmitView: View {
 
     private var expenseTypePicker: some View {
         GlassCard(padding: 12) {
-            Picker("Expense type", selection: $expenseKind) {
-                Text("Pre-approval").tag(ExpenseKind.preApproval)
-                Text("Claim reimbursement").tag(ExpenseKind.reimbursementClaim)
+            Picker(tr("detail.field.type"), selection: $expenseKind) {
+                Text(tr("submit.kind.pre_approval")).tag(ExpenseKind.preApproval)
+                Text(tr("submit.kind.reimbursement")).tag(ExpenseKind.reimbursementClaim)
             }
             .pickerStyle(.segmented)
         }
@@ -215,7 +215,7 @@ struct SubmitView: View {
         if !drafts.isEmpty {
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    Text("Drafts")
+                    Text(tr("submit.drafts.title"))
                         .font(.system(size: 13, weight: .semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 4)
@@ -261,7 +261,7 @@ struct SubmitView: View {
             HStack(spacing: 10) {
                 ProgressView().tint(Tokens.aiPurple)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(scanStatus == .uploading ? "Uploading receipt" : "Scanning receipt")
+                    Text(scanStatus == .uploading ? tr("submit.scan.uploading_label") : tr("submit.scan.scanning_label"))
                         .font(.system(size: 13, weight: .semibold))
                     Text(receiptFileName ?? "receipt.jpg")
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
@@ -276,11 +276,11 @@ struct SubmitView: View {
                 infoBanner(
                     icon: "exclamationmark.triangle.fill",
                     tint: Tokens.rejected,
-                    title: "Scan failed",
-                    message: "Enter the receipt fields manually or try another photo."
+                    title: tr("submit.scan.failed"),
+                    message: tr("status.scan_failed")
                 )
                 Button { showReceiptOptions = true } label: {
-                    Label("Try Another Photo", systemImage: "camera.fill")
+                    Label(tr("submit.scan.retry"), systemImage: "camera.fill")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Tokens.aiPurple)
                         .frame(maxWidth: .infinity)
@@ -295,13 +295,13 @@ struct SubmitView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Tokens.aiPurple)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Receipt scanned")
+                    Text(tr("submit.scan.needs_review"))
                         .font(.system(size: 12.5, weight: .semibold))
-                    Text("Review extracted fields before submitting")
+                    Text(tr("submit.scan.subtitle.reimbursement"))
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Rescan") { showReceiptOptions = true }
+                Button(tr("submit.scan.retry")) { showReceiptOptions = true }
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Tokens.aiPurple)
             }
@@ -319,8 +319,8 @@ struct SubmitView: View {
                     }.frame(width: 40, height: 40)
 
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Scan receipt or product").font(.system(size: 14, weight: .semibold))
-                        Text(expenseKind == .preApproval ? "Attach context or quote" : "AI fills vendor, amount, and category")
+                        Text(tr("submit.scan.title.pre_approval")).font(.system(size: 14, weight: .semibold))
+                        Text(expenseKind == .preApproval ? tr("submit.scan.subtitle.pre_approval") : tr("submit.scan.subtitle.reimbursement"))
                             .font(.system(size: 11.5)).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -339,7 +339,7 @@ struct SubmitView: View {
     private var scanReviewCard: some View {
         GlassCard(padding: 0) {
             VStack(spacing: 0) {
-                Text("AI field review")
+                Text(tr("submit.scan.ai_review"))
                     .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 4)
@@ -421,18 +421,25 @@ struct SubmitView: View {
         if let merchant = value("merchant") {
             vendor = merchant
             aiFields.insert("Vendor")
-            fields.append(LocalScanField(id: "merchant", label: "Vendor", value: merchant, confidence: .high))
+            fields.append(LocalScanField(id: "merchant", label: tr("submit.field.vendor"), value: merchant, confidence: .high))
         }
         if let amountValue = value("amount") {
             amountText = amountValue
             aiFields.insert("Amount")
-            fields.append(LocalScanField(id: "amount", label: "Amount", value: amountValue, confidence: .high))
+            fields.append(LocalScanField(id: "amount", label: tr("submit.field.amount"), value: amountValue, confidence: .high))
+        }
+        // Currency is now extracted too — apply it so Thai receipts default to THB.
+        if let currencyValue = value("currency"),
+           !currencyValue.isEmpty {
+            currency = currencyValue.uppercased()
         }
         if let categoryName = value("category"),
            let match = workspaceCategories.first(where: { $0.name.caseInsensitiveCompare(categoryName) == .orderedSame }) {
             selectedCategoryId = match.id
             aiFields.insert("Category")
-            fields.append(LocalScanField(id: "category", label: "Category", value: match.name, confidence: .medium))
+            // Show the localized category name so a Thai user sees "อาหาร" not "Meals".
+            let displayName = repositoryApp.displayCategoryName(forId: match.id)
+            fields.append(LocalScanField(id: "category", label: tr("submit.field.category"), value: displayName, confidence: .medium))
         }
         if let dateValue = value("date") {
             let formatter = DateFormatter()
@@ -463,20 +470,16 @@ struct SubmitView: View {
     }
 
     private var submitLabel: String {
-        guard amount > 0 else { return "Submit" }
-        switch expenseKind {
-        case .preApproval:
-            return willAutoApprove ? "Submit Pre-approval" : "Submit for Approval"
-        case .reimbursementClaim:
-            return willAutoApprove ? "Submit Claim" : "Submit Claim for Review"
-        }
+        // We keep a single translated label across kinds — multilingual UX
+        // benefits more from consistency than from the four English variants.
+        tr("submit.action.submit")
     }
 
     // MARK: – Form rows
 
     private var amountRow: some View {
         HStack {
-            Text("Amount").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+            Text(tr("submit.field.amount")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
             Spacer()
             if aiFields.contains("Amount") {
                 StatusPill(text: "AI", tint: Tokens.aiPurple, leadingIcon: "sparkles")
@@ -511,12 +514,12 @@ struct SubmitView: View {
 
     private var workflowDateRow: some View {
         HStack {
-            Text(expenseKind == .preApproval ? "Needed by" : "Purchase date")
+            Text(expenseKind == .preApproval ? tr("submit.field.needed_by") : tr("submit.field.purchase_date"))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
             Spacer()
             DatePicker(
-                expenseKind == .preApproval ? "Needed by" : "Purchase date",
+                expenseKind == .preApproval ? tr("submit.field.needed_by") : tr("submit.field.purchase_date"),
                 selection: expenseKind == .preApproval ? $neededByDate : $purchaseDate,
                 displayedComponents: .date
             )
@@ -530,7 +533,7 @@ struct SubmitView: View {
         infoBanner(
             icon: "exclamationmark.circle.fill",
             tint: Tokens.pending,
-            title: "Complete required fields",
+            title: tr("common.required"),
             message: validationMessages.joined(separator: " ")
         )
     }
@@ -551,9 +554,9 @@ struct SubmitView: View {
             }
         } label: {
             HStack {
-                Text("Project").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                Text(tr("submit.field.project")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
-                Text(selectedProject?.name ?? "Select project")
+                Text(selectedProject?.name ?? tr("submit.field.project"))
                     .font(.system(size: 13.5, weight: .medium))
                     .foregroundStyle(Color.primary)
                 Image(systemName: "chevron.up.chevron.down")
@@ -743,9 +746,9 @@ struct ScanningSheet: View {
             .opacity(pulse ? 0.75 : 1.0)
             .animation(.easeInOut(duration: 0.7).repeatForever(), value: pulse)
 
-            Text("Reading receipt…")
+            Text(tr("submit.scan.processing"))
                 .font(.system(size: 17, weight: .semibold))
-            Text("Extracting vendor, amount, date, and category")
+            Text(tr("submit.scan.processing_detail"))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -797,7 +800,7 @@ struct ReceiptSourceSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Add receipt or product photo")
+            Text(tr("submit.scan.add_receipt"))
                 .font(.system(size: 20, weight: .bold))
                 .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 16)
 
@@ -805,8 +808,8 @@ struct ReceiptSourceSheet: View {
                 if UIImagePickerController.isSourceTypeAvailable(.camera) {
                     Button { showCamera = true } label: {
                         sourceRow(icon: "camera.fill", tint: Tokens.slate500,
-                                  title: "Take Photo",
-                                  subtitle: "Capture your receipt with the camera")
+                                  title: tr("submit.scan.take_photo"),
+                                  subtitle: tr("submit.scan.take_photo.subtitle"))
                     }
                     .buttonStyle(.plain)
                     Divider().opacity(0.4).padding(.leading, 56)
@@ -819,8 +822,8 @@ struct ReceiptSourceSheet: View {
                             .frame(width: 30, height: 30)
                             .background(Tokens.aiPurple, in: RoundedRectangle(cornerRadius: 9))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Choose from Library").font(.system(size: 13.5, weight: .semibold))
-                            Text("Pick an existing receipt photo").font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text(tr("submit.scan.choose_library")).font(.system(size: 13.5, weight: .semibold))
+                            Text(tr("submit.scan.choose_library.subtitle")).font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Image(systemName: "chevron.right")

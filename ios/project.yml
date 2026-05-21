@@ -11,6 +11,10 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - TurfmappExpenseReport
+      - path: TurfmappExpenseReport/Resources/en.lproj/Localizable.strings
+        type: file
+      - path: TurfmappExpenseReport/Resources/th.lproj/Localizable.strings
+        type: file
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.turfmapp.expense-report

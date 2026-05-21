@@ -23,7 +23,7 @@ struct ManageProjectsView: View {
                 }
                 .buttonStyle(.plain).glassSurface(corner: 999)
 
-                Text("Manage projects").font(.system(size: 18, weight: .bold))
+                Text(tr("projects.title")).font(.system(size: 18, weight: .bold))
                 Spacer()
                 Button {
                     projectName = ""
@@ -139,7 +139,7 @@ struct ManageProjectsView: View {
         GlassCard(padding: 16) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text("New project").font(.system(size: 14, weight: .semibold))
+                    Text(tr("projects.new")).font(.system(size: 14, weight: .semibold))
                     Spacer()
                     Button { showCreate = false } label: {
                         Image(systemName: "xmark").foregroundStyle(.secondary)
@@ -201,7 +201,7 @@ struct ManageProjectsView: View {
                     Task { await repositoryApp.createProject(newProject) }
                     showCreate = false
                 } label: {
-                    Text("Create project")
+                    Text(tr("projects.new"))
                         .font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 12)
                 }

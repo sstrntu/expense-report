@@ -1,0 +1,525 @@
+/* === Tabs & shell === */
+"tab.home" = "Home";
+"tab.overview" = "Overview";
+"tab.dashboard" = "Dashboard";
+"tab.activity" = "Activity";
+"tab.review" = "Review";
+"tab.you" = "You";
+"shell.loading" = "Loading…";
+
+/* === Common === */
+"common.cancel" = "Cancel";
+"common.save" = "Save";
+"common.done" = "Done";
+"common.delete" = "Delete";
+"common.archive" = "Archive";
+"common.unarchive" = "Unarchive";
+"common.confirm" = "Confirm";
+"common.back" = "Back";
+"common.next" = "Next";
+"common.close" = "Close";
+"common.search" = "Search";
+"common.all" = "All";
+"common.coming_soon" = "Coming soon";
+"common.approximate" = "Approximate";
+"common.optional" = "Optional";
+"common.required" = "Required";
+"common.yes" = "Yes";
+"common.no" = "No";
+"common.continue" = "Continue";
+"common.retry" = "Retry";
+"common.add" = "Add";
+"common.edit" = "Edit";
+"common.remove" = "Remove";
+"common.update" = "Update";
+"common.error" = "Error";
+"common.success" = "Saved";
+"common.loading" = "Loading…";
+
+/* === Auth === */
+"auth.signin.title" = "Sign in";
+"auth.signup.title" = "Create account";
+"auth.email" = "Email";
+"auth.password" = "Password";
+"auth.signin.action" = "Sign in";
+"auth.signup.action" = "Create account";
+"auth.forgot" = "Forgot password?";
+"auth.back_to_signin" = "Back to sign in";
+"auth.switch_to_signup" = "Create account";
+"auth.switch_to_signin" = "Use sign in";
+"auth.subtitle" = "Track approvals, purchases, and reimbursements across your workspace.";
+"auth.reset_sent.title" = "Password reset sent";
+"auth.reset_sent.message" = "Check %@ for a reset link.";
+"auth.reset_sent.fallback" = "your email";
+"auth.verification.title" = "Verification required";
+"auth.verification.message" = "Check your email to confirm this account, then sign in.";
+"auth.failed.title" = "Authentication failed";
+
+/* === Profile setup === */
+"setup.profile.title" = "Set up profile";
+"setup.profile.subtitle" = "Create the identity teammates will see on requests, approvals, and reimbursement records.";
+"setup.profile.fullname" = "Full name";
+"setup.profile.nickname" = "Nickname";
+
+/* === Workspace setup === */
+"setup.workspace.title" = "Workspace";
+"setup.workspace.subtitle" = "Create an organization or join one by invite before submitting expenses.";
+"setup.workspace.mode.create" = "Create";
+"setup.workspace.mode.join" = "Join";
+"setup.workspace.org_name" = "Organization";
+"setup.workspace.default_currency" = "Default currency";
+"setup.workspace.invite_code" = "Invite code";
+"setup.workspace.status" = "Status";
+"setup.workspace.waiting_invite" = "Waiting for invite";
+"setup.workspace.ready_join" = "Ready to join";
+"setup.workspace.failed.title" = "Workspace setup failed";
+"setup.workspace.invite_required.title" = "Invite required";
+"setup.workspace.invite_required.message" = "If an invite is not accepted yet, this screen keeps the user out of the workspace.";
+"setup.workspace.create_action" = "Create workspace";
+"setup.workspace.join_action" = "Join workspace";
+
+/* === Roles === */
+"role.employee" = "Employee";
+"role.manager" = "Manager";
+"role.finance" = "Finance";
+"role.admin" = "Admin";
+"role.member" = "Member";
+"role.workspace_admin" = "Workspace admin";
+"role.employee.description" = "Submit expenses and track reimbursement status";
+"role.manager.description" = "Approve or reject expenses above the auto-approve threshold";
+"role.finance.description" = "Mark expenses as reimbursed and handle finance review";
+"role.admin.description" = "Full access — invite members, remove users, configure workspace";
+
+/* === Expense status === */
+"status.draft" = "Draft";
+"status.submitted" = "Submitted";
+"status.scan_processing" = "Scanning receipt";
+"status.scan_failed" = "Scan failed";
+"status.pending_manager_approval" = "Awaiting approval";
+"status.pending_finance_review" = "Finance review";
+"status.approved" = "Approved";
+"status.rejected" = "Rejected";
+"status.purchase_confirmed" = "Awaiting reimbursement";
+"status.ready_for_reimbursement" = "Ready to pay";
+"status.reimbursed" = "Reimbursed";
+"status.cancelled" = "Cancelled";
+"status.archived" = "Archived";
+
+/* === Expense kind === */
+"kind.pre_approval" = "Pre-approval";
+"kind.reimbursement_claim" = "Reimbursement";
+
+/* === Home / Activity === */
+"home.title" = "Home";
+"home.recent" = "Recent activity";
+"home.empty.title" = "No expenses yet";
+"home.empty.subtitle" = "Tap + to submit your first request.";
+"home.greeting.welcome" = "Welcome back";
+"home.greeting.hello" = "Hello, %@";
+"home.this_month" = "This month";
+"home.reimbursable" = "REIMBURSABLE";
+"home.stat.pending" = "Pending";
+"home.stat.approved" = "Approved";
+"home.stat.rejected" = "Rejected";
+"home.see_all" = "See all";
+"home.new_expense" = "New Expense";
+"home.new_expense.subtitle" = "Submit before making the purchase";
+"home.drafts.count" = "%d draft";
+"home.drafts.count.plural" = "%d drafts";
+"home.drafts.continue" = "Tap to continue editing.";
+
+/* === Detail view sheets === */
+"detail.purchase_sheet.title" = "Confirm Purchase";
+"detail.purchase_sheet.subtitle" = "Confirm that you've made this purchase. Attach your receipt so the team can process reimbursement.";
+"detail.purchase_sheet.final_amount" = "Final amount";
+"detail.purchase_sheet.receipt" = "Receipt";
+"detail.reject_sheet.title" = "Reject request";
+"detail.reject_sheet.subtitle" = "Add a reason so the employee knows what to fix before resubmitting.";
+"detail.reject_sheet.reason_placeholder" = "Reason";
+"detail.paid_sheet.title" = "Mark as Reimbursed";
+"detail.paid_sheet.method" = "Payment method";
+"detail.paid_sheet.receipt" = "Payment receipt";
+"detail.receipt_preview.title" = "Receipt preview";
+"detail.receipt_preview.subtitle" = "Inspect the uploaded proof here, with zoom, share, and retry actions in a full release.";
+
+/* === Submit view discard === */
+"submit.discard.action" = "Discard draft";
+"submit.discard.keep" = "Keep editing";
+
+/* === Manage projects detail === */
+"projects.auto_approve_under" = "Auto-approve under";
+"projects.visibility" = "Visibility";
+"projects.auto_approve_threshold" = "Auto-approve threshold";
+"projects.auto_approve_threshold.subtitle" = "Expenses at or below this amount follow the project's routing mode.";
+"projects.assigned_members" = "Assigned members";
+"projects.member_assignment_note" = "All active workspace members are eligible for assignment.";
+"projects.archive" = "Archive Project";
+"projects.save_policy" = "Save Policy";
+"projects.routing" = "Routing";
+"projects.over_budget" = "Over budget";
+"projects.allowed_categories" = "Allowed categories";
+"projects.budget_period" = "Budget period";
+"projects.member_total" = "%d total";
+"activity.title" = "Activity";
+"activity.search.placeholder" = "Search merchant, category, project";
+"activity.all_projects" = "All projects";
+"activity.all_time" = "All time";
+"activity.section.today" = "Today";
+"activity.section.this_week" = "This week";
+"activity.section.earlier" = "Earlier";
+"activity.empty.archived.title" = "No archived expenses";
+"activity.empty.archived.subtitle" = "Archive expenses to remove them from your main view.";
+"activity.empty.fresh.title" = "No expenses yet";
+"activity.empty.fresh.subtitle" = "New expenses will appear here after submission.";
+"activity.empty.filtered.title" = "No matching expenses";
+"activity.empty.filtered.subtitle" = "Adjust search, project, or status filters.";
+"activity.filter.all" = "All";
+"activity.filter.awaiting_approval" = "Awaiting Approval";
+"activity.filter.approved" = "Approved";
+"activity.filter.awaiting_reimbursement" = "Awaiting Reimbursement";
+"activity.filter.reimbursed" = "Reimbursed";
+"activity.filter.rejected" = "Rejected";
+"activity.filter.archived" = "Archived";
+"activity.delete.title" = "Delete \"%@\"?";
+"activity.delete.message" = "This cannot be undone.";
+
+/* === Dashboard / Analytics === */
+"dashboard.subtitle" = "All activity";
+"dashboard.title" = "Analytics";
+"dashboard.kpi.paid" = "PAID";
+"dashboard.kpi.pending" = "PENDING";
+"dashboard.kpi.total" = "TOTAL";
+"dashboard.category" = "By category";
+"dashboard.category.total" = "TOTAL";
+"dashboard.monthly" = "Monthly spend";
+"dashboard.monthly.range_6mo" = "6 mo";
+"dashboard.top_merchants" = "Top merchants";
+"dashboard.transactions" = "%d transactions";
+"dashboard.foreign.converted" = "%d expense(s) converted to %@ at approximate rates.";
+"dashboard.foreign.excluded" = "%d expense(s) excluded — currency not supported.";
+"dashboard.drilldown.category" = "Category drilldown";
+"dashboard.drilldown.merchant" = "Merchant drilldown";
+
+/* === Manager overview === */
+"overview.admin_view" = "Admin view";
+"overview.finance_view" = "Finance view";
+"overview.manager_view" = "Manager view";
+"overview.title" = "Overview";
+"overview.awaiting.label" = "AWAITING YOUR APPROVAL";
+"overview.awaiting.total" = "%@ total";
+"overview.open_queue" = "Open review queue";
+"overview.drafts.count" = "%d draft";
+"overview.drafts.count.plural" = "%d drafts";
+"overview.drafts.continue" = "Tap to continue editing.";
+"overview.finance_queue" = "FINANCE QUEUE";
+"overview.team_spend_mtd" = "TEAM SPEND MTD";
+"overview.no_prior_month" = "No prior month";
+"overview.over_24h" = "%d over 24h";
+"overview.project_budgets" = "Project budgets";
+"overview.no_projects" = "No projects yet. Create one in You ▸ Manage projects.";
+"overview.delta.vs_lm" = "%@%% vs LM";
+"overview.budget.over" = "Over budget";
+"overview.budget.paid" = "Paid";
+"overview.budget.pending" = "Pending";
+
+/* === Review === */
+"review.title" = "Review";
+"review.summary" = "%d approval · %d reimbursement · %d awaiting purchase";
+"review.summary.plural" = "%d approvals · %d reimbursements · %d awaiting purchase";
+"review.approve_all" = "Approve all visible";
+"review.empty.title" = "All caught up";
+"review.empty.subtitle" = "No approvals or reimbursements waiting";
+"review.section.manager" = "Manager approval";
+"review.section.finance" = "Finance reimbursement";
+"review.section.awaiting_purchase" = "Awaiting purchase";
+"review.section.past" = "Past & archived";
+"review.past.count" = "%d past · reimbursed, cancelled, rejected, archived";
+"review.history.title" = "%@";
+"review.history.subtitle" = "Past & archived expenses";
+"review.history.empty.title" = "No past or archived expenses";
+"review.history.empty.subtitle" = "Reimbursed, cancelled, rejected, or archived expenses for this project will show here.";
+"review.history.entries" = "ENTRIES";
+"review.history.total" = "TOTAL";
+
+/* === Expense detail === */
+"detail.title" = "Expense detail";
+"detail.field.type" = "Type";
+"detail.field.category" = "Category";
+"detail.field.project" = "Project";
+"detail.field.submitted_by" = "Submitted by";
+"detail.field.receipt" = "Receipt";
+"detail.timeline" = "Timeline";
+"detail.timeline.created" = "Created";
+"detail.timeline.no_events" = "No repository events yet";
+"detail.notes" = "Notes";
+"detail.notes.submitted_for" = "Submitted for %@.";
+"detail.notes.reviewer_rejected" = "Please add more context and a clearer business purpose.";
+"detail.notes.manager_approved" = "Approved under project policy.";
+"detail.notes.author.reviewer" = "Reviewer";
+"detail.notes.author.manager" = "Manager";
+"detail.receipts.submitted" = "Submitted receipt";
+"detail.receipts.purchase" = "Purchase receipt";
+"detail.receipts.reimbursement" = "Reimbursement proof";
+"detail.add_receipt" = "Add receipt";
+"detail.add_receipt.subtitle" = "Take a photo or pick from library";
+"detail.action.approve" = "Approve";
+"detail.action.reject" = "Reject";
+"detail.action.purchased" = "I Made the Purchase";
+"detail.action.mark_reimbursed" = "Mark as Reimbursed";
+"detail.action.resubmit" = "Resubmit Expense";
+"detail.action.cancel_submission" = "Cancel Submission";
+"detail.delete.title" = "Delete \"%@\"?";
+"detail.delete.message" = "This cannot be undone.";
+"detail.info.awaiting_approval.title" = "Awaiting approval";
+"detail.info.awaiting_approval.message" = "A manager or admin needs to review this expense.";
+"detail.info.approved.title" = "Approved";
+"detail.info.approved.message" = "Waiting for the next workflow step.";
+"detail.info.awaiting_reimbursement.title" = "Awaiting reimbursement";
+"detail.info.awaiting_reimbursement.message" = "Finance or an admin needs to process this expense.";
+"detail.info.not_approved.title" = "Not approved";
+"detail.info.not_approved.message" = "Review the reason and resubmit if needed.";
+"detail.info.reimbursed.title" = "Reimbursed";
+"detail.info.reimbursed.message" = "Payment has been marked as sent.";
+"detail.info.no_action" = "No action is currently available.";
+
+/* === Submit / new expense === */
+"submit.title" = "New expense";
+"submit.title.pre_approval" = "New Approval";
+"submit.title.reimbursement" = "New Reimbursement";
+"submit.subtitle.pre_approval" = "Ask before buying";
+"submit.subtitle.reimbursement" = "Get reimbursed for a purchase";
+"submit.close" = "Close";
+"submit.kind.pre_approval" = "Pre-approval";
+"submit.kind.reimbursement" = "Reimbursement";
+"submit.field.vendor" = "Vendor";
+"submit.field.vendor.placeholder" = "Merchant name";
+"submit.field.amount" = "Amount";
+"submit.field.currency" = "Currency";
+"submit.field.category" = "Category";
+"submit.field.project" = "Project";
+"submit.field.project.select" = "Select project";
+"submit.field.purpose" = "Purpose";
+"submit.field.purpose.placeholder" = "Team lunch — design review";
+"submit.field.business_purpose" = "Business purpose";
+"submit.field.purchase_date" = "Purchase date";
+"submit.field.needed_by" = "Needed by";
+"submit.scan.title.pre_approval" = "Scan receipt or product";
+"submit.scan.title.reimbursement" = "Scan receipt or product";
+"submit.scan.subtitle.pre_approval" = "Attach context or quote";
+"submit.scan.subtitle.reimbursement" = "AI fills vendor, amount, and category";
+"submit.scan.scanning_label" = "Scanning receipt";
+"submit.scan.uploading_label" = "Uploading receipt";
+"submit.action.cannot_submit" = "Cannot submit expense";
+"submit.action.save_draft.saving" = "Saving...";
+"submit.drafts.title" = "Drafts";
+"submit.discard.message" = "Your vendor, amount, purpose, and receipt details have not been submitted.";
+"submit.scan.processing_detail" = "Extracting vendor, amount, date, and category";
+"submit.scan.ai_review" = "AI field review";
+"submit.scan.add_receipt" = "Add receipt or product photo";
+"submit.scan.take_photo" = "Take Photo";
+"submit.scan.take_photo.subtitle" = "Capture your receipt with the camera";
+"submit.scan.choose_library" = "Choose from Library";
+"submit.scan.choose_library.subtitle" = "Pick an existing receipt photo";
+"submit.scan.uploading" = "Uploading…";
+"submit.scan.processing" = "Scanning receipt…";
+"submit.scan.needs_review" = "Review extracted fields";
+"submit.scan.failed" = "Scan failed";
+"submit.scan.retry" = "Retake";
+"submit.action.submit" = "Submit";
+"submit.action.save_draft" = "Save draft";
+"submit.confidence.high" = "High";
+"submit.confidence.medium" = "Medium";
+"submit.confidence.low" = "Low";
+"submit.confidence.manual" = "Manual";
+
+/* === Sheets === */
+"sheet.purchase.title" = "Confirm purchase";
+"sheet.purchase.amount" = "Final amount";
+"sheet.purchase.receipt" = "Receipt note";
+"sheet.purchase.action" = "Confirm purchase";
+"sheet.paid.title" = "Mark as paid";
+"sheet.paid.method" = "Payment method";
+"sheet.paid.method.transfer" = "Bank transfer";
+"sheet.paid.method.qr" = "QR code";
+"sheet.paid.method.cash" = "Cash";
+"sheet.paid.method.card" = "Card";
+"sheet.paid.method.cheque" = "Cheque";
+"sheet.paid.reference" = "Reference";
+"sheet.paid.action" = "Mark reimbursed";
+"sheet.reject.title" = "Reject expense";
+"sheet.reject.reason" = "Reason";
+"sheet.reject.action" = "Reject";
+
+/* === Profile / You === */
+"profile.title" = "You";
+"profile.add_name" = "Add your name";
+"profile.section.workspace_admin" = "Workspace admin";
+"profile.section.finance" = "Finance";
+"profile.section.account" = "Account";
+"profile.section.access" = "Access";
+"profile.nav.workspace" = "Workspace";
+"profile.nav.workspace.sub" = "Name, logo, and identity";
+"profile.nav.manage_projects" = "Manage projects";
+"profile.nav.manage_projects.sub" = "%d projects · %@ budget";
+"profile.nav.permissions" = "Permissions";
+"profile.nav.permissions.sub" = "%d members · 4 roles";
+"profile.nav.reimbursement_queue" = "Reimbursement queue";
+"profile.nav.reimbursement_queue.sub" = "Mark expenses as paid, handle finance review";
+"profile.nav.activity" = "My activity";
+"profile.nav.activity.sub" = "Drafts, submitted, approved, reimbursed";
+"profile.nav.notifications" = "Notifications";
+"profile.nav.notifications.sub" = "Approvals, reminders, reimbursements";
+"profile.nav.account" = "Account";
+"profile.nav.account.sub" = "Profile, email, workspace identity";
+"profile.nav.security" = "Security";
+"profile.nav.security.sub" = "Password, sessions, recovery";
+"profile.nav.preferences" = "Preferences";
+"profile.nav.preferences.sub" = "Theme, language, currency, export format";
+"profile.nav.reports" = "Reports & export";
+"profile.nav.reports.sub" = "CSV export available · PDF coming soon";
+"profile.nav.help" = "Help & support";
+"profile.nav.legal" = "Legal & about";
+"profile.signout" = "Sign out";
+
+/* === Notifications screen === */
+"notifications.title" = "Notifications";
+"notifications.filter.all" = "All";
+"notifications.filter.approvals" = "Approvals";
+"notifications.filter.payments" = "Payments";
+"notifications.filter.admin" = "Admin";
+"notifications.empty.title" = "No notifications";
+"notifications.empty.subtitle" = "Approval, reimbursement, and invite updates will appear here when they are available.";
+"notifications.unread_summary" = "%d unread notifications";
+"notifications.unread_message" = "New approval, reimbursement, and workspace updates will appear here.";
+"notifications.new_badge" = "New";
+"notifications.kind.approval" = "Approval";
+"notifications.kind.expense" = "Expense";
+"notifications.kind.payment" = "Payment";
+"notifications.kind.admin" = "Admin";
+
+/* === Account / security / preferences === */
+"account.title" = "Account";
+"account.name" = "Name";
+"account.email" = "Email";
+"account.workspace" = "Workspace";
+"account.save" = "Save account";
+"account.save_failed" = "Could not save";
+"security.title" = "Security";
+"security.change_password" = "Change password";
+"security.change_password.sub" = "Set a new password for this account";
+"security.reset_email" = "Send password reset email";
+"security.reset_email.sub" = "Email a reset link to %@";
+"security.reset_email.sent" = "Password-reset email sent to %@.";
+"security.signout_all" = "Sign out of all devices";
+"security.signout_all.sub" = "Invalidates every active session";
+"security.signout_all.done" = "Signed out of all devices.";
+"security.failed" = "Could not complete";
+"security.password.new" = "New";
+"security.password.confirm" = "Confirm";
+"security.password.mismatch" = "Passwords don't match.";
+"security.password.hint" = "8+ characters";
+"security.password.reenter" = "Re-enter";
+"preferences.title" = "Preferences";
+"preferences.language" = "Language";
+"preferences.language.note" = "Switches the app's display language. Receipt scanning still detects the receipt's language automatically.";
+"preferences.workspace_currency" = "Workspace currency";
+"preferences.compact_lists" = "Compact lists";
+"preferences.compact_lists.sub" = "Saved on this device";
+"preferences.workspace_settings" = "Workspace settings";
+"preferences.workspace_settings.message" = "Currency and receipt rules are configured per workspace and project by an admin.";
+
+/* === Workspace settings === */
+"workspace.title" = "Workspace";
+"workspace.tap_logo" = "Tap the logo to upload an image, or leave it to show the workspace's initials.";
+"workspace.name" = "Name";
+"workspace.name.placeholder" = "Workspace name";
+"workspace.default_currency" = "Default currency";
+"workspace.workspace_id" = "Workspace ID";
+"workspace.save_changes" = "Save changes";
+"workspace.saving" = "Saving...";
+"workspace.saved" = "Workspace updated.";
+"workspace.update_failed" = "Could not update workspace";
+"workspace.per_project_policy" = "Per-project policy";
+"workspace.per_project_policy.message" = "Approval thresholds and routing live on individual projects — open Manage projects to edit those.";
+
+/* === Manage projects === */
+"projects.title" = "Manage projects";
+"projects.new" = "New project";
+"projects.empty.title" = "No projects yet";
+"projects.empty.subtitle" = "Create your first project to organize expenses.";
+"projects.budget" = "Budget";
+"projects.spent" = "Spent";
+"projects.archive" = "Archive";
+"projects.unarchive" = "Unarchive";
+"projects.delete" = "Delete";
+"projects.confirm_delete.title" = "Delete \"%@\"?";
+"projects.confirm_delete.message" = "This will hide the project. Existing expenses keep their project tag.";
+
+/* === Permissions === */
+"permissions.title" = "Permissions";
+"permissions.subtitle" = "%d members · %d pending invites";
+"permissions.members" = "Members";
+"permissions.invites" = "Pending invites";
+"permissions.invite_member" = "Invite member";
+"permissions.invite.email" = "Email";
+"permissions.invite.role" = "Role";
+"permissions.invite.send" = "Send invite";
+"permissions.invite.sent" = "Invite sent to %@.";
+"permissions.role_capabilities" = "Role capabilities";
+"permissions.remove" = "Remove";
+"permissions.cancel_invite" = "Cancel invite";
+"permissions.confirm_remove.title" = "Remove %@?";
+"permissions.confirm_remove.message" = "They lose access to this workspace until re-invited.";
+
+/* === Reports === */
+"reports.title" = "Reports";
+"reports.stat.expenses" = "Expenses";
+"reports.stat.spend" = "Spend";
+"reports.stat.pending" = "Pending";
+"reports.empty.title" = "Nothing to export yet";
+"reports.empty.subtitle" = "Submit your first expense and the CSV export will be ready here.";
+"reports.export_csv" = "Export CSV";
+"reports.share" = "Share %@";
+"reports.share.subtitle" = "Send to Mail, Files, AirDrop, …";
+"reports.pdf_soon" = "PDF & receipt bundle";
+"reports.pdf_soon.message" = "Coming soon — for now use the CSV in any spreadsheet tool.";
+"reports.csv_columns" = "%d rows — id, date, project, category, merchant, amount, currency, status";
+
+/* === Help & legal === */
+"help.title" = "Help";
+"help.workflow_title" = "How approvals work";
+"help.workflow_body" = "Submit a pre-approval before purchase, or a reimbursement claim afterwards. The manager queue clears requests above the project's auto-approve threshold; finance then handles reimbursement.";
+"help.contact" = "Contact support";
+"legal.title" = "About";
+"legal.app_name" = "Turfmapp Expenses";
+"legal.version" = "Version %@";
+"legal.build" = "Build";
+"legal.backend" = "Backend";
+
+/* === System states === */
+"states.title" = "System states";
+"states.loading.title" = "Loading";
+"states.loading.message" = "Skeleton cards appear while workspace data syncs.";
+"states.offline.title" = "Offline";
+"states.offline.message" = "Users can keep drafts locally and retry when connected.";
+"states.failed.title" = "Failed to load";
+"states.failed.message" = "Show a retry action without losing the selected organization.";
+"states.empty.title" = "Empty";
+"states.empty.message" = "First-run screens explain what to create or submit next.";
+
+/* === Categories === */
+"category.travel" = "Travel";
+"category.meals" = "Meals";
+"category.software" = "Software";
+"category.office" = "Office";
+"category.other" = "Other";
+
+/* === Errors === */
+"error.sign_in_required" = "Sign in before using this workspace.";
+"error.verify_email" = "Check your email to confirm this account, then sign in.";
+"error.unexpected" = "Supabase returned an unexpected response.";
+"error.invite.expired" = "This invite has expired.";
+"error.invite.wrong_email" = "This invite is not addressed to your account.";
+"error.invite.not_found" = "Invite not found.";
+"error.rate_limit" = "Too many requests. Try again later.";
+"error.network" = "Network error. Check your connection and retry.";

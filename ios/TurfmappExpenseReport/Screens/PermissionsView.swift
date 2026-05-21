@@ -26,7 +26,7 @@ struct PermissionsView: View {
                         .frame(width: 34, height: 34)
                 }
                 .buttonStyle(.plain).glassSurface(corner: 999)
-                Text("Permissions").font(.system(size: 18, weight: .bold))
+                Text(tr("permissions.title")).font(.system(size: 18, weight: .bold))
                 Spacer()
                 if canInviteOrRemove {
                     Button { showInvite = true } label: {
@@ -45,7 +45,7 @@ struct PermissionsView: View {
                 infoBanner(
                     icon: "exclamationmark.shield.fill",
                     tint: Tokens.rejected,
-                    title: "Action blocked",
+                    title: tr("common.error"),
                     message: lastError
                 )
             }
@@ -57,14 +57,14 @@ struct PermissionsView: View {
                     GlassCard(padding: 10) {
                         VStack(spacing: 1) {
                             Text("\(counts[r]?.count ?? 0)").font(.system(size: 18, weight: .bold))
-                            Text(r.label).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+                            Text(tr("role.\(r.rawValue)")).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                     }
                 }
             }
 
-            Text("Members").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
+            Text(tr("permissions.members")).font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
 
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
@@ -76,7 +76,7 @@ struct PermissionsView: View {
             }
 
             if canInviteOrRemove && !repositoryApp.invites.isEmpty {
-                Text("Pending invites").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
+                Text(tr("permissions.invites")).font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
                 GlassCard(padding: 0) {
                     VStack(spacing: 0) {
                         ForEach(Array(repositoryApp.invites.enumerated()), id: \.element.id) { idx, invite in
@@ -88,10 +88,10 @@ struct PermissionsView: View {
                                     .background(Tokens.pending.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(invite.email).font(.system(size: 13.5, weight: .medium))
-                                    Text("Invite sent · \(invite.role.label) access").font(.system(size: 11)).foregroundStyle(.secondary)
+                                    Text("\(tr("permissions.invites")) · \(tr("role.\(invite.role.rawValue)"))").font(.system(size: 11)).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Button("Cancel") {
+                                Button(tr("common.cancel")) {
                                     Task { await repositoryApp.cancelInvite(id: invite.id) }
                                 }
                                     .font(.system(size: 11, weight: .semibold))
@@ -103,34 +103,22 @@ struct PermissionsView: View {
                 }
             }
 
-            Text("Role capabilities").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
+            Text(tr("permissions.role_capabilities")).font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
 
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    roleCapabilityRow("Employee", icon: "person.fill", tint: Tokens.slate500,
-                                      description: "Submit expenses and track their status")
+                    roleCapabilityRow(tr("role.employee"), icon: "person.fill", tint: Tokens.slate500,
+                                      description: tr("role.employee.description"))
                     Divider().opacity(0.4)
-                    roleCapabilityRow("Manager", icon: "checkmark.shield.fill", tint: Tokens.approved,
-                                      description: "Approve or reject expenses above the auto-approve threshold")
+                    roleCapabilityRow(tr("role.manager"), icon: "checkmark.shield.fill", tint: Tokens.approved,
+                                      description: tr("role.manager.description"))
                     Divider().opacity(0.4)
-                    roleCapabilityRow("Finance", icon: "banknote.fill", tint: Tokens.aiPurple,
-                                      description: "Mark expenses as reimbursed and handle finance review")
+                    roleCapabilityRow(tr("role.finance"), icon: "banknote.fill", tint: Tokens.aiPurple,
+                                      description: tr("role.finance.description"))
                     Divider().opacity(0.4)
-                    roleCapabilityRow("Admin", icon: "crown.fill", tint: Tokens.pending,
-                                      description: "Full access — invite members, manage projects, configure workspace")
+                    roleCapabilityRow(tr("role.admin"), icon: "crown.fill", tint: Tokens.pending,
+                                      description: tr("role.admin.description"))
                 }
-            }
-
-            Text("Approval policy").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4)
-
-            GlassCard(padding: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Approval thresholds, receipt rules, routing, and allowed categories are configured per project.")
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
-                    Text("Open You ▸ Manage projects ▸ a project to edit its policy.")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.horizontal, 16)
@@ -141,15 +129,15 @@ struct PermissionsView: View {
             }
             .presentationDetents([.medium])
         }
-        .confirmationDialog("Remove member?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
-            Button("Remove \(memberToRemove?.displayName ?? "member")", role: .destructive) {
+        .confirmationDialog(tr("permissions.confirm_remove.title", memberToRemove?.displayName ?? tr("role.member")), isPresented: $showRemoveConfirm, titleVisibility: .visible) {
+            Button(tr("permissions.remove"), role: .destructive) {
                 if let memberToRemove {
                     Task { await repositoryApp.removeMember(id: memberToRemove.id) }
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(tr("common.cancel"), role: .cancel) {}
         } message: {
-            Text("\(memberToRemove?.displayName ?? "This member") will lose access to \(repositoryApp.selectedWorkspace?.name ?? app.company.name).")
+            Text(tr("permissions.confirm_remove.message"))
         }
     }
 
@@ -182,7 +170,7 @@ struct PermissionsView: View {
                     Button {
                         editingID = editingID == m.id ? nil : m.id
                     } label: {
-                        Text(m.role.label)
+                        Text(tr("role.\(m.role.rawValue)"))
                             .font(.system(size: 11, weight: .semibold))
                             .padding(.horizontal, 11).padding(.vertical, 5)
                             .background(Color.primary.opacity(0.07), in: Capsule())
@@ -190,7 +178,7 @@ struct PermissionsView: View {
                     }
                     .buttonStyle(.plain)
                 } else {
-                    Text(m.role.label)
+                    Text(tr("role.\(m.role.rawValue)"))
                         .font(.system(size: 11, weight: .semibold))
                         .padding(.horizontal, 11).padding(.vertical, 5)
                         .background(Color.primary.opacity(0.07), in: Capsule())
@@ -217,7 +205,7 @@ struct PermissionsView: View {
                                 Task { await repositoryApp.updateMemberRole(id: m.id, role: r) }
                                 editingID = nil
                             } label: {
-                                Text(r.label)
+                                Text(tr("role.\(r.rawValue)"))
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(m.role == r ? .white : .primary)
                                     .padding(.horizontal, 10).padding(.vertical, 6)
@@ -246,14 +234,14 @@ struct InviteMemberSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Invite member")
+            Text(tr("permissions.invite_member"))
                 .font(.system(size: 20, weight: .bold))
                 .padding(.horizontal, 20).padding(.top, 24)
 
             GlassCard(padding: 16) {
                 VStack(spacing: 0) {
                     HStack {
-                        Text("Email").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Text(tr("permissions.invite.email")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                         Spacer()
                         TextField("teammate@company.com", text: $email)
                             .font(.system(size: 13.5, weight: .medium))
@@ -264,11 +252,11 @@ struct InviteMemberSheet: View {
                     .padding(.vertical, 11)
                     Divider().opacity(0.4)
                     HStack {
-                        Text("Role").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Text(tr("permissions.invite.role")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                         Spacer()
-                        Picker("Role", selection: $role) {
+                        Picker(tr("permissions.invite.role"), selection: $role) {
                             ForEach(availableRoles, id: \.self) { r in
-                                Text(r.label).tag(r)
+                                Text(tr("role.\(r.rawValue)")).tag(r)
                             }
                         }
                         .pickerStyle(.menu)
@@ -280,8 +268,8 @@ struct InviteMemberSheet: View {
             .padding(.horizontal, 20)
 
             infoBanner(icon: "clock.badge.fill", tint: Tokens.pending,
-                       title: "Pending invite",
-                       message: "Invited members appear in a pending state until they accept.")
+                       title: tr("permissions.invites"),
+                       message: tr("setup.workspace.invite_required.message"))
                 .padding(.horizontal, 20)
 
             Spacer()
@@ -290,7 +278,7 @@ struct InviteMemberSheet: View {
                 onInvite(email.isEmpty ? "new.member@company.com" : email, role)
                 dismiss()
             } label: {
-                Text("Send invite").primaryActionLabel()
+                Text(tr("permissions.invite.send")).primaryActionLabel()
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
