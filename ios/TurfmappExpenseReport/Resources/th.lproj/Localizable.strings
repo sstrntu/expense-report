@@ -523,3 +523,9 @@
 "error.invite.not_found" = "ไม่พบคำเชิญ";
 "error.rate_limit" = "คำขอบ่อยเกินไป โปรดลองอีกครั้งภายหลัง";
 "error.network" = "เกิดข้อผิดพลาดเครือข่าย ตรวจสอบการเชื่อมต่อและลองใหม่";
+
+"submit.fx.will_convert" = "จะถูกแปลงจาก %1$@ เป็น %2$@ เมื่อส่ง";
+
+"home.drafts.continue" = "เลือกหนึ่งรายการเพื่อแก้ไขต่อ";
+"home.drafts.untitled" = "รายการไม่มีชื่อ";
+"overview.drafts.continue" = "เลือกหนึ่งรายการเพื่อแก้ไขต่อ";

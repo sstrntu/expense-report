@@ -523,3 +523,10 @@
 "error.invite.not_found" = "Invite not found.";
 "error.rate_limit" = "Too many requests. Try again later.";
 "error.network" = "Network error. Check your connection and retry.";
+
+/* FX conversion hint on submit screen: %1$@ = native currency, %2$@ = project base. */
+"submit.fx.will_convert" = "Will be converted from %1$@ to %2$@ on submit";
+
+"home.drafts.continue" = "Pick one to continue";
+"home.drafts.untitled" = "Untitled expense";
+"overview.drafts.continue" = "Pick one to continue";

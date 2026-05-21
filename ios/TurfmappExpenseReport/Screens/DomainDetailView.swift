@@ -129,12 +129,50 @@ struct DomainDetailView: View {
                     Spacer()
                     StatusPill(text: localizedStatusLabel(expense.status), tint: statusTint, leadingIcon: statusIcon)
                 }
-                Text(expense.amount.formatted)
+                // Headline is the base-currency snapshot when the receipt was
+                // foreign — matches the dashboard total. Native amount goes
+                // below as the audit line so finance can trace the conversion.
+                Text((expense.amountInBase ?? expense.amount).formatted)
                     .font(.system(size: 36, weight: .bold, design: .rounded))
                     .tracking(-1)
+                if expense.isConverted {
+                    fxAuditLine
+                }
             }
         }
     }
+
+    /// "↻ $20.00 USD · 36.0500 THB/USD · May 20, 2026 · Frankfurter" — every
+    /// piece of the conversion the user (or auditor) might need to verify.
+    private var fxAuditLine: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 10, weight: .semibold))
+            Text(fxAuditText).font(.system(size: 11))
+        }
+        .foregroundStyle(.secondary)
+    }
+
+    private var fxAuditText: String {
+        var parts: [String] = [expense.amount.formatted]
+        if let rate = expense.fxRate, let inBase = expense.amountInBase {
+            let rateString = String(format: "%.4f", rate)
+            parts.append("\(rateString) \(inBase.currency)/\(expense.amount.currency)")
+        }
+        if let asOf = expense.fxRateAsOf {
+            parts.append(Self.fxDateFormatter.string(from: asOf))
+        }
+        if let source = expense.fxSource, source != "identity" {
+            parts.append(source.replacingOccurrences(of: "-", with: " ").capitalized)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static let fxDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        return f
+    }()
 
     private var detailsCard: some View {
         GlassCard(padding: 16) {

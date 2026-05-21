@@ -5,6 +5,14 @@ struct SubmitView: View {
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onClose: () -> Void
     var onSubmit: () -> Void
+    /// When non-nil on appear, the matching draft is loaded into the form
+    /// immediately and the form scrolls to its top. Set by other tabs that
+    /// surface a specific draft so the user lands directly in the editor for
+    /// that draft instead of having to pick again here.
+    var initialDraftId: String? = nil
+    /// Called once after `initialDraftId` has been consumed, so the parent
+    /// can clear the pending id and avoid re-loading on subsequent tab visits.
+    var onDidLoadInitialDraft: () -> Void = {}
 
     @State private var vendor: String     = ""
     @State private var amountText: String = ""
@@ -195,6 +203,36 @@ struct SubmitView: View {
         } message: {
             Text(tr("submit.discard.message"))
         }
+        .onAppear {
+            // If another tab handed us a specific draft to continue, load it
+            // straight into the form. Only on first appear — subsequent visits
+            // shouldn't clobber edits.
+            if let id = initialDraftId, scannedDraftId == nil,
+               let draft = repositoryApp.draftExpenses.first(where: { $0.id == id }) {
+                load(draft: draft)
+                onDidLoadInitialDraft()
+            }
+        }
+    }
+
+    /// Populates every form field from a draft expense. Used both by the
+    /// inline drafts card (in-tab pick) and by the cross-tab handoff via
+    /// `initialDraftId`. Keep this in one place so the two paths stay in sync.
+    private func load(draft: DomainExpense) {
+        vendor = draft.merchant
+        amountText = draft.amount.minorUnits == 0 ? "" : String(format: "%.2f", draft.amount.decimalValue)
+        currency = draft.amount.currency
+        selectedCategoryId = draft.categoryId
+        selectedProjectId = draft.projectId
+        expenseKind = draft.kind
+        purpose = draft.businessPurpose
+        if draft.kind == .reimbursementClaim, let purchase = draft.purchaseDate {
+            purchaseDate = purchase
+        }
+        if draft.kind == .preApproval, let needed = draft.neededByDate {
+            neededByDate = needed
+        }
+        scannedDraftId = draft.id
     }
 
     // MARK: – AI scan card
@@ -221,16 +259,7 @@ struct SubmitView: View {
                         .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 4)
                     ForEach(Array(drafts.prefix(3).enumerated()), id: \.element.id) { idx, draft in
                         if idx > 0 { Divider().opacity(0.4) }
-                        Button {
-                            vendor = draft.merchant
-                            amountText = draft.amount.minorUnits == 0 ? "" : String(format: "%.2f", draft.amount.decimalValue)
-                            currency = draft.amount.currency
-                            selectedCategoryId = draft.categoryId
-                            selectedProjectId = draft.projectId
-                            expenseKind = draft.kind
-                            purpose = draft.businessPurpose
-                            scannedDraftId = draft.id
-                        } label: {
+                        Button { load(draft: draft) } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "doc.badge.clock")
                                     .foregroundStyle(Tokens.pending)
@@ -478,36 +507,51 @@ struct SubmitView: View {
     // MARK: – Form rows
 
     private var amountRow: some View {
-        HStack {
-            Text(tr("submit.field.amount")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-            Spacer()
-            if aiFields.contains("Amount") {
-                StatusPill(text: "AI", tint: Tokens.aiPurple, leadingIcon: "sparkles")
-            }
-            Menu {
-                ForEach(Self.currencyOptions, id: \.self) { code in
-                    Button {
-                        currency = code
-                    } label: {
-                        HStack {
-                            Text(code)
-                            if effectiveCurrency == code { Image(systemName: "checkmark") }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(tr("submit.field.amount")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                Spacer()
+                if aiFields.contains("Amount") {
+                    StatusPill(text: "AI", tint: Tokens.aiPurple, leadingIcon: "sparkles")
+                }
+                Menu {
+                    ForEach(Self.currencyOptions, id: \.self) { code in
+                        Button {
+                            currency = code
+                        } label: {
+                            HStack {
+                                Text(code)
+                                if effectiveCurrency == code { Image(systemName: "checkmark") }
+                            }
                         }
                     }
+                } label: {
+                    Text(effectiveCurrency)
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.primary.opacity(0.06), in: Capsule())
                 }
-            } label: {
-                Text(effectiveCurrency)
-                    .font(.system(size: 13.5, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.06), in: Capsule())
+                TextField("0.00", text: $amountText)
+                    .font(.system(size: 13.5, weight: .medium))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                    .onChange(of: amountText) { _, _ in aiFields.remove("Amount") }
             }
-            TextField("0.00", text: $amountText)
-                .font(.system(size: 13.5, weight: .medium))
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 100)
-                .onChange(of: amountText) { _, _ in aiFields.remove("Amount") }
+            // Foreign currency: surface that we'll convert at submit time so
+            // the user isn't surprised when the dashboard shows base-currency
+            // figures rather than what's on the receipt.
+            if let project = selectedProject,
+               effectiveCurrency != project.budget.currency {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(tr("submit.fx.will_convert", effectiveCurrency, project.budget.currency))
+                        .font(.system(size: 10.5))
+                }
+                .foregroundStyle(.tertiary)
+            }
         }
         .padding(.vertical, 11)
     }
@@ -712,7 +756,11 @@ struct SubmitView: View {
             categoryId: categoryId,
             businessPurpose: trimmedPurpose,
             purchaseDate: expenseKind == .reimbursementClaim ? purchaseDate : nil,
-            neededByDate: expenseKind == .preApproval ? neededByDate : nil
+            neededByDate: expenseKind == .preApproval ? neededByDate : nil,
+            // The project's reporting currency, so the repository can call
+            // the convert-currency edge function before insert and snapshot
+            // the FX rate onto the expense row.
+            baseCurrency: project.baseCurrency
         )
     }
 

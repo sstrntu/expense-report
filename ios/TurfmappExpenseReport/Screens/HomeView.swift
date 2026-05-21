@@ -4,6 +4,9 @@ struct HomeView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
     @Binding var selectedTab: TabID
+    /// Tapping a draft row hands its id up to RootShell, which stashes it and
+    /// switches to the Add tab. SubmitView then opens with that draft loaded.
+    var onOpenDraft: (String) -> Void = { _ in }
     var onOpen: (DomainExpense) -> Void
 
     private var workspaceCurrency: String { repositoryApp.aggregationCurrency }
@@ -57,30 +60,7 @@ struct HomeView: View {
 
             scanReceiptButton
 
-            if !repositoryApp.draftExpenses.isEmpty {
-                Button { selectedTab = .add } label: {
-                    GlassCard(padding: 14) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "doc.badge.clock")
-                                .foregroundStyle(Tokens.pending)
-                                .frame(width: 32, height: 32)
-                                .background(Tokens.pending.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(tr(repositoryApp.draftExpenses.count == 1 ? "home.drafts.count" : "home.drafts.count.plural", repositoryApp.draftExpenses.count))
-                                    .font(.system(size: 13.5, weight: .semibold))
-                                    .foregroundStyle(Color.primary)
-                                Text(tr("home.drafts.continue"))
-                                    .font(.system(size: 11)).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
+            draftsCard
 
             sectionHeader(title: tr("home.recent"), action: tr("home.see_all")) { selectedTab = .activity }
             recentList
@@ -119,6 +99,59 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    /// Inline drafts panel: replaces the old "X drafts" stub card with a
+    /// per-row picker, so the user can see what each draft is *about* and
+    /// pick one directly. Tap → SubmitView opens with that draft loaded.
+    @ViewBuilder
+    private var draftsCard: some View {
+        let drafts = repositoryApp.draftExpenses
+        if !drafts.isEmpty {
+            GlassCard(padding: 0) {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text(tr(drafts.count == 1 ? "home.drafts.count" : "home.drafts.count.plural", drafts.count))
+                            .font(.system(size: 13, weight: .semibold))
+                        Spacer()
+                        Text(tr("home.drafts.continue"))
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
+
+                    ForEach(Array(drafts.prefix(3).enumerated()), id: \.element.id) { idx, draft in
+                        Divider().opacity(0.4)
+                        Button { onOpenDraft(draft.id) } label: {
+                            draftRow(draft)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private func draftRow(_ draft: DomainExpense) -> some View {
+        HStack(spacing: 12) {
+            Text(draft.icon).font(.system(size: 18))
+                .frame(width: 32, height: 32)
+                .background(Tokens.pending.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(draft.merchant.isEmpty ? tr("home.drafts.untitled") : draft.merchant)
+                    .font(.system(size: 13.5, weight: .semibold))
+                Text("\(draft.projectName(in: repositoryApp.projects)) · \(draft.displayDate)")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(draft.amount.minorUnits == 0 ? "—" : draft.amount.formatted)
+                    .font(.system(size: 13, weight: .semibold))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 11)
     }
 
     private var scanReceiptButton: some View {
@@ -228,7 +261,20 @@ struct DomainExpenseRow: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 3) {
-                Text(expense.amount.formatted).font(.system(size: 13.5, weight: .semibold))
+                // When the receipt was in a foreign currency, the headline is
+                // the snapshotted base-currency amount so it lines up with the
+                // dashboard totals; the original native amount lives below in
+                // a small "↻" tag so the user can still see what they paid.
+                Text((expense.amountInBase ?? expense.amount).formatted)
+                    .font(.system(size: 13.5, weight: .semibold))
+                if expense.isConverted {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 9, weight: .semibold))
+                        Text(expense.amount.formatted).font(.system(size: 10.5))
+                    }
+                    .foregroundStyle(.tertiary)
+                }
                 StatusPill(text: expense.status.displayLabel, tint: expense.status.tint, leadingIcon: expense.status.icon)
                 if let owner = expense.status.nextOwnerLabel {
                     StatusPill(text: owner, tint: Tokens.slate500, leadingIcon: expense.status.nextOwnerIcon)
@@ -266,21 +312,37 @@ struct DomainProjectRow: View {
         .purchaseConfirmed, .pendingFinanceReview, .readyForReimbursement
     ]
 
-    /// Only count expenses that share the project's currency. No conversion.
+    /// All expenses for this project, regardless of native currency. Foreign
+    /// expenses get rolled in via their `amountInBase` snapshot — the rate
+    /// was captured at submit time, so the budget consumption is exact and
+    /// reproducible. Expenses with no snapshot AND a non-matching native
+    /// currency are skipped (legacy rows pending backfill).
     private var projectExpenses: [DomainExpense] {
-        expenses.filter { $0.projectId == project.id && $0.amount.currency == project.budget.currency }
+        expenses.filter { $0.projectId == project.id }
+    }
+
+    /// Returns the contribution of this expense to the project's budget. Same
+    /// currency as the budget; nil when we can't project the amount into the
+    /// project base (no snapshot + foreign currency).
+    private func budgetAmount(of expense: DomainExpense) -> Double? {
+        let base = project.budget.currency
+        if expense.amount.currency == base { return expense.amount.decimalValue }
+        if let inBase = expense.amountInBase, inBase.currency == base { return inBase.decimalValue }
+        return nil
     }
 
     private var paid: Double {
         projectExpenses
             .filter { Self.paidStatuses.contains($0.status) }
-            .reduce(0) { $0 + $1.amount.decimalValue }
+            .compactMap(budgetAmount(of:))
+            .reduce(0, +)
     }
 
     private var pending: Double {
         projectExpenses
             .filter { Self.pendingStatuses.contains($0.status) }
-            .reduce(0) { $0 + $1.amount.decimalValue }
+            .compactMap(budgetAmount(of:))
+            .reduce(0, +)
     }
 
     private var committed: Double { paid + pending }

@@ -9,6 +9,11 @@ struct RootShell: View {
     /// hold the UI on a launch screen during this window so a returning user
     /// doesn't see the AuthView flash before their saved session resolves.
     @State private var launchState: LaunchState = .restoring
+    /// When a draft is picked from Home/Overview, this carries the row's id
+    /// across to SubmitView so the form opens already populated. Cleared once
+    /// SubmitView consumes it, so re-entering the Add tab without picking
+    /// again shows the normal blank form.
+    @State private var pendingDraftId: String?
 
     private enum LaunchState { case restoring, ready }
 
@@ -77,6 +82,13 @@ struct RootShell: View {
                 if app.userName.isEmpty { app.userName = profile.displayName }
                 if app.userEmail.isEmpty { app.userEmail = profile.email }
             }
+            // Best-effort FX backfill for legacy rows: kicks off after the UI
+            // is already restored, so the splash doesn't wait on Frankfurter.
+            // Detached on a background task so failures here can't block
+            // launch and so the user sees their data immediately.
+            Task.detached(priority: .background) { [repositoryApp] in
+                await repositoryApp.backfillFXSnapshots()
+            }
         }
         launchState = .ready
     }
@@ -137,20 +149,33 @@ struct RootShell: View {
             if app.role != .employee {
                 ManagerOverviewView(
                     onGoToReview: { selectedTab = .review },
-                    onContinueDraft: { selectedTab = .add }
+                    onOpenDraft: { id in
+                        pendingDraftId = id
+                        selectedTab = .add
+                    }
                 )
                     .environmentObject(app)
             } else {
-                HomeView(selectedTab: $selectedTab) { e in
-                    navStack.append(.domainDetail(e))
-                }
+                HomeView(
+                    selectedTab: $selectedTab,
+                    onOpenDraft: { id in
+                        pendingDraftId = id
+                        selectedTab = .add
+                    },
+                    onOpen: { e in navStack.append(.domainDetail(e)) }
+                )
                 .environmentObject(app)
             }
         case .dashboard:
             DashboardView { e in navStack.append(.domainDetail(e)) }
                 .environmentObject(app)
         case .add:
-            SubmitView(onClose: { selectedTab = .home }, onSubmit: { selectedTab = .activity })
+            SubmitView(
+                onClose: { selectedTab = .home },
+                onSubmit: { selectedTab = .activity },
+                initialDraftId: pendingDraftId,
+                onDidLoadInitialDraft: { pendingDraftId = nil }
+            )
                 .environmentObject(app)
         case .activity:
             ActivityView { e in navStack.append(.domainDetail(e)) }

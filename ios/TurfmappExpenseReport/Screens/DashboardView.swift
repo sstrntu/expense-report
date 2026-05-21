@@ -25,8 +25,18 @@ struct DashboardView: View {
         .purchaseConfirmed, .pendingFinanceReview, .readyForReimbursement
     ]
 
+    /// All expenses that count toward analytics — excludes drafts, cancelled, rejected, archived, and failed scans.
+    private static let analyticsStatuses: Set<ExpenseWorkflowStatus> = [
+        .submitted, .pendingManagerApproval, .approved,
+        .purchaseConfirmed, .pendingFinanceReview, .readyForReimbursement, .reimbursed
+    ]
+
+    private var analyticsExpenses: [DomainExpense] {
+        expensesInCurrency.filter { Self.analyticsStatuses.contains($0.status) }
+    }
+
     private var cats: [DonutChart.Segment] {
-        let totals = Dictionary(grouping: expensesInCurrency, by: { repositoryApp.categoryName(forId: $0.categoryId) })
+        let totals = Dictionary(grouping: analyticsExpenses, by: { repositoryApp.categoryName(forId: $0.categoryId) })
             .mapValues { $0.reduce(0) { $0 + $1.amount.decimalValue } }
 
         return totals
@@ -49,21 +59,38 @@ struct DashboardView: View {
         }
     }
 
-    /// Ordered list of category names that have any activity, used both to
-    /// build the stacked-bar segments and to draw a consistent legend below
-    /// the chart. Sorted by total spend so the dominant category sits on
-    /// the bottom of each stack.
-    private var monthlyCategoryOrder: [String] {
-        Dictionary(grouping: expensesInCurrency, by: { repositoryApp.categoryName(forId: $0.categoryId) })
-            .mapValues { $0.reduce(0) { $0 + $1.amount.decimalValue } }
-            .sorted { $0.value > $1.value }
-            .map { $0.key }
+    /// How each analytics expense buckets in the monthly bar chart. Mirrors
+    /// the Paid / Pending split shown by `spendBreakdownCard` directly above
+    /// so the chart legend and the KPI tiles tell the same story.
+    private enum MonthlyStatusGroup: CaseIterable {
+        case pending  // submitted through ready-for-reimbursement
+        case paid     // reimbursed
+
+        var color: Color {
+            switch self {
+            case .pending: return Tokens.purchased
+            case .paid:    return Tokens.slate500
+            }
+        }
+
+        /// Translation key for the legend chip. Resolved by `tr()` at the
+        /// call site so the enum body stays off the main actor (and the
+        /// language picker still refreshes the legend immediately).
+        var localizationKey: String {
+            switch self {
+            case .pending: return "dashboard.kpi.pending"
+            case .paid:    return "dashboard.kpi.paid"
+            }
+        }
+    }
+
+    private func statusGroup(for expense: DomainExpense) -> MonthlyStatusGroup {
+        expense.status == .reimbursed ? .paid : .pending
     }
 
     private var months: [BarsChart.Bar] {
         let calendar = Calendar.current
         let now = Date()
-        let categoryOrder = monthlyCategoryOrder
 
         return (0..<6).reversed().map { offset in
             let date = calendar.date(byAdding: .month, value: -offset, to: now) ?? now
@@ -75,16 +102,17 @@ struct DashboardView: View {
                 return c.year == components.year && c.month == components.month
             }
 
-            // One stacked segment per category that had any spend this month.
-            // Categories without spend in this month are skipped — keeps the
-            // bar tight rather than padding with zero-height slivers.
-            let monthExpenses = expensesInCurrency.filter(isInMonth)
-            let segments: [BarsChart.Segment] = categoryOrder.compactMap { category in
+            // One segment per status group that has any spend this month.
+            // Pending sits on the bottom (the dominant bucket for most teams);
+            // paid stacks on top. Groups without spend are skipped — no
+            // zero-height slivers cluttering the bar.
+            let monthExpenses = analyticsExpenses.filter(isInMonth)
+            let segments: [BarsChart.Segment] = MonthlyStatusGroup.allCases.compactMap { group in
                 let total = monthExpenses
-                    .filter { repositoryApp.categoryName(forId: $0.categoryId) == category }
+                    .filter { statusGroup(for: $0) == group }
                     .reduce(0) { $0 + $1.amount.decimalValue }
                 guard total > 0 else { return nil }
-                return BarsChart.Segment(value: total, color: categoryColor(category))
+                return BarsChart.Segment(value: total, color: group.color)
             }
 
             let label = DateFormatter().shortMonthSymbols[max((components.month ?? 1) - 1, 0)]
@@ -93,7 +121,7 @@ struct DashboardView: View {
     }
 
     private var merchants: [(String, Double, Int)] {
-        Dictionary(grouping: expensesInCurrency, by: \.merchant)
+        Dictionary(grouping: analyticsExpenses, by: \.merchant)
             .map { merchant, expenses in
                 (merchant, expenses.reduce(0) { $0 + $1.amount.decimalValue }, expenses.count)
             }
@@ -135,8 +163,10 @@ struct DashboardView: View {
                         StatusPill(text: tr("dashboard.monthly.range_6mo"), tint: Tokens.slate500)
                     }
                     BarsChart(bars: months)
-                    // Wrap to multiple lines when the workspace has many categories.
-                    FlowingLegend(items: monthlyCategoryOrder.map { (categoryColor($0), localizeCategory($0)) })
+                    // Legend matches the Paid/Pending split shown by the
+                    // breakdown card above, so the chart and the KPI tiles
+                    // line up colour-for-colour.
+                    FlowingLegend(items: MonthlyStatusGroup.allCases.map { ($0.color, tr($0.localizationKey)) })
                 }
             }
 
