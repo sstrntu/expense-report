@@ -82,13 +82,7 @@ struct RootShell: View {
                 if app.userName.isEmpty { app.userName = profile.displayName }
                 if app.userEmail.isEmpty { app.userEmail = profile.email }
             }
-            // Best-effort FX backfill for legacy rows: kicks off after the UI
-            // is already restored, so the splash doesn't wait on Frankfurter.
-            // Detached on a background task so failures here can't block
-            // launch and so the user sees their data immediately.
-            Task.detached(priority: .background) { [repositoryApp] in
-                await repositoryApp.backfillFXSnapshots()
-            }
+            Task { await repositoryApp.backfillFXSnapshots() }
         }
         launchState = .ready
     }
@@ -203,6 +197,8 @@ struct RootShell: View {
         }
     }
 
+    private func popNav() { if !navStack.isEmpty { navStack.removeLast() } }
+
     @ViewBuilder
     private func routeView(_ route: NavRoute) -> some View {
         switch route {
@@ -213,22 +209,22 @@ struct RootShell: View {
                 categories: repositoryApp.categories,
                 events: repositoryApp.eventsByExpenseId[e.id] ?? [],
                 role: app.role,
-                onBack: { navStack.removeLast() },
+                onBack: { popNav() },
                 onApprove: {
                     Task { await repositoryApp.approveExpense(id: e.id) }
-                    navStack.removeLast()
+                    popNav()
                 },
                 onReject: { reason in
                     Task { await repositoryApp.rejectExpense(id: e.id, reason: reason) }
-                    navStack.removeLast()
+                    popNav()
                 },
                 onResubmit: {
                     Task { await repositoryApp.resubmitExpense(id: e.id) }
-                    navStack.removeLast()
+                    popNav()
                 },
                 onCancel: {
                     Task { await repositoryApp.cancelExpense(id: e.id, reason: "Cancelled by submitter.") }
-                    navStack.removeLast()
+                    popNav()
                 },
                 onConfirmPurchase: { finalAmount, receipt in
                     Task {
@@ -242,7 +238,7 @@ struct RootShell: View {
                             )
                         )
                     }
-                    navStack.removeLast()
+                    popNav()
                 },
                 onMarkReimbursed: { method, receipt in
                     Task {
@@ -257,7 +253,7 @@ struct RootShell: View {
                             )
                         )
                     }
-                    navStack.removeLast()
+                    popNav()
                 },
                 onArchive: {
                     Task {
@@ -267,11 +263,11 @@ struct RootShell: View {
                             await repositoryApp.archiveExpense(id: e.id)
                         }
                     }
-                    navStack.removeLast()
+                    popNav()
                 },
                 onDelete: {
                     Task { await repositoryApp.deleteExpense(id: e.id) }
-                    navStack.removeLast()
+                    popNav()
                 },
                 onAttachReceipt: { data, fileName, contentType in
                     // Tag the attachment with the kind that matches the current workflow step
@@ -300,45 +296,45 @@ struct RootShell: View {
                 }
             )
         case .manageProjects:
-            ManageProjectsView { navStack.removeLast() }
+            ManageProjectsView { popNav() }
                 .environmentObject(app)
         case .workspaceSettings:
-            WorkspaceSettingsView { navStack.removeLast() }
+            WorkspaceSettingsView { popNav() }
                 .environmentObject(app)
         case .activity:
             ActivityView(
                 onOpen: { e in navStack.append(.domainDetail(e)) },
-                onBack: { navStack.removeLast() }
+                onBack: { popNav() }
             )
             .environmentObject(app)
         case .permissions:
-            PermissionsView { navStack.removeLast() }
+            PermissionsView { popNav() }
                 .environmentObject(app)
         case .notifications:
             NotificationsView(
-                onBack: { navStack.removeLast() },
+                onBack: { popNav() },
                 onOpenExpense: { e in
-                    navStack.removeLast()
+                    popNav()
                     navStack.append(.domainDetail(e))
                 }
             )
                 .environmentObject(app)
         case .accountSettings:
-            AccountSettingsView { navStack.removeLast() }
+            AccountSettingsView { popNav() }
                 .environmentObject(app)
         case .securitySettings:
-            SecuritySettingsView { navStack.removeLast() }
+            SecuritySettingsView { popNav() }
         case .appPreferences:
-            AppPreferencesView { navStack.removeLast() }
+            AppPreferencesView { popNav() }
         case .reports:
-            ReportsExportView { navStack.removeLast() }
+            ReportsExportView { popNav() }
                 .environmentObject(app)
         case .systemStates:
-            SystemStatesView { navStack.removeLast() }
+            SystemStatesView { popNav() }
         case .help:
-            HelpSupportView { navStack.removeLast() }
+            HelpSupportView { popNav() }
         case .legal:
-            LegalAboutView { navStack.removeLast() }
+            LegalAboutView { popNav() }
         }
     }
 

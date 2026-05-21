@@ -76,6 +76,7 @@ struct BottomTabBar: View {
                     .foregroundStyle(selected == tab.id ? Color.primary : Color.secondary)
             }
             .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
