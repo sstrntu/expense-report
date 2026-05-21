@@ -11,6 +11,14 @@ struct ManageProjectsView: View {
     @State private var projectOwner = ""
     @State private var projectThreshold = "100"
     @State private var projectVisibility = "Team"
+    /// New-project base currency. Nil → falls back to workspace default at
+    /// submit time. The picker exposes the same ISO codes as the submit screen.
+    @State private var projectCurrency: String?
+
+    /// ISO codes offered when picking a project's base currency. Kept in sync
+    /// with SubmitView.currencyOptions so users don't end up with a project
+    /// whose base they can't enter expenses in.
+    private static let currencyOptions = ["USD", "EUR", "GBP", "THB", "JPY", "SGD", "AUD", "CAD"]
     var onBack: () -> Void
 
     var body: some View {
@@ -149,11 +157,13 @@ struct ManageProjectsView: View {
 
                 createField("Name", text: $projectName, placeholder: "Project name")
                 Divider().opacity(0.4)
-                createField("Budget", text: $projectBudget, placeholder: "25000", prefix: "$")
+                currencyPickerRow
+                Divider().opacity(0.4)
+                createField("Budget", text: $projectBudget, placeholder: "25000", prefix: effectiveCurrencySymbol)
                 Divider().opacity(0.4)
                 createField("Owner", text: $projectOwner, placeholder: app.userName)
                 Divider().opacity(0.4)
-                createField("Auto-approve under", text: $projectThreshold, placeholder: "100", prefix: "$")
+                createField("Auto-approve under", text: $projectThreshold, placeholder: "100", prefix: effectiveCurrencySymbol)
 
                 Text("Visibility")
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
@@ -179,7 +189,8 @@ struct ManageProjectsView: View {
 
                 Button {
                     guard let workspaceId = repositoryApp.selectedWorkspace?.id else { return }
-                    let currency = repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD"
+                    // Project base currency: explicit picker wins, then workspace default.
+                    let currency = projectCurrency ?? repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD"
                     let budget = Double(projectBudget) ?? 0
                     let threshold = Double(projectThreshold) ?? 100
                     let newProject = DomainProject(
@@ -222,12 +233,57 @@ struct ManageProjectsView: View {
             TextField(placeholder, text: text)
                 .font(.system(size: 13.5, weight: .medium))
                 .multilineTextAlignment(.trailing)
-                .keyboardType(prefix == "$" ? .numberPad : .default)
+                .keyboardType(prefix == "$" || prefix.count <= 3 ? .numbersAndPunctuation : .default)
                 .frame(maxWidth: 180)
         }
         .padding(.vertical, 11)
     }
 
+    /// Resolves the picker's choice, falling back to the workspace default
+    /// when the user hasn't explicitly picked. Mirrors the resolution logic
+    /// in the Create button so the prefix always matches what we'll write.
+    private var effectiveProjectCurrency: String {
+        projectCurrency ?? repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD"
+    }
+
+    /// Used as the budget/threshold prefix so users see (e.g.) "฿" when the
+    /// project base currency is THB. Falls back to the ISO code for currencies
+    /// without a unique short symbol.
+    private var effectiveCurrencySymbol: String {
+        switch effectiveProjectCurrency {
+        case "USD": return "$"
+        case "EUR": return "€"
+        case "GBP": return "£"
+        case "JPY": return "¥"
+        case "THB": return "฿"
+        default: return effectiveProjectCurrency
+        }
+    }
+
+    private var currencyPickerRow: some View {
+        HStack {
+            Text("Base currency").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+            Spacer()
+            Menu {
+                ForEach(Self.currencyOptions, id: \.self) { code in
+                    Button {
+                        projectCurrency = code
+                    } label: {
+                        HStack {
+                            Text(code)
+                            if effectiveProjectCurrency == code { Image(systemName: "checkmark") }
+                        }
+                    }
+                }
+            } label: {
+                Text(effectiveProjectCurrency)
+                    .font(.system(size: 13.5, weight: .semibold)).foregroundStyle(.secondary)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.primary.opacity(0.06), in: Capsule())
+            }
+        }
+        .padding(.vertical, 11)
+    }
 }
 
 private extension ProjectRole {

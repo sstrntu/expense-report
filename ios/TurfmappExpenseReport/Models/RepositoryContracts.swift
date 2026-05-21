@@ -19,6 +19,12 @@ struct ExpenseDraftInput: Codable, Hashable, Sendable {
     let businessPurpose: String
     let purchaseDate: Date?
     let neededByDate: Date?
+    /// The project's base currency, captured at submit-screen render time.
+    /// When non-nil and different from `amount.currency`, the repository
+    /// calls the `convert-currency` edge function and snapshots the
+    /// converted amount + rate onto the expense row. Pass nil to skip
+    /// FX snapshotting (legacy callers; pre-FX-feature shims).
+    let baseCurrency: String?
 }
 
 struct PurchaseConfirmationInput: Codable, Hashable, Sendable {
@@ -95,6 +101,15 @@ protocol ExpenseRepository: Sendable {
     func listEvents(expenseId: String) async throws -> [ExpenseWorkflowEvent]
     func createDraft(_ input: ExpenseDraftInput) async throws -> DomainExpense
     func updateDraft(id: String, _ input: ExpenseDraftInput) async throws -> DomainExpense
+    /// One-shot backfill of FX snapshot fields on a single row. Called once per
+    /// legacy expense at launch to populate `amount_in_base` retroactively. Idempotent —
+    /// patching the same values twice is a no-op. Returns the updated row.
+    func backfillFXSnapshot(
+        id: String,
+        amount: MoneyAmount,
+        baseCurrency: String,
+        date: Date
+    ) async throws -> DomainExpense
     func submitExpense(id: String) async throws -> DomainExpense
     func resubmitExpense(id: String) async throws -> DomainExpense
     func cancelExpense(id: String, reason: String?) async throws -> DomainExpense

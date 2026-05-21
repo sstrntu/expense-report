@@ -100,6 +100,7 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
     func listEvents(expenseId: String) async throws -> [ExpenseWorkflowEvent] { throw error }
     func createDraft(_ input: ExpenseDraftInput) async throws -> DomainExpense { throw error }
     func updateDraft(id: String, _ input: ExpenseDraftInput) async throws -> DomainExpense { throw error }
+    func backfillFXSnapshot(id: String, amount: MoneyAmount, baseCurrency: String, date: Date) async throws -> DomainExpense { throw error }
     func submitExpense(id: String) async throws -> DomainExpense { throw error }
     func resubmitExpense(id: String) async throws -> DomainExpense { throw error }
     func cancelExpense(id: String, reason: String?) async throws -> DomainExpense { throw error }
@@ -921,11 +922,12 @@ struct SupabaseExpenseRepository: ExpenseRepository {
     func createDraft(_ input: ExpenseDraftInput) async throws -> DomainExpense {
         let membershipId = try await currentMembershipId(workspaceId: input.workspaceId)
         let newId = UUID().uuidString
+        let fx = await snapshotFX(amount: input.amount, baseCurrency: input.baseCurrency, date: Date())
         // Prefer: return=minimal avoids RETURNING * which would trigger the SELECT
         // RLS policy on the freshly-inserted row and fail with 42501.
         let _: EmptyResponse = try await client.post(
             "expenses",
-            body: ExpenseInsert(id: newId, input: input, submittedByMembershipId: membershipId),
+            body: ExpenseInsert(id: newId, input: input, submittedByMembershipId: membershipId, fx: fx),
             preferRepresentation: false
         )
         let rows: [SupabaseExpenseRow] = try await client.get(
@@ -941,20 +943,119 @@ struct SupabaseExpenseRepository: ExpenseRepository {
     }
 
     func updateDraft(id: String, _ input: ExpenseDraftInput) async throws -> DomainExpense {
+        // Re-snapshot FX on every update — the user may have changed the native
+        // amount or currency. Cache on the server keeps repeat conversions cheap.
+        let fx = await snapshotFX(amount: input.amount, baseCurrency: input.baseCurrency, date: Date())
         let rows: [SupabaseExpenseRow] = try await client.patch(
             "expenses?id=eq.\(id)",
-            body: ExpenseDraftUpdate(input: input)
+            body: ExpenseDraftUpdate(input: input, fx: fx)
         )
         guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
         return row.domainExpense
     }
 
+    func backfillFXSnapshot(id: String, amount: MoneyAmount, baseCurrency: String, date: Date) async throws -> DomainExpense {
+        // Resolve the snapshot via the same edge function that create/update use —
+        // identical cache, identical fallback. Skip the row if conversion fails;
+        // the next launch will retry. The RPC bypasses the workflow-state
+        // UPDATE policies (FX fields aren't workflow state) and is idempotent —
+        // it only stamps rows whose snapshot is currently null.
+        guard let fx = await snapshotFX(amount: amount, baseCurrency: baseCurrency, date: date) else {
+            throw SupabaseRepositoryError.invalidResponse
+        }
+        let _: EmptyResponse = try await client.rpc(
+            "backfill_expense_fx",
+            body: BackfillExpenseFXArgs(
+                expenseId: id,
+                baseCurrency: fx.baseCurrency,
+                amountInBaseMinor: fx.amountInBaseMinor,
+                fxRate: fx.fxRate,
+                fxRateAsOf: fx.fxRateAsOf,
+                fxSource: fx.fxSource
+            )
+        )
+        // Re-read the row so the caller sees the freshly-stamped snapshot.
+        let rows: [SupabaseExpenseRow] = try await client.get(
+            "expenses",
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "id", value: "eq.\(id)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
+        guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
+        return row.domainExpense
+    }
+
+    /// Asks the `convert-currency` edge function to snapshot an FX rate for
+    /// the given amount + target base currency on `date`. Returns nil when
+    /// the base currency is unknown, the pair is unsupported, or the call
+    /// fails — in which case the expense is inserted without FX fields and
+    /// will get backfilled later. Never throws; FX problems must not block
+    /// the user from saving their expense.
+    private func snapshotFX(amount: MoneyAmount, baseCurrency: String?, date: Date) async -> FXSnapshot? {
+        guard let base = baseCurrency else { return nil }
+        do {
+            let req = ConvertCurrencyRequest(
+                amount: amount.minorUnits,
+                from: amount.currency,
+                to: base,
+                date: Self.dateFormatter.string(from: date)
+            )
+            let resp: ConvertCurrencyResponse = try await client.invokeFunction("convert-currency", body: req)
+            return FXSnapshot(
+                baseCurrency: base,
+                amountInBaseMinor: resp.converted,
+                fxRate: resp.rate,
+                fxRateAsOf: Self.dateFormatter.date(from: resp.asOf) ?? date,
+                fxSource: resp.source
+            )
+        } catch {
+            return nil
+        }
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .iso8601)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
     func submitExpense(id: String) async throws -> DomainExpense {
-        try await updateStatus(id: id, status: .submitted)
+        try await invokeSubmit(id: id)
     }
 
     func resubmitExpense(id: String) async throws -> DomainExpense {
-        try await updateStatus(id: id, status: .submitted)
+        try await invokeSubmit(id: id)
+    }
+
+    /// Routes the draft → submitted transition through the `submit_expense`
+    /// SECURITY DEFINER RPC instead of a direct PATCH. The PATCH path fails
+    /// RLS WITH CHECK because the `route_submitted_expense` BEFORE trigger
+    /// rewrites `status` to the routed value (pending_manager_approval, etc.),
+    /// which falls outside the submitter UPDATE policy's allowed set. The
+    /// RPC enforces equivalent authorization server-side (caller is the
+    /// original submitter, status is submittable) before letting the trigger
+    /// route.
+    private func invokeSubmit(id: String) async throws -> DomainExpense {
+        let _: EmptyResponse = try await client.rpc(
+            "submit_expense",
+            body: SubmitExpenseArgs(expenseId: id)
+        )
+        // Re-read so the caller sees the routed final status, not 'submitted'.
+        let rows: [SupabaseExpenseRow] = try await client.get(
+            "expenses",
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "id", value: "eq.\(id)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
+        guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
+        return row.domainExpense
     }
 
     func cancelExpense(id: String, reason: String?) async throws -> DomainExpense {
@@ -1385,6 +1486,13 @@ private struct SupabaseExpenseRow: Codable {
     let merchant: String
     let amountMinor: Int
     let currency: String
+    /// FX snapshot, all nullable for rows created before the FX-snapshot feature
+    /// shipped (those rows get backfilled on next launch).
+    let baseCurrency: String?
+    let amountInBaseMinor: Int?
+    let fxRate: Double?
+    let fxRateAsOf: Date?
+    let fxSource: String?
     let categoryId: String
     let businessPurpose: String
     let purchaseDate: Date?
@@ -1394,7 +1502,13 @@ private struct SupabaseExpenseRow: Codable {
     let isArchived: Bool
 
     var domainExpense: DomainExpense {
-        DomainExpense(
+        let amountInBase: MoneyAmount?
+        if let inBase = amountInBaseMinor, let baseCur = baseCurrency {
+            amountInBase = MoneyAmount(minorUnits: inBase, currency: baseCur)
+        } else {
+            amountInBase = nil
+        }
+        return DomainExpense(
             id: id,
             workspaceId: workspaceId,
             projectId: projectId,
@@ -1403,6 +1517,10 @@ private struct SupabaseExpenseRow: Codable {
             status: status,
             merchant: merchant,
             amount: MoneyAmount(minorUnits: amountMinor, currency: currency),
+            amountInBase: amountInBase,
+            fxRate: fxRate,
+            fxRateAsOf: fxRateAsOf,
+            fxSource: fxSource,
             categoryId: categoryId,
             businessPurpose: businessPurpose,
             purchaseDate: purchaseDate,
@@ -1412,6 +1530,30 @@ private struct SupabaseExpenseRow: Codable {
             isArchived: isArchived
         )
     }
+}
+
+/// Snapshot returned by the `convert-currency` edge function and stamped onto
+/// expense rows at create/update time. Same shape on insert and patch paths.
+struct FXSnapshot {
+    let baseCurrency: String
+    let amountInBaseMinor: Int
+    let fxRate: Double
+    let fxRateAsOf: Date
+    let fxSource: String
+}
+
+private struct ConvertCurrencyRequest: Encodable {
+    let amount: Int
+    let from: String
+    let to: String
+    let date: String
+}
+
+private struct ConvertCurrencyResponse: Decodable {
+    let rate: Double
+    let converted: Int
+    let source: String
+    let asOf: String
 }
 
 private struct ExpenseInsert: Encodable {
@@ -1424,12 +1566,17 @@ private struct ExpenseInsert: Encodable {
     let merchant: String
     let amountMinor: Int
     let currency: String
+    let baseCurrency: String?
+    let amountInBaseMinor: Int?
+    let fxRate: Double?
+    let fxRateAsOf: Date?
+    let fxSource: String?
     let categoryId: String
     let businessPurpose: String
     let purchaseDate: Date?
     let neededByDate: Date?
 
-    init(id: String, input: ExpenseDraftInput, submittedByMembershipId: String) {
+    init(id: String, input: ExpenseDraftInput, submittedByMembershipId: String, fx: FXSnapshot?) {
         self.id = id
         workspaceId = input.workspaceId
         projectId = input.projectId
@@ -1439,6 +1586,11 @@ private struct ExpenseInsert: Encodable {
         merchant = input.merchant
         amountMinor = input.amount.minorUnits
         currency = input.amount.currency
+        baseCurrency = fx?.baseCurrency
+        amountInBaseMinor = fx?.amountInBaseMinor
+        fxRate = fx?.fxRate
+        fxRateAsOf = fx?.fxRateAsOf
+        fxSource = fx?.fxSource
         categoryId = input.categoryId
         businessPurpose = input.businessPurpose
         purchaseDate = input.purchaseDate
@@ -1451,21 +1603,57 @@ private struct ExpenseDraftUpdate: Encodable {
     let merchant: String
     let amountMinor: Int
     let currency: String
+    let baseCurrency: String?
+    let amountInBaseMinor: Int?
+    let fxRate: Double?
+    let fxRateAsOf: Date?
+    let fxSource: String?
     let categoryId: String
     let businessPurpose: String
     let purchaseDate: Date?
     let neededByDate: Date?
 
-    init(input: ExpenseDraftInput) {
+    init(input: ExpenseDraftInput, fx: FXSnapshot?) {
         type = input.kind
         merchant = input.merchant
         amountMinor = input.amount.minorUnits
         currency = input.amount.currency
+        baseCurrency = fx?.baseCurrency
+        amountInBaseMinor = fx?.amountInBaseMinor
+        fxRate = fx?.fxRate
+        fxRateAsOf = fx?.fxRateAsOf
+        fxSource = fx?.fxSource
         categoryId = input.categoryId
         businessPurpose = input.businessPurpose
         purchaseDate = input.purchaseDate
         neededByDate = input.neededByDate
     }
+}
+
+/// Arguments to the `turfmapp_expenses.submit_expense` SECURITY DEFINER RPC.
+/// One field, one purpose: kick off the draft → submitted routing on the
+/// server side without tripping the submitter UPDATE policy's WITH CHECK.
+private struct SubmitExpenseArgs: Encodable {
+    let expenseId: String
+}
+
+/// Arguments to the `turfmapp_expenses.backfill_expense_fx` SECURITY DEFINER
+/// RPC. Calling it stamps the FX snapshot on a single row IF that row's
+/// snapshot is currently null — the RPC enforces idempotency server-side.
+/// We can't PATCH directly because the RLS UPDATE policies are workflow-state
+/// scoped (drafts/manager/finance queues), and FX backfill needs to touch
+/// rows in any state.
+private struct BackfillExpenseFXArgs: Encodable {
+    let expenseId: String
+    let baseCurrency: String
+    let amountInBaseMinor: Int
+    let fxRate: Double
+    let fxRateAsOf: Date
+    let fxSource: String
+
+    // Postgres function param names use snake_case; Codable's keyEncodingStrategy
+    // (in JSONEncoder.supabase) converts camelCase to snake_case automatically.
+    // So `expenseId` ↔ `expense_id`, etc. — no manual CodingKeys needed.
 }
 
 private struct ExpensePurchaseUpdate: Encodable {

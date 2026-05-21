@@ -70,56 +70,60 @@ final class RepositoryAppState: ObservableObject {
         selectedWorkspace?.defaultCurrency ?? "USD"
     }
 
-    /// Expenses re-projected into the workspace default currency. Foreign
-    /// expenses are converted via the static FX table; anything we can't
-    /// convert is dropped (counted in `unconvertibleExpenseCount` so the UI
-    /// can footnote it).
+    /// Expenses re-projected into the workspace default currency. Three paths,
+    /// in priority order:
+    ///   1. Native amount already matches the target — pass through.
+    ///   2. The expense has an `amount_in_base` snapshot in the target — use
+    ///      that. This is the new audit-clean path: the rate was captured at
+    ///      submit time and never re-converted, so historical reports are
+    ///      reproducible even when live FX rates drift.
+    ///   3. Legacy fallback to the static FX table for rows that predate FX
+    ///      snapshotting. These get backfilled on launch via the
+    ///      `convert-currency` edge function — the static path is a stopgap.
+    /// Anything that exhausts all three paths is dropped and counted as
+    /// unconvertible so the UI can footnote it.
     var expensesInDefaultCurrency: [DomainExpense] {
         let target = aggregationCurrency
         return expenses.compactMap { expense in
+            // 1. Already in target currency.
             if expense.amount.currency == target { return expense }
+            // 2. Snapshot path — preferred when available.
+            if let inBase = expense.amountInBase, inBase.currency == target {
+                return expense.withDisplayAmount(inBase)
+            }
+            // 3. Legacy static fallback.
             guard let converted = CurrencyConverter.convert(
                 expense.amount.decimalValue,
                 from: expense.amount.currency,
                 to: target
             ) else { return nil }
-            // Rebuild MoneyAmount in the target currency for display/aggregation.
-            return DomainExpense(
-                id: expense.id,
-                workspaceId: expense.workspaceId,
-                projectId: expense.projectId,
-                submittedByMembershipId: expense.submittedByMembershipId,
-                kind: expense.kind,
-                status: expense.status,
-                merchant: expense.merchant,
-                amount: MoneyAmount(minorUnits: Int((converted * 100).rounded()), currency: target),
-                categoryId: expense.categoryId,
-                businessPurpose: expense.businessPurpose,
-                purchaseDate: expense.purchaseDate,
-                neededByDate: expense.neededByDate,
-                createdAt: expense.createdAt,
-                submittedAt: expense.submittedAt,
-                isArchived: expense.isArchived
+            return expense.withDisplayAmount(
+                MoneyAmount(minorUnits: Int((converted * 100).rounded()), currency: target)
             )
         }
     }
 
-    /// Expenses that could not be converted into the workspace currency
-    /// (currency missing from the static FX table). Shown as a footnote so
-    /// admins know to add the rate.
+    /// Expenses that could not be projected into the workspace currency by any
+    /// path above. Shown as a footnote so admins know to add the rate. With
+    /// snapshotting + Frankfurter fallback this should approach zero post-backfill.
     var unconvertibleExpenseCount: Int {
         let target = aggregationCurrency
-        return expenses.filter {
-            $0.amount.currency != target && !CurrencyConverter.canConvert(from: $0.amount.currency, to: target)
+        return expenses.filter { expense in
+            if expense.amount.currency == target { return false }
+            if let inBase = expense.amountInBase, inBase.currency == target { return false }
+            return !CurrencyConverter.canConvert(from: expense.amount.currency, to: target)
         }.count
     }
 
-    /// Count of expenses that were silently converted from a foreign
-    /// currency. Shown as an "Approximate FX" footnote.
+    /// Count of expenses whose native currency differs from the aggregation
+    /// currency — i.e. the dashboard is showing them as a conversion. With
+    /// snapshots this is exact; with legacy static fallback it's approximate.
     var convertedForeignExpenseCount: Int {
         let target = aggregationCurrency
-        return expenses.filter {
-            $0.amount.currency != target && CurrencyConverter.canConvert(from: $0.amount.currency, to: target)
+        return expenses.filter { expense in
+            expense.amount.currency != target
+                && (expense.amountInBase?.currency == target
+                    || CurrencyConverter.canConvert(from: expense.amount.currency, to: target))
         }.count
     }
 
@@ -683,6 +687,51 @@ final class RepositoryAppState: ObservableObject {
     func refresh() async {
         await loadWorkspaces(selecting: selectedWorkspace?.id)
         await reloadSelectedWorkspaceData()
+    }
+
+    /// Once-per-launch backfill of FX snapshot fields on legacy expenses that
+    /// predate the FX-snapshotting feature. For each row missing
+    /// `amount_in_base`, ask the convert-currency edge function for a rate as
+    /// of the expense's create date (cached server-side, so repeated currencies
+    /// only hit Frankfurter once), then RPC the snapshot onto the row.
+    ///
+    /// Best-effort and bounded: skipped if no workspace is selected, runs at
+    /// most 50 conversions per launch to keep startup snappy, and silently
+    /// swallows individual failures (next launch retries). Triggers a single
+    /// expense reload at the end so the dashboard sees the new numbers.
+    func backfillFXSnapshots() async {
+        guard !expenses.isEmpty, !projects.isEmpty else { return }
+        let projectBaseByID: [String: String] = projects.reduce(into: [:]) { acc, p in
+            acc[p.id] = p.budget.currency
+        }
+        // Newest first — users care more about current numbers being right
+        // than ancient archived rows.
+        let pending = expenses
+            .filter { $0.amountInBase == nil }
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(50)
+        guard !pending.isEmpty else { return }
+
+        var stamped = 0
+        for expense in pending {
+            guard let base = projectBaseByID[expense.projectId] else { continue }
+            do {
+                _ = try await expenseRepository.backfillFXSnapshot(
+                    id: expense.id,
+                    amount: expense.amount,
+                    baseCurrency: base,
+                    date: expense.createdAt
+                )
+                stamped += 1
+            } catch {
+                // Conversion or RPC failed; next launch retries the same row.
+                continue
+            }
+        }
+
+        if stamped > 0 {
+            await reloadSelectedWorkspaceData()
+        }
     }
 
     private func reloadSelectedWorkspaceData() async {

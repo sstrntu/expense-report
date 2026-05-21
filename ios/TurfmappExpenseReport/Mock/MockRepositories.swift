@@ -752,6 +752,16 @@ struct MockExpenseRepository: ExpenseRepository {
         try await store.updateDraft(id: id, input)
     }
 
+    func backfillFXSnapshot(id: String, amount: MoneyAmount, baseCurrency: String, date: Date) async throws -> DomainExpense {
+        // Mock store has no FX columns to populate; treat this as a successful
+        // no-op so launch backfill doesn't error out in DEBUG / unit tests.
+        // Return whatever the store currently has for that id, or fall back
+        // to throwing if the row is somehow missing.
+        let all = await store.listExpenses(filters: ExpenseFilters(workspaceId: "", projectId: nil, status: nil, kind: nil, searchText: nil, dateRange: nil))
+        guard let row = all.first(where: { $0.id == id }) else { throw MockRepositoryError.notFound }
+        return row
+    }
+
     func submitExpense(id: String) async throws -> DomainExpense {
         try await store.submitExpense(id: id)
     }

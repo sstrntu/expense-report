@@ -155,6 +155,12 @@ struct DomainProject: Identifiable, Codable, Hashable, Sendable {
     let receiptRequiredThreshold: MoneyAmount
     let currentUserProjectRole: ProjectRole?
     let isArchived: Bool
+
+    /// The project's reporting/base currency. Same as `budget.currency` — the
+    /// budget is denominated in the project's base currency by construction.
+    /// Expenses submitted in any other currency get converted to this and
+    /// snapshotted onto the expense row at submit time.
+    var baseCurrency: String { budget.currency }
 }
 
 struct DomainExpense: Identifiable, Codable, Hashable, Sendable {
@@ -165,7 +171,23 @@ struct DomainExpense: Identifiable, Codable, Hashable, Sendable {
     let kind: ExpenseKind
     let status: ExpenseWorkflowStatus
     let merchant: String
+    /// What the user actually entered on the receipt — the native amount in
+    /// the native currency. Never re-converted; the source of truth.
     let amount: MoneyAmount
+    /// Snapshot of the expense in the project's base currency at create time.
+    /// Nil only for legacy rows pending backfill; new submissions always
+    /// populate this so the dashboard never re-converts at display time.
+    let amountInBase: MoneyAmount?
+    /// FX rate used to derive `amountInBase` from `amount`. `1.0` for
+    /// same-currency expenses; otherwise pulled from Frankfurter (ECB) or
+    /// the static fallback table.
+    let fxRate: Double?
+    /// Date the rate was effective for — typically the expense's create date.
+    let fxRateAsOf: Date?
+    /// Provenance tag: "identity" (same currency), "frankfurter" (live),
+    /// "cache" (already in fx_rates table), "fallback-static" (offline
+    /// fallback), or "backfill" (post-launch one-time fill).
+    let fxSource: String?
     let categoryId: String
     let businessPurpose: String
     let purchaseDate: Date?
@@ -173,6 +195,88 @@ struct DomainExpense: Identifiable, Codable, Hashable, Sendable {
     let createdAt: Date
     let submittedAt: Date?
     let isArchived: Bool
+
+    /// True when the user entered a foreign-currency receipt and the dashboard
+    /// is showing the converted amount rather than what was on the receipt.
+    /// Drives the `↻ $20 USD` tag on row/detail.
+    var isConverted: Bool {
+        guard let inBase = amountInBase else { return false }
+        return inBase.currency != amount.currency
+    }
+}
+
+extension DomainExpense {
+    /// Returns a copy with `amount` replaced — used by aggregation helpers
+    /// that project expenses into a common reporting currency for dashboards.
+    /// The original native amount is preserved on the source row; only this
+    /// derived view exposes the converted value. FX snapshot fields are
+    /// preserved so callers can still inspect provenance.
+    func withDisplayAmount(_ newAmount: MoneyAmount) -> DomainExpense {
+        DomainExpense(
+            id: id,
+            workspaceId: workspaceId,
+            projectId: projectId,
+            submittedByMembershipId: submittedByMembershipId,
+            kind: kind,
+            status: status,
+            merchant: merchant,
+            amount: newAmount,
+            amountInBase: amountInBase,
+            fxRate: fxRate,
+            fxRateAsOf: fxRateAsOf,
+            fxSource: fxSource,
+            categoryId: categoryId,
+            businessPurpose: businessPurpose,
+            purchaseDate: purchaseDate,
+            neededByDate: neededByDate,
+            createdAt: createdAt,
+            submittedAt: submittedAt,
+            isArchived: isArchived
+        )
+    }
+
+    /// Back-compat init for legacy call sites that predate FX snapshotting
+    /// (mocks, tests, in-flight refactors). New write paths should use the
+    /// full memberwise init so the snapshot is stamped from the start.
+    init(
+        id: String,
+        workspaceId: String,
+        projectId: String,
+        submittedByMembershipId: String,
+        kind: ExpenseKind,
+        status: ExpenseWorkflowStatus,
+        merchant: String,
+        amount: MoneyAmount,
+        categoryId: String,
+        businessPurpose: String,
+        purchaseDate: Date?,
+        neededByDate: Date?,
+        createdAt: Date,
+        submittedAt: Date?,
+        isArchived: Bool
+    ) {
+        self.init(
+            id: id,
+            workspaceId: workspaceId,
+            projectId: projectId,
+            submittedByMembershipId: submittedByMembershipId,
+            kind: kind,
+            status: status,
+            merchant: merchant,
+            amount: amount,
+            amountInBase: nil,
+            fxRate: nil,
+            fxRateAsOf: nil,
+            fxSource: nil,
+            categoryId: categoryId,
+            businessPurpose: businessPurpose,
+            purchaseDate: purchaseDate,
+            neededByDate: neededByDate,
+            createdAt: createdAt,
+            submittedAt: submittedAt,
+            isArchived: isArchived
+        )
+    }
 }
 
 struct ExpenseWorkflowEvent: Identifiable, Codable, Hashable, Sendable {
