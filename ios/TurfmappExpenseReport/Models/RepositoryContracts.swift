@@ -126,6 +126,7 @@ protocol AttachmentRepository: Sendable {
     func listAttachments(expenseId: String) async throws -> [ExpenseAttachment]
     func uploadAttachment(expenseId: String, kind: ExpenseAttachment.Kind, fileName: String, contentType: String, data: Data) async throws -> ExpenseAttachment
     func deleteAttachment(id: String) async throws
+    func downloadAttachment(storageKey: String) async throws -> Data
 }
 
 protocol ReceiptScanRepository: Sendable {

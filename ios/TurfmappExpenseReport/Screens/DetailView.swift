@@ -334,11 +334,14 @@ struct ReceiptPreview: Identifiable {
     let title: String
     let fileName: String
     let tint: Color
+    var loadImage: (() async -> Data?)? = nil
 }
 
 struct ReceiptPreviewSheet: View {
     let receipt: ReceiptPreview
     @Environment(\.dismiss) private var dismiss
+    @State private var imageData: Data? = nil
+    @State private var isLoading = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -356,26 +359,45 @@ struct ReceiptPreviewSheet: View {
             }
             .padding(.top, 24).padding(.horizontal, 20)
 
-            RoundedRectangle(cornerRadius: 20)
-                .fill(receipt.tint.opacity(0.12))
-                .overlay(
-                    VStack(spacing: 12) {
-                        Image(systemName: "doc.text.image.fill")
-                            .font(.system(size: 42))
-                            .foregroundStyle(receipt.tint)
-                        Text(tr("detail.receipt_preview.title"))
-                            .font(.system(size: 15, weight: .semibold))
-                        Text(tr("detail.receipt_preview.subtitle"))
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                    }
-                )
-                .frame(height: 260)
-                .padding(.horizontal, 20)
+            if isLoading {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(receipt.tint.opacity(0.08))
+                    .overlay(ProgressView().tint(receipt.tint))
+                    .frame(maxHeight: .infinity)
+                    .padding(.horizontal, 20)
+            } else if let data = imageData, let uiImage = UIImage(data: data) {
+                ScrollView([.vertical, .horizontal], showsIndicators: false) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(.horizontal, 20)
+                }
+            } else {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(receipt.tint.opacity(0.12))
+                    .overlay(
+                        VStack(spacing: 12) {
+                            Image(systemName: "doc.text.image.fill")
+                                .font(.system(size: 42)).foregroundStyle(receipt.tint)
+                            Text(tr("detail.receipt_preview.title"))
+                                .font(.system(size: 15, weight: .semibold))
+                            Text(tr("detail.receipt_preview.subtitle"))
+                                .font(.system(size: 12)).foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center).padding(.horizontal, 24)
+                        }
+                    )
+                    .frame(maxHeight: .infinity)
+                    .padding(.horizontal, 20)
+            }
 
-            Spacer()
+            Spacer(minLength: 0)
+        }
+        .task {
+            if let load = receipt.loadImage {
+                imageData = await load()
+            }
+            isLoading = false
         }
     }
 }

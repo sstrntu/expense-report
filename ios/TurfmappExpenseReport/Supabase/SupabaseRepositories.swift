@@ -115,6 +115,7 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
     func listAttachments(expenseId: String) async throws -> [ExpenseAttachment] { throw error }
     func uploadAttachment(expenseId: String, kind: ExpenseAttachment.Kind, fileName: String, contentType: String, data: Data) async throws -> ExpenseAttachment { throw error }
     func deleteAttachment(id: String) async throws { throw error }
+    func downloadAttachment(storageKey: String) async throws -> Data { throw error }
 
     func startScan(attachmentId: String) async throws -> ReceiptScanResult { throw error }
     func getScanResult(id: String) async throws -> ReceiptScanResult { throw error }
@@ -341,6 +342,27 @@ actor SupabaseRESTClient {
         guard (200..<300).contains(http.statusCode) else {
             throw SupabaseRepositoryError.requestFailed(http.statusCode, String(data: responseData, encoding: .utf8) ?? "")
         }
+    }
+
+    func downloadStorageObject(bucket: String, objectPath: String) async throws -> Data {
+        guard let accessToken = session?.accessToken else { throw SupabaseRepositoryError.missingSession }
+        let base = baseURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let encodedPath = objectPath
+            .split(separator: "/", omittingEmptySubsequences: false)
+            .map { $0.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String($0) }
+            .joined(separator: "/")
+        guard let url = URL(string: "\(base)/storage/v1/object/\(bucket)/\(encodedPath)") else {
+            throw SupabaseRepositoryError.invalidResponse
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SupabaseRepositoryError.invalidResponse
+        }
+        return data
     }
 
     func publicStorageURL(bucket: String, objectPath: String) -> String {
@@ -1208,6 +1230,10 @@ struct SupabaseAttachmentRepository: AttachmentRepository {
             "attachments?id=eq.\(id)",
             body: ["deleted_at": ISO8601DateFormatter().string(from: Date())]
         )
+    }
+
+    func downloadAttachment(storageKey: String) async throws -> Data {
+        try await client.downloadStorageObject(bucket: bucket, objectPath: storageKey)
     }
 }
 

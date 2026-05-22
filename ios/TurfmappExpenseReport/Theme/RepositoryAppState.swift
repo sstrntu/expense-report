@@ -459,6 +459,14 @@ final class RepositoryAppState: ObservableObject {
         }
     }
 
+    func listAttachments(for expenseId: String) async -> [ExpenseAttachment] {
+        (try? await attachmentRepository.listAttachments(expenseId: expenseId)) ?? []
+    }
+
+    func downloadAttachment(_ attachment: ExpenseAttachment) async -> Data? {
+        try? await attachmentRepository.downloadAttachment(storageKey: attachment.storageKey)
+    }
+
     @discardableResult
     func createDraft(_ input: ExpenseDraftInput) async -> Bool {
         do {

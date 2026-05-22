@@ -17,12 +17,15 @@ struct DomainDetailView: View {
     var onDelete: () -> Void
     var onAttachReceipt: (Data, String, String) -> Void = { _, _, _ in }
 
+    @EnvironmentObject private var repositoryApp: RepositoryAppState
+
     @State private var showPurchaseSheet = false
     @State private var showReimbursedSheet = false
     @State private var showRejectSheet = false
     @State private var showDeleteConfirm = false
     @State private var showReceiptSource = false
     @State private var previewReceipt: ReceiptPreview? = nil
+    @State private var attachments: [ExpenseAttachment] = []
 
     private var projectName: String { expense.projectName(in: projects) }
 
@@ -74,6 +77,9 @@ struct DomainDetailView: View {
             Button(tr("common.cancel"), role: .cancel) {}
         } message: {
             Text(tr("detail.delete.message"))
+        }
+        .task {
+            attachments = await repositoryApp.listAttachments(for: expense.id)
         }
     }
 
@@ -191,16 +197,24 @@ struct DomainDetailView: View {
     }
 
     private var receiptPreviewCard: some View {
-        GlassCard(padding: 0) {
+        let submitted = attachments.first { $0.kind == .submittedReceipt || $0.kind == .supportingDocument }
+        let purchase = attachments.first { $0.kind == .purchaseReceipt }
+        let reimbursement = attachments.first { $0.kind == .reimbursementProof }
+
+        return GlassCard(padding: 0) {
             VStack(spacing: 0) {
-                receiptRow(title: tr("detail.receipts.submitted"), file: receiptLabel, tint: Tokens.slate500)
+                if let a = submitted {
+                    receiptRow(title: tr("detail.receipts.submitted"), attachment: a, tint: Tokens.slate500)
+                } else if !attachments.isEmpty || expense.status != .draft {
+                    receiptRow(title: tr("detail.receipts.submitted"), attachment: nil, tint: Tokens.slate500)
+                }
                 if [.pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement, .reimbursed].contains(expense.status) {
                     Divider().opacity(0.4)
-                    receiptRow(title: tr("detail.receipts.purchase"), file: "purchase_receipt.pdf", tint: Tokens.purchased)
+                    receiptRow(title: tr("detail.receipts.purchase"), attachment: purchase, tint: Tokens.purchased)
                 }
                 if expense.status == .reimbursed {
                     Divider().opacity(0.4)
-                    receiptRow(title: tr("detail.receipts.reimbursement"), file: "reimbursement_proof.pdf", tint: Tokens.reimbursed)
+                    receiptRow(title: tr("detail.receipts.reimbursement"), attachment: reimbursement, tint: Tokens.reimbursed)
                 }
                 Divider().opacity(0.4)
                 Button { showReceiptSource = true } label: {
@@ -225,25 +239,36 @@ struct DomainDetailView: View {
         }
     }
 
-    private func receiptRow(title: String, file: String, tint: Color) -> some View {
-        Button {
-            previewReceipt = ReceiptPreview(title: title, fileName: file, tint: tint)
+    private func receiptRow(title: String, attachment: ExpenseAttachment?, tint: Color) -> some View {
+        let fileName = attachment?.fileName ?? tr("detail.receipt_preview.title")
+        let hasFile = attachment != nil
+        return Button {
+            guard hasFile, let a = attachment else { return }
+            previewReceipt = ReceiptPreview(
+                title: title,
+                fileName: a.fileName,
+                tint: tint,
+                loadImage: { [repositoryApp] in await repositoryApp.downloadAttachment(a) }
+            )
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: "doc.text.image.fill")
-                    .foregroundStyle(tint)
+                Image(systemName: hasFile ? "doc.text.image.fill" : "doc.text.image")
+                    .foregroundStyle(hasFile ? tint : Color.secondary)
                     .frame(width: 32, height: 32)
-                    .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+                    .background((hasFile ? tint : Color.secondary).opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title).font(.system(size: 13.5, weight: .medium))
-                    Text(file).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(fileName).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Image(systemName: "eye.fill").foregroundStyle(.secondary)
+                if hasFile {
+                    Image(systemName: "eye.fill").foregroundStyle(.secondary)
+                }
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
         }
         .buttonStyle(.plain)
+        .disabled(!hasFile)
     }
 
     private var timelineCard: some View {

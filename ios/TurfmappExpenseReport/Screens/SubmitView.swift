@@ -28,6 +28,7 @@ struct SubmitView: View {
     @State private var scanStatus: ReceiptScanStatus = .notStarted
     @State private var receiptFileName: String? = nil
     @State private var scannedDraftId: String? = nil
+    @State private var scannedImageData: Data? = nil
     @State private var showReceiptOptions = false
     @State private var showDiscardConfirm = false
     @State private var isSubmitting = false
@@ -320,14 +321,23 @@ struct SubmitView: View {
             }
         } else if hasScanned {
             HStack(spacing: 10) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Tokens.aiPurple)
+                if let data = scannedImageData, let uiImage = UIImage(data: data) {
+                    Image(uiImage: uiImage)
+                        .resizable().scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Tokens.aiPurple)
+                        .frame(width: 44, height: 44)
+                }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(tr("submit.scan.needs_review"))
                         .font(.system(size: 12.5, weight: .semibold))
-                    Text(tr("submit.scan.subtitle.reimbursement"))
+                    Text(receiptFileName ?? tr("submit.scan.subtitle.reimbursement"))
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 Spacer()
                 Button(tr("submit.scan.retry")) { showReceiptOptions = true }
@@ -408,6 +418,7 @@ struct SubmitView: View {
         receiptFileName = fileName
         scanStatus = .uploading
         isScanning = true
+        scannedImageData = data
 
         Task {
             let input = repositoryInput(project: project)

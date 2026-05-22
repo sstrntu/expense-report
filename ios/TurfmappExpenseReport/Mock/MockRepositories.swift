@@ -817,6 +817,10 @@ struct MockAttachmentRepository: AttachmentRepository {
     func deleteAttachment(id: String) async throws {
         await store.deleteAttachment(id: id)
     }
+
+    func downloadAttachment(storageKey: String) async throws -> Data {
+        Data()
+    }
 }
 
 struct MockReceiptScanRepository: ReceiptScanRepository {
