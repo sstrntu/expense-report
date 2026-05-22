@@ -140,6 +140,31 @@ struct RootShell: View {
             if app.userName.isEmpty { app.userName = profile.displayName }
             if app.userEmail.isEmpty { app.userEmail = profile.email }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceTokenReceived)) { note in
+            guard let token = note.userInfo?["token"] as? String else { return }
+            Task { await repositoryApp.registerDeviceToken(token) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pushNotificationOpened)) { note in
+            guard let expenseId = note.userInfo?["expenseId"] as? String else { return }
+            openExpenseFromPush(id: expenseId)
+        }
+    }
+
+    private func openExpenseFromPush(id: String) {
+        // Navigate straight to detail if the expense is already loaded;
+        // otherwise refresh then navigate (covers cold-start tap).
+        if let expense = repositoryApp.expenses.first(where: { $0.id == id }) {
+            navStack = [.domainDetail(expense)]
+            selectedTab = .activity
+        } else {
+            Task {
+                await repositoryApp.refresh()
+                if let expense = repositoryApp.expenses.first(where: { $0.id == id }) {
+                    navStack = [.domainDetail(expense)]
+                    selectedTab = .activity
+                }
+            }
+        }
     }
 
     @ViewBuilder

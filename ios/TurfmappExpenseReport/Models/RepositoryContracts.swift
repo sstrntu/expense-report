@@ -87,6 +87,9 @@ protocol WorkspaceRepository: Sendable {
     func markNotificationRead(id: String) async throws
     func updateWorkspaceLogo(workspaceId: String, logoUrl: String?) async throws -> DomainWorkspace
     func updateWorkspace(workspaceId: String, name: String, defaultCurrency: String) async throws -> DomainWorkspace
+    /// Upserts the APNs device token for the current user's membership in this workspace.
+    /// Called once after push permission is granted; safe to call again after token rotation.
+    func registerDeviceToken(_ token: String, workspaceId: String) async throws
 }
 
 protocol ProjectRepository: Sendable {

@@ -280,6 +280,13 @@ final class RepositoryAppState: ObservableObject {
         UserDefaults.standard.removeObject(forKey: selectedWorkspaceDefaultsKey)
     }
 
+    /// Registers the APNs device token for the current user's membership.
+    /// Failures are silently swallowed — push is non-critical.
+    func registerDeviceToken(_ token: String) async {
+        guard let wsid = selectedWorkspace?.id else { return }
+        try? await workspaceRepository.registerDeviceToken(token, workspaceId: wsid)
+    }
+
     @discardableResult
     func signOutAllSessions() async -> Bool {
         do {

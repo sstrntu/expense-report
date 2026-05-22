@@ -1,16 +1,10 @@
 import SwiftUI
 
-// Reusable sheet components shared by `DomainDetailView`:
-//   - `ReceiptPreview` / `ReceiptPreviewSheet` — loads + renders an
-//     attachment image from Supabase Storage.
+// Reusable sheet components used by `DomainDetailView`:
+//   - `ReceiptPreview` / `ReceiptPreviewSheet` — loads + renders an attachment from Supabase Storage.
 //   - `PurchaseConfirmSheet` — employee confirms a completed purchase.
 //   - `RejectReasonSheet` — manager rejects with a free-text reason.
 //   - `MarkAsPaidSheet` — finance marks an expense reimbursed.
-//
-// The legacy monolithic `DetailView` that previously lived here (built on
-// the older `Expense`/`ExpenseStatus` model and rendering hardcoded
-// placeholder notes) was removed once every call site migrated to
-// `DomainDetailView`.
 
 
 struct ReceiptPreview: Identifiable {

@@ -680,6 +680,8 @@ struct MockWorkspaceRepository: WorkspaceRepository {
 
     func markNotificationRead(id: String) async throws {}
 
+    func registerDeviceToken(_ token: String, workspaceId: String) async throws {}
+
     func updateWorkspaceLogo(workspaceId: String, logoUrl: String?) async throws -> DomainWorkspace {
         DomainWorkspace(id: workspaceId, name: "Mock", abbr: "MK", brandColorHex: "878E9F", defaultCurrency: "USD", currentUserRole: .admin, logoUrl: logoUrl)
     }

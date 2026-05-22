@@ -90,6 +90,7 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
     func markNotificationRead(id: String) async throws { throw error }
     func updateWorkspaceLogo(workspaceId: String, logoUrl: String?) async throws -> DomainWorkspace { throw error }
     func updateWorkspace(workspaceId: String, name: String, defaultCurrency: String) async throws -> DomainWorkspace { throw error }
+    func registerDeviceToken(_ token: String, workspaceId: String) async throws { throw error }
 
     func listProjects(workspaceId: String) async throws -> [DomainProject] { throw error }
     func createProject(_ project: DomainProject) async throws -> DomainProject { throw error }
@@ -306,6 +307,18 @@ actor SupabaseRESTClient {
     ) async throws -> ResponseBody {
         let data = try JSONEncoder.supabase.encode(body)
         return try await request(path: "rest/v1/\(path)", method: "PATCH", headers: ["Prefer": "return=representation"], body: data)
+    }
+
+    /// Insert-or-update via PostgREST's duplicate-resolution semantics.
+    /// `path` must include `?on_conflict=<column>`, e.g. `"device_tokens?on_conflict=device_token"`.
+    func upsert<RequestBody: Encodable>(_ path: String, body: RequestBody) async throws {
+        let data = try JSONEncoder.supabase.encode(body)
+        let _: EmptyResponse = try await request(
+            path: "rest/v1/\(path)",
+            method: "POST",
+            headers: ["Prefer": "resolution=merge-duplicates,return=minimal"],
+            body: data
+        )
     }
 
     func rpc<RequestBody: Encodable, ResponseBody: Decodable>(_ name: String, body: RequestBody) async throws -> ResponseBody {
@@ -840,6 +853,25 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
             defaultCurrency: row.defaultCurrency,
             currentUserRole: role,
             logoUrl: row.logoUrl
+        )
+    }
+
+    func registerDeviceToken(_ token: String, workspaceId: String) async throws {
+        let membershipId = try await client.currentMembershipId(workspaceId: workspaceId)
+        struct Body: Encodable {
+            let membershipId: String
+            let deviceToken: String
+            let platform: String
+            let updatedAt: String
+        }
+        try await client.upsert(
+            "device_tokens?on_conflict=device_token",
+            body: Body(
+                membershipId: membershipId,
+                deviceToken: token,
+                platform: "ios",
+                updatedAt: ISO8601DateFormatter().string(from: Date())
+            )
         )
     }
 }
