@@ -1,13 +1,33 @@
 import SwiftUI
 
 struct DashboardView: View {
+    enum Scope: String, CaseIterable, Hashable { case mine, workspace }
+
     @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
     @State private var drilldown: DashboardDrilldown? = nil
+    @State private var scope: Scope = .workspace
     var onOpen: (DomainExpense) -> Void = { _ in }
 
     private var workspaceCurrency: String { repositoryApp.aggregationCurrency }
-    private var expensesInCurrency: [DomainExpense] { repositoryApp.expensesInDefaultCurrency }
+
+    /// Does the user have any cross-team responsibilities? If not we hide the
+    /// scope toggle entirely — their only data is their own. Admin grants both
+    /// approve and reimburse so the two-flag check covers it.
+    private var canViewWorkspaceScope: Bool {
+        app.role.canApproveExpenses || app.role.canReimburseExpenses
+    }
+
+    /// `expensesInDefaultCurrency` with an optional submitter filter applied.
+    /// "Mine" filters to expenses submitted by the current member; "workspace"
+    /// passes everything through.
+    private var expensesInCurrency: [DomainExpense] {
+        let all = repositoryApp.expensesInDefaultCurrency
+        guard scope == .mine, let me = repositoryApp.currentMembershipId else {
+            return all
+        }
+        return all.filter { $0.submittedByMembershipId == me }
+    }
 
     /// Active-but-not-yet-paid expenses (everything in the pipeline except actually reimbursed,
     /// drafts, cancelled, rejected, archived, or failed scans). These count toward total
@@ -150,6 +170,17 @@ struct DashboardView: View {
                 Text(tr("dashboard.title")).font(.system(size: 26, weight: .bold))
             }
             .padding(.horizontal, 4).padding(.top, 4)
+
+            // Multi-role users (managers/finance/admin) can flip between their
+            // own submissions and the whole workspace. Plain employees never
+            // see the toggle — their data is always personal.
+            if canViewWorkspaceScope {
+                Picker("", selection: $scope) {
+                    Text(tr("dashboard.scope.mine")).tag(Scope.mine)
+                    Text(tr("dashboard.scope.workspace")).tag(Scope.workspace)
+                }
+                .pickerStyle(.segmented)
+            }
 
             spendBreakdownCard(paid: confirmed, pending: projected)
 

@@ -228,6 +228,8 @@
 /* === Dashboard / Analytics === */
 "dashboard.subtitle" = "All activity";
 "dashboard.title" = "Analytics";
+"dashboard.scope.mine" = "Mine";
+"dashboard.scope.workspace" = "Workspace";
 "dashboard.kpi.paid" = "PAID";
 "dashboard.kpi.pending" = "PENDING";
 "dashboard.kpi.total" = "TOTAL";
@@ -274,6 +276,12 @@
 "review.section.manager" = "Manager approval";
 "review.section.finance" = "Finance reimbursement";
 "review.section.awaiting_purchase" = "Awaiting purchase";
+"review.role.manager" = "As Manager";
+"review.role.finance" = "As Finance";
+"review.role.watching" = "Watching";
+"review.action.to_approve" = "To approve";
+"review.action.to_reimburse" = "To reimburse";
+"review.action.awaiting_purchase" = "Awaiting purchase";
 "review.section.past" = "Past & archived";
 "review.past.count" = "%d past · reimbursed, cancelled, rejected, archived";
 "review.history.title" = "%@";
@@ -435,6 +443,8 @@
 "notifications.kind.expense" = "Expense";
 "notifications.kind.payment" = "Payment";
 "notifications.kind.admin" = "Admin";
+"notifications.mark_all_read" = "Mark all read";
+"notifications.delete" = "Delete";
 
 /* === Account / security / preferences === */
 "account.title" = "Account";

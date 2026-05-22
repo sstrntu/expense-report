@@ -88,6 +88,8 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
     func removeMember(id: String) async throws { throw error }
     func listNotifications(workspaceId: String) async throws -> [DomainNotification] { throw error }
     func markNotificationRead(id: String) async throws { throw error }
+    func markAllNotificationsRead(workspaceId: String) async throws { throw error }
+    func deleteNotification(id: String) async throws { throw error }
     func updateWorkspaceLogo(workspaceId: String, logoUrl: String?) async throws -> DomainWorkspace { throw error }
     func updateWorkspace(workspaceId: String, name: String, defaultCurrency: String) async throws -> DomainWorkspace { throw error }
     func registerDeviceToken(_ token: String, workspaceId: String) async throws { throw error }
@@ -318,6 +320,18 @@ actor SupabaseRESTClient {
             method: "POST",
             headers: ["Prefer": "resolution=merge-duplicates,return=representation"],
             body: data
+        )
+    }
+
+    /// PostgREST DELETE. Path may include filters such as `"notifications?id=eq.<uuid>"`.
+    /// RLS still applies, so callers can rely on row-level checks (e.g. recipient-only)
+    /// rather than threading auth into the filter.
+    func delete(_ path: String) async throws {
+        let _: [EmptyResponse] = try await request(
+            path: "rest/v1/\(path)",
+            method: "DELETE",
+            headers: ["Prefer": "return=minimal"],
+            body: Optional<Data>.none
         )
     }
 
@@ -792,6 +806,19 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
             "notifications?id=eq.\(id)",
             body: ["read_at": ISO8601DateFormatter().string(from: Date())]
         )
+    }
+
+    func markAllNotificationsRead(workspaceId: String) async throws {
+        // PostgREST PATCH against a filter set — read_at=is.null narrows to unread rows,
+        // and the RLS policy on notifications further scopes to the current member.
+        let _: [EmptyResponse] = try await client.patch(
+            "notifications?workspace_id=eq.\(workspaceId)&read_at=is.null",
+            body: ["read_at": ISO8601DateFormatter().string(from: Date())]
+        )
+    }
+
+    func deleteNotification(id: String) async throws {
+        try await client.delete("notifications?id=eq.\(id)")
     }
 
     func updateWorkspace(workspaceId: String, name: String, defaultCurrency: String) async throws -> DomainWorkspace {

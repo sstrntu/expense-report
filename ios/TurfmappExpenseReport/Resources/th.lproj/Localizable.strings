@@ -228,6 +228,8 @@
 /* === Dashboard / Analytics === */
 "dashboard.subtitle" = "กิจกรรมทั้งหมด";
 "dashboard.title" = "การวิเคราะห์";
+"dashboard.scope.mine" = "ของฉัน";
+"dashboard.scope.workspace" = "ทั้งบริษัท";
 "dashboard.kpi.paid" = "จ่ายแล้ว";
 "dashboard.kpi.pending" = "ค้างชำระ";
 "dashboard.kpi.total" = "รวม";
@@ -274,6 +276,12 @@
 "review.section.manager" = "การอนุมัติของผู้จัดการ";
 "review.section.finance" = "การเบิกจ่ายของการเงิน";
 "review.section.awaiting_purchase" = "รอการซื้อ";
+"review.role.manager" = "ในฐานะผู้จัดการ";
+"review.role.finance" = "ในฐานะการเงิน";
+"review.role.watching" = "ติดตาม";
+"review.action.to_approve" = "รออนุมัติ";
+"review.action.to_reimburse" = "รอเบิกจ่าย";
+"review.action.awaiting_purchase" = "รอการซื้อ";
 "review.section.past" = "ที่ผ่านมา & เก็บถาวร";
 "review.past.count" = "%d รายการที่ผ่านมา · เบิกจ่ายแล้ว ยกเลิก ปฏิเสธ เก็บถาวร";
 "review.history.title" = "%@";
@@ -435,6 +443,8 @@
 "notifications.kind.expense" = "ค่าใช้จ่าย";
 "notifications.kind.payment" = "ชำระเงิน";
 "notifications.kind.admin" = "ผู้ดูแล";
+"notifications.mark_all_read" = "อ่านทั้งหมด";
+"notifications.delete" = "ลบ";
 
 /* === Account / security / preferences === */
 "account.title" = "บัญชี";

@@ -73,14 +73,33 @@ struct ReviewView: View {
                     .frame(maxWidth: .infinity)
                 }
             } else {
+                // Section headers spell out which role the user is acting in.
+                // For a multi-hat user (e.g. a Manager who also handles Finance),
+                // this is the only way they can tell at a glance which numbers
+                // correspond to which queue.
                 if !pending.isEmpty {
-                    queueSection(title: tr("review.section.manager"), items: pending, tint: Tokens.pending)
+                    queueSection(
+                        roleIcon: "person.badge.shield.checkmark.fill",
+                        roleLabel: tr("review.role.manager"),
+                        actionLabel: tr("review.action.to_approve"),
+                        items: pending, tint: Tokens.pending
+                    )
                 }
                 if !financeQueue.isEmpty {
-                    queueSection(title: tr("review.section.finance"), items: financeQueue, tint: Tokens.reimbursed)
+                    queueSection(
+                        roleIcon: "creditcard.fill",
+                        roleLabel: tr("review.role.finance"),
+                        actionLabel: tr("review.action.to_reimburse"),
+                        items: financeQueue, tint: Tokens.reimbursed
+                    )
                 }
                 if !awaitingPurchase.isEmpty {
-                    queueSection(title: tr("review.section.awaiting_purchase"), items: awaitingPurchase, tint: Tokens.purchased)
+                    queueSection(
+                        roleIcon: "eye.fill",
+                        roleLabel: tr("review.role.watching"),
+                        actionLabel: tr("review.action.awaiting_purchase"),
+                        items: awaitingPurchase, tint: Tokens.purchased
+                    )
                 }
             }
 
@@ -191,12 +210,30 @@ struct ReviewView: View {
         .buttonStyle(.plain)
     }
 
-    private func queueSection(title: String, items: [DomainExpense], tint: Color) -> some View {
+    /// Header is now two parts: a coloured role badge ("AS MANAGER") to show
+    /// which hat the user is wearing, plus a plain action description
+    /// ("3 to approve"). Pill on the right keeps the running count.
+    private func queueSection(
+        roleIcon: String,
+        roleLabel: String,
+        actionLabel: String,
+        items: [DomainExpense],
+        tint: Color
+    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title.uppercased())
-                    .font(.system(size: 11, weight: .semibold)).tracking(0.6)
-                    .foregroundStyle(.tertiary)
+            HStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    Image(systemName: roleIcon).font(.system(size: 9, weight: .bold))
+                    Text(roleLabel.uppercased())
+                        .font(.system(size: 10, weight: .bold)).tracking(0.8)
+                }
+                .foregroundStyle(tint)
+                .padding(.horizontal, 7).padding(.vertical, 3)
+                .background(tint.opacity(0.12), in: Capsule())
+
+                Text(actionLabel)
+                    .font(.system(size: 11, weight: .semibold)).tracking(0.3)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 StatusPill(text: "\(items.count)", tint: tint)
             }

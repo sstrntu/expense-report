@@ -680,6 +680,10 @@ struct MockWorkspaceRepository: WorkspaceRepository {
 
     func markNotificationRead(id: String) async throws {}
 
+    func markAllNotificationsRead(workspaceId: String) async throws {}
+
+    func deleteNotification(id: String) async throws {}
+
     func registerDeviceToken(_ token: String, workspaceId: String) async throws {}
 
     func updateWorkspaceLogo(workspaceId: String, logoUrl: String?) async throws -> DomainWorkspace {

@@ -70,6 +70,14 @@ final class RepositoryAppState: ObservableObject {
         selectedWorkspace?.defaultCurrency ?? "USD"
     }
 
+    /// Membership id for the current user in the selected workspace, if any.
+    /// Used to filter "Mine" views on the dashboard and Review screens.
+    var currentMembershipId: String? {
+        guard let userId = currentUserProfile?.id,
+              let workspaceId = selectedWorkspace?.id else { return nil }
+        return members.first(where: { $0.userId == userId && $0.workspaceId == workspaceId })?.id
+    }
+
     /// Expenses re-projected into the workspace default currency. Three paths,
     /// in priority order:
     ///   1. Native amount already matches the target — pass through.
@@ -234,6 +242,25 @@ final class RepositoryAppState: ObservableObject {
     func markNotificationRead(id: String) async {
         do {
             try await workspaceRepository.markNotificationRead(id: id)
+            await reloadSelectedWorkspaceData()
+        } catch {
+            setError(error)
+        }
+    }
+
+    func markAllNotificationsRead() async {
+        guard let workspaceId = selectedWorkspace?.id else { return }
+        do {
+            try await workspaceRepository.markAllNotificationsRead(workspaceId: workspaceId)
+            await reloadSelectedWorkspaceData()
+        } catch {
+            setError(error)
+        }
+    }
+
+    func deleteNotification(id: String) async {
+        do {
+            try await workspaceRepository.deleteNotification(id: id)
             await reloadSelectedWorkspaceData()
         } catch {
             setError(error)

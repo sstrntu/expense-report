@@ -85,6 +85,8 @@ protocol WorkspaceRepository: Sendable {
     func removeMember(id: String) async throws
     func listNotifications(workspaceId: String) async throws -> [DomainNotification]
     func markNotificationRead(id: String) async throws
+    func markAllNotificationsRead(workspaceId: String) async throws
+    func deleteNotification(id: String) async throws
     func updateWorkspaceLogo(workspaceId: String, logoUrl: String?) async throws -> DomainWorkspace
     func updateWorkspace(workspaceId: String, name: String, defaultCurrency: String) async throws -> DomainWorkspace
     /// Upserts the APNs device token for the current user's membership in this workspace.

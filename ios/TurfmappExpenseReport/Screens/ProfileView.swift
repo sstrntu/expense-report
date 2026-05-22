@@ -248,7 +248,22 @@ struct NotificationsView: View {
     }
 
     var body: some View {
-        settingsContainer(title: tr("notifications.title"), onBack: onBack) {
+        settingsContainer(
+            title: tr("notifications.title"),
+            onBack: onBack,
+            trailing: {
+                if unreadCount > 0 {
+                    Button {
+                        Task { await repositoryApp.markAllNotificationsRead() }
+                    } label: {
+                        Text(tr("notifications.mark_all_read"))
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(Tokens.pending)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        ) {
             HStack(spacing: 8) {
                 filterChip(tr("notifications.filter.all"), selected: filter == .all) { filter = .all }
                 filterChip(tr("notifications.filter.approvals"), selected: filter == .approvals) { filter = .approvals }
@@ -263,7 +278,15 @@ struct NotificationsView: View {
                     VStack(spacing: 0) {
                         ForEach(Array(filteredNotifications.enumerated()), id: \.element.id) { idx, item in
                             if idx > 0 { Divider().opacity(0.4) }
-                            notificationRow(item)
+                            SwipeToDelete(
+                                deleteLabel: tr("notifications.delete"),
+                                onDelete: {
+                                    guard let domainId = item.domainId else { return }
+                                    Task { await repositoryApp.deleteNotification(id: domainId) }
+                                }
+                            ) {
+                                notificationRow(item)
+                            }
                         }
                     }
                 }
@@ -1118,6 +1141,15 @@ struct WorkspaceSettingsView: View {
 
 @MainActor
 func settingsContainer<Content: View>(title: String, onBack: @escaping () -> Void, @ViewBuilder content: () -> Content) -> some View {
+    settingsContainer(title: title, onBack: onBack, trailing: { EmptyView() }, content: content)
+}
+
+func settingsContainer<Trailing: View, Content: View>(
+    title: String,
+    onBack: @escaping () -> Void,
+    @ViewBuilder trailing: () -> Trailing,
+    @ViewBuilder content: () -> Content
+) -> some View {
     VStack(alignment: .leading, spacing: 14) {
         HStack(spacing: 8) {
             Button(action: onBack) {
@@ -1128,6 +1160,8 @@ func settingsContainer<Content: View>(title: String, onBack: @escaping () -> Voi
             .buttonStyle(.plain)
             .glassSurface(corner: 999)
             Text(title).font(.system(size: 18, weight: .bold))
+            Spacer()
+            trailing()
         }
         .padding(.horizontal, 4).padding(.top, 4)
 
@@ -1135,4 +1169,95 @@ func settingsContainer<Content: View>(title: String, onBack: @escaping () -> Voi
     }
     .padding(.horizontal, 16)
     .padding(.bottom, 100)
+}
+
+/// Row wrapper that reveals a destructive action on left-swipe.
+///
+/// SwiftUI's built-in `.swipeActions` only works inside `List`, but the
+/// notifications inbox sits in a `GlassCard` + `VStack` to keep the glass
+/// aesthetic. This component reproduces the mail-style left-swipe gesture
+/// with `DragGesture`: the row slides under a red "Delete" tab, snaps open
+/// past the threshold, and fires `onDelete` if the swipe is forceful enough
+/// (or the tab is tapped).
+struct SwipeToDelete<Content: View>: View {
+    let deleteLabel: String
+    let onDelete: () -> Void
+    let content: Content
+
+    @State private var offset: CGFloat = 0
+    @State private var committedOffset: CGFloat = 0
+    @GestureState private var isDragging: Bool = false
+
+    private let actionWidth: CGFloat = 84
+    private let revealThreshold: CGFloat = 30
+    private let commitThreshold: CGFloat = 160
+
+    init(deleteLabel: String, onDelete: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+        self.deleteLabel = deleteLabel
+        self.onDelete = onDelete
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // Background action tab — only takes the space we've revealed.
+            Button {
+                fireDelete()
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "trash.fill").font(.system(size: 14, weight: .semibold))
+                    Text(deleteLabel).font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .frame(width: actionWidth)
+                .frame(maxHeight: .infinity)
+                .background(Color.red)
+            }
+            .buttonStyle(.plain)
+            .opacity(min(1, -offset / actionWidth))
+
+            content
+                .background(Color.clear)
+                .contentShape(Rectangle())
+                .offset(x: offset)
+                .gesture(
+                    DragGesture(minimumDistance: 8)
+                        .updating($isDragging) { _, state, _ in state = true }
+                        .onChanged { value in
+                            let proposed = committedOffset + value.translation.width
+                            // Allow a little stretch past the action width, but not unbounded.
+                            offset = min(0, max(-(actionWidth + 40), proposed))
+                        }
+                        .onEnded { value in
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                                if value.translation.width < -commitThreshold {
+                                    // Full swipe → commit delete.
+                                    offset = -actionWidth
+                                    committedOffset = -actionWidth
+                                    fireDelete()
+                                } else if offset < -revealThreshold {
+                                    // Held open at the delete tab.
+                                    offset = -actionWidth
+                                    committedOffset = -actionWidth
+                                } else {
+                                    // Snap back closed.
+                                    offset = 0
+                                    committedOffset = 0
+                                }
+                            }
+                        }
+                )
+        }
+        .clipped()
+    }
+
+    private func fireDelete() {
+        withAnimation(.easeOut(duration: 0.18)) {
+            offset = -(actionWidth + 40)
+            committedOffset = offset
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            onDelete()
+        }
+    }
 }
