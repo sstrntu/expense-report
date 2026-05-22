@@ -20,12 +20,14 @@ struct DashboardView: View {
 
     /// `expensesInDefaultCurrency` with an optional submitter filter applied.
     /// "Mine" filters to expenses submitted by the current member; "workspace"
-    /// passes everything through.
+    /// passes everything through. If we can't identify the current member while
+    /// in Mine scope, return empty rather than silently falling back to the
+    /// workspace set — that's how the two tabs ended up showing identical
+    /// numbers in early testing.
     private var expensesInCurrency: [DomainExpense] {
         let all = repositoryApp.expensesInDefaultCurrency
-        guard scope == .mine, let me = repositoryApp.currentMembershipId else {
-            return all
-        }
+        if scope == .workspace { return all }
+        guard let me = repositoryApp.currentMembershipId else { return [] }
         return all.filter { $0.submittedByMembershipId == me }
     }
 
