@@ -1,26 +1,41 @@
 name: TurfmappExpenseReport
 options:
-  bundleIdPrefix: io.turfmapp
+  bundleIdPrefix: com.turfmapp
   deploymentTarget:
     iOS: "26.0"
+
+# Settings shared by both targets. Explicit values here match what Xcode has
+# been driving into the .pbxproj — regenerating from this file with xcodegen
+# should produce a project that builds and code-signs without further edits.
+settings:
+  base:
+    DEVELOPMENT_TEAM: HAS8MJEJM2
+    CODE_SIGN_IDENTITY: "iPhone Developer"
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
 
 targets:
   TurfmappExpenseReport:
     type: application
     platform: iOS
     deploymentTarget: "26.0"
+    # The single `TurfmappExpenseReport` source entry lets xcodegen walk the
+    # whole app directory and auto-detect Swift files, the asset catalog,
+    # Info.plist, PrivacyInfo.xcprivacy, the .xcconfig example, and the
+    # en/th .lproj variant group under Resources/.
     sources:
       - TurfmappExpenseReport
-      - path: TurfmappExpenseReport/Resources/en.lproj/Localizable.strings
-        type: file
-      - path: TurfmappExpenseReport/Resources/th.lproj/Localizable.strings
-        type: file
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.turfmapp.expense-report
-        SWIFT_VERSION: "6.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.turfmapp.expense-report
         INFOPLIST_FILE: TurfmappExpenseReport/Info.plist
-        MARKETING_VERSION: "1.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Marketing version and build number are the source of truth for
+        # App Store / TestFlight submissions. Bump CURRENT_PROJECT_VERSION
+        # for every new TestFlight upload (Apple requires it to be strictly
+        # increasing within a marketing version).
+        MARKETING_VERSION: "1.2"
         CURRENT_PROJECT_VERSION: "1"
 
   TurfmappExpenseReportTests:
@@ -33,6 +48,27 @@ targets:
       - target: TurfmappExpenseReport
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.turfmapp.expense-report.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.turfmapp.expense-report.tests
         GENERATE_INFOPLIST_FILE: YES
-        SWIFT_VERSION: "6.0"
+
+# Shared scheme so `xcodebuild -scheme TurfmappExpenseReport` works after
+# every xcodegen run. Without this, xcodegen removes the scheme from
+# xcshareddata/.
+schemes:
+  TurfmappExpenseReport:
+    build:
+      targets:
+        TurfmappExpenseReport: all
+        TurfmappExpenseReportTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - TurfmappExpenseReportTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

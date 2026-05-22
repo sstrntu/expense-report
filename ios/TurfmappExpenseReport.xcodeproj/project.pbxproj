@@ -31,8 +31,6 @@
 		741A4BD84FE8A4F61135B0D5 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22F66287D08F237A93AEE5B /* DetailView.swift */; };
 		7448C44EE0C996244E94403C /* RepositoryAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C1348EECDE16A1827E2010 /* RepositoryAppState.swift */; };
 		7E9A53D69CC02AA267DE44B4 /* RepositoryContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D246FB0AA3C57CF36D9B46F7 /* RepositoryContracts.swift */; };
-		80ADA534E913999E8CF5FE3A /* th in Resources */ = {isa = PBXBuildFile; fileRef = 9D9E91BCDD6B358CB84025E3 /* th */; };
-		80DE756056F559B7E8D73182 /* en in Resources */ = {isa = PBXBuildFile; fileRef = 7F65B1C5F92A891890BB17FF /* en */; };
 		88A127235B82BCB09DDEAC7C /* MockRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E1528C7366ED9C0B1743FF /* MockRepositories.swift */; };
 		916271724F6586B58CC7D66C /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6E88799E3A97175A67C294 /* LocalizationManager.swift */; };
 		98000D0F105320FD2AEF70B2 /* SubmitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38494852C1A233217A4B4CAF /* SubmitView.swift */; };
@@ -65,7 +63,7 @@
 		0E14C7927495CDE1F99FD155 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		1318FEF50B5EA3EAB23F8E7F /* CurrencyConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyConverter.swift; sourceTree = "<group>"; };
 		231934AADFA8013182DE19B6 /* StatusPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPill.swift; sourceTree = "<group>"; };
-		2360D5D3F26299AE4D322585 /* TurfmappExpenseReport.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurfmappExpenseReport.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2360D5D3F26299AE4D322585 /* TurfmappExpenseReport.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TurfmappExpenseReport.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		29437C36AF260B6783FA3947 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		2C580869F5B6FF78D1128C4E /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
 		38494852C1A233217A4B4CAF /* SubmitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmitView.swift; sourceTree = "<group>"; };
@@ -74,6 +72,7 @@
 		4F7038F8122D513472A92656 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		536DAABDF76A6F8DFD29DEEF /* RootShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootShell.swift; sourceTree = "<group>"; };
 		5B488DCADA8C68BFA0360E5C /* DomainDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDetailView.swift; sourceTree = "<group>"; };
+		5C39C2FBABF3E388FC35A3C4 /* th */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = th; path = th.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5DA4C973EC4A0EC46FB9BA9D /* PermissionMatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionMatrixTests.swift; sourceTree = "<group>"; };
 		5FC5205A5E412F3544FBF6C8 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
 		649767E02DA13AB1CCBFD0E9 /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
@@ -82,26 +81,25 @@
 		67EC6D7BD90D039BB416ED74 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		6ABE7DE6913E857B352AF659 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		6F096F243857EBABB4129FEC /* TurfmappExpenseReportApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurfmappExpenseReportApp.swift; sourceTree = "<group>"; };
-		7F65B1C5F92A891890BB17FF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8941FC76E8EADAC392D24D4C /* BottomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomTabBar.swift; sourceTree = "<group>"; };
 		8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
 		9D1A529E6050B7B6F915F71D /* V1Domain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V1Domain.swift; sourceTree = "<group>"; };
-		9D9E91BCDD6B358CB84025E3 /* th */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = th; path = th.lproj/Localizable.strings; sourceTree = "<group>"; };
 		A2E1528C7366ED9C0B1743FF /* MockRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRepositories.swift; sourceTree = "<group>"; };
 		BFCEF355C532DA04E3146431 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		CA4CB3A46FA47E4715A510B1 /* Avatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Avatar.swift; sourceTree = "<group>"; };
 		D246FB0AA3C57CF36D9B46F7 /* RepositoryContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryContracts.swift; sourceTree = "<group>"; };
 		D53DEF6879D81BC1B1ED4918 /* ManagerOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagerOverviewView.swift; sourceTree = "<group>"; };
-		D6FB9F6D29FAAFB56DE2D00A /* TurfmappExpenseReportTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TurfmappExpenseReportTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D6FB9F6D29FAAFB56DE2D00A /* TurfmappExpenseReportTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TurfmappExpenseReportTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB435F138568CD4F6440FBDF /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		DBA109009158416677C78BCB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E22F66287D08F237A93AEE5B /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
 		E267442BEA226AA91190BCA2 /* SupabaseRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseRepositories.swift; sourceTree = "<group>"; };
 		E6C1348EECDE16A1827E2010 /* RepositoryAppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryAppState.swift; sourceTree = "<group>"; };
+		EA14ACD9CE6B450907E4C1E5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EB3C217BB946FC793FCE5377 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		FF6E88799E3A97175A67C294 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
-		FF8327C50FEE23C95BB2274C /* AppConfig.local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = AppConfig.local.xcconfig.example; sourceTree = "<group>"; };
+		FF8327C50FEE23C95BB2274C /* AppConfig.local.xcconfig.example */ = {isa = PBXFileReference; path = AppConfig.local.xcconfig.example; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -117,8 +115,6 @@
 		44F6938D37538A6A6E8E1ED8 = {
 			isa = PBXGroup;
 			children = (
-				E2E60022C6C1859DDCE0B111 /* en.lproj */,
-				8DE26134D2B1399B9CCFA215 /* th.lproj */,
 				48547F9FA0B2C2253C3369F5 /* TurfmappExpenseReport */,
 				1136C83044F9B0DD459B6AA6 /* TurfmappExpenseReportTests */,
 				485B5985E214DEBC704737A9 /* Products */,
@@ -214,14 +210,6 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
-		8DE26134D2B1399B9CCFA215 /* th.lproj */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = th.lproj;
-			path = TurfmappExpenseReport/Resources/th.lproj;
-			sourceTree = "<group>";
-		};
 		B5B7260E49760133DEAE5D3B /* Mock */ = {
 			isa = PBXGroup;
 			children = (
@@ -256,14 +244,6 @@
 				38494852C1A233217A4B4CAF /* SubmitView.swift */,
 			);
 			path = Screens;
-			sourceTree = "<group>";
-		};
-		E2E60022C6C1859DDCE0B111 /* en.lproj */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = en.lproj;
-			path = TurfmappExpenseReport/Resources/en.lproj;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -313,6 +293,14 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					3A83A050FE5E3DBFBF66E840 = {
+						DevelopmentTeam = HAS8MJEJM2;
+					};
+					5A5AD32FED04F0A458E19D94 = {
+						DevelopmentTeam = HAS8MJEJM2;
+					};
+				};
 			};
 			buildConfigurationList = 5FF16B6260869449D82C0F27 /* Build configuration list for PBXProject "TurfmappExpenseReport" */;
 			developmentRegion = en;
@@ -343,8 +331,6 @@
 				0982BE8186C0B5D411254834 /* AppConfig.local.xcconfig.example in Resources */,
 				EBDA7A1CA4F408572CA28FAB /* Assets.xcassets in Resources */,
 				555469A5FCC5089B0EE32506 /* Localizable.strings in Resources */,
-				80DE756056F559B7E8D73182 /* en in Resources */,
-				80ADA534E913999E8CF5FE3A /* th in Resources */,
 				4D237D0C9EBF4614E552C27D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -414,8 +400,8 @@
 		3934E66267FB647ABA10BE72 /* Localizable.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
-				7F65B1C5F92A891890BB17FF /* en */,
-				9D9E91BCDD6B358CB84025E3 /* th */,
+				EA14ACD9CE6B450907E4C1E5 /* en */,
+				5C39C2FBABF3E388FC35A3C4 /* th */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -428,7 +414,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = HAS8MJEJM2;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = TurfmappExpenseReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -438,7 +424,6 @@
 				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.turfmapp.expense-report";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -447,7 +432,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = HAS8MJEJM2;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -457,7 +441,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.turfmapp.expense-report.tests";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TurfmappExpenseReport.app/TurfmappExpenseReport";
 			};
@@ -496,8 +479,10 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = HAS8MJEJM2;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -515,7 +500,8 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -552,8 +538,10 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = HAS8MJEJM2;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -578,7 +566,8 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -587,7 +576,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = HAS8MJEJM2;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = TurfmappExpenseReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -597,7 +586,6 @@
 				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.turfmapp.expense-report";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -606,7 +594,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = HAS8MJEJM2;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -616,7 +603,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.turfmapp.expense-report.tests";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TurfmappExpenseReport.app/TurfmappExpenseReport";
 			};

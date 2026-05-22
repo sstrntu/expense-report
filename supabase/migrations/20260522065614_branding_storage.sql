@@ -89,9 +89,9 @@ create policy "workspace admins can upload branding" on storage.objects
 for insert to authenticated
 with check (
   bucket_id = 'branding'
-  and public.has_workspace_role(
+  and turfmapp_expenses.has_workspace_role(
     public.branding_workspace_segment(name),
-    array['admin'::public.workspace_role]
+    array['admin'::turfmapp_expenses.workspace_role]
   )
 );
 
@@ -100,16 +100,16 @@ create policy "workspace admins can update branding" on storage.objects
 for update to authenticated
 using (
   bucket_id = 'branding'
-  and public.has_workspace_role(
+  and turfmapp_expenses.has_workspace_role(
     public.branding_workspace_segment(name),
-    array['admin'::public.workspace_role]
+    array['admin'::turfmapp_expenses.workspace_role]
   )
 )
 with check (
   bucket_id = 'branding'
-  and public.has_workspace_role(
+  and turfmapp_expenses.has_workspace_role(
     public.branding_workspace_segment(name),
-    array['admin'::public.workspace_role]
+    array['admin'::turfmapp_expenses.workspace_role]
   )
 );
 
@@ -118,8 +118,8 @@ create policy "workspace admins can delete branding" on storage.objects
 for delete to authenticated
 using (
   bucket_id = 'branding'
-  and public.has_workspace_role(
+  and turfmapp_expenses.has_workspace_role(
     public.branding_workspace_segment(name),
-    array['admin'::public.workspace_role]
+    array['admin'::turfmapp_expenses.workspace_role]
   )
 );
