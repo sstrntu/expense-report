@@ -18,6 +18,9 @@
 		2A38DBEAE2ACA435E822BB54 /* ManageProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38CFAE9C5DE3B638DCBBB2C0 /* ManageProjectsView.swift */; };
 		2F34697B2E31FBBCFBE5DAA8 /* ExpenseWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057E30DAAC213F6C11654F4F /* ExpenseWorkflow.swift */; };
 		316F8FA301DEBD3B60C8FE6C /* ExpenseWorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65032653E0FA8C25647EE99C /* ExpenseWorkflowTests.swift */; };
+		AA11BB22CC33DD44EE55FF66 /* CurrencyConverterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF01 /* CurrencyConverterTests.swift */; };
+		BB22CC33DD44EE55FF66AA11 /* MoneyAmountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF660011 /* MoneyAmountTests.swift */; };
+		CC33DD44EE55FF66AA11BB22 /* FXAggregationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC33DD44EE55FF66AA110022 /* FXAggregationTests.swift */; };
 		33D75A9DB439478097014021 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ABE7DE6913E857B352AF659 /* AppEnvironment.swift */; };
 		40834B5A7CB85792D6B041B7 /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */; };
 		443FA1297503350D3A53D578 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231934AADFA8013182DE19B6 /* StatusPill.swift */; };
@@ -75,6 +78,9 @@
 		5B488DCADA8C68BFA0360E5C /* DomainDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDetailView.swift; sourceTree = "<group>"; };
 		5C39C2FBABF3E388FC35A3C4 /* th */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = th; path = th.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5DA4C973EC4A0EC46FB9BA9D /* PermissionMatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionMatrixTests.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF01 /* CurrencyConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyConverterTests.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF660011 /* MoneyAmountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyAmountTests.swift; sourceTree = "<group>"; };
+		CC33DD44EE55FF66AA110022 /* FXAggregationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FXAggregationTests.swift; sourceTree = "<group>"; };
 		5FC5205A5E412F3544FBF6C8 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
 		649767E02DA13AB1CCBFD0E9 /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
 		65032653E0FA8C25647EE99C /* ExpenseWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseWorkflowTests.swift; sourceTree = "<group>"; };
@@ -94,14 +100,14 @@
 		D6FB9F6D29FAAFB56DE2D00A /* TurfmappExpenseReportTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TurfmappExpenseReportTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB435F138568CD4F6440FBDF /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		DBA109009158416677C78BCB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E22F66287D08F237A93AEE5B /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
 		E267442BEA226AA91190BCA2 /* SupabaseRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseRepositories.swift; sourceTree = "<group>"; };
 		E6C1348EECDE16A1827E2010 /* RepositoryAppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryAppState.swift; sourceTree = "<group>"; };
 		EA14ACD9CE6B450907E4C1E5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EB3C217BB946FC793FCE5377 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		FF6E88799E3A97175A67C294 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
-		FF8327C50FEE23C95BB2274C /* AppConfig.local.xcconfig.example */ = {isa = PBXFileReference; path = AppConfig.local.xcconfig.example; sourceTree = "<group>"; };
+		FF8327C50FEE23C95BB2274C /* AppConfig.local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = AppConfig.local.xcconfig.example; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -110,6 +116,9 @@
 			children = (
 				65032653E0FA8C25647EE99C /* ExpenseWorkflowTests.swift */,
 				5DA4C973EC4A0EC46FB9BA9D /* PermissionMatrixTests.swift */,
+				AA11BB22CC33DD44EE55FF01 /* CurrencyConverterTests.swift */,
+				BB22CC33DD44EE55FF660011 /* MoneyAmountTests.swift */,
+				CC33DD44EE55FF66AA110022 /* FXAggregationTests.swift */,
 			);
 			path = TurfmappExpenseReportTests;
 			sourceTree = "<group>";
@@ -387,6 +396,9 @@
 			files = (
 				316F8FA301DEBD3B60C8FE6C /* ExpenseWorkflowTests.swift in Sources */,
 				45A49085C87D7679952C460E /* PermissionMatrixTests.swift in Sources */,
+				AA11BB22CC33DD44EE55FF66 /* CurrencyConverterTests.swift in Sources */,
+				BB22CC33DD44EE55FF66AA11 /* MoneyAmountTests.swift in Sources */,
+				CC33DD44EE55FF66AA11BB22 /* FXAggregationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
