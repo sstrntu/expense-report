@@ -11,8 +11,8 @@ struct DomainDetailView: View {
     var onReject: (String) -> Void
     var onResubmit: () -> Void
     var onCancel: () -> Void
-    var onConfirmPurchase: (MoneyAmount, String?) -> Void
-    var onMarkReimbursed: (PaymentMethod, String?) -> Void
+    var onConfirmPurchase: (MoneyAmount, Data?, String?, String?) -> Void
+    var onMarkReimbursed: (PaymentMethod, Data?, String?, String?) -> Void
     var onArchive: () -> Void
     var onDelete: () -> Void
     var onAttachReceipt: (Data, String, String) -> Void = { _, _, _ in }
@@ -42,19 +42,21 @@ struct DomainDetailView: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
         .sheet(isPresented: $showPurchaseSheet) {
-            PurchaseConfirmSheet(initialAmount: expense.amount.decimalValue) { finalAmount, receipt in
+            PurchaseConfirmSheet(initialAmount: expense.amount.decimalValue) { finalAmount, data, fileName, contentType in
                 onConfirmPurchase(
                     MoneyAmount(
                         minorUnits: Int((finalAmount * 100).rounded()),
                         currency: expense.amount.currency
                     ),
-                    receipt
+                    data, fileName, contentType
                 )
             }
                 .presentationDetents([.medium])
         }
         .sheet(isPresented: $showReimbursedSheet) {
-            MarkAsPaidSheet { method, receipt in onMarkReimbursed(method, receipt) }
+            MarkAsPaidSheet { method, data, fileName, contentType in
+                onMarkReimbursed(method, data, fileName, contentType)
+            }
                 .presentationDetents([.medium])
         }
         .sheet(isPresented: $showRejectSheet) {

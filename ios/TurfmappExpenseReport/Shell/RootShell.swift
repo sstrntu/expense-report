@@ -269,30 +269,56 @@ struct RootShell: View {
                     Task { await repositoryApp.cancelExpense(id: e.id, reason: "Cancelled by submitter.") }
                     popNav()
                 },
-                onConfirmPurchase: { finalAmount, receipt in
+                onConfirmPurchase: { finalAmount, receiptData, receiptFileName, receiptContentType in
                     Task {
+                        var attachmentId: String? = nil
+                        if let data = receiptData, let fileName = receiptFileName, let contentType = receiptContentType {
+                            let attachment = await repositoryApp.uploadAttachment(
+                                expenseId: e.id,
+                                upload: PendingReceiptUpload(
+                                    kind: .purchaseReceipt,
+                                    fileName: fileName,
+                                    contentType: contentType,
+                                    data: data
+                                )
+                            )
+                            attachmentId = attachment?.id
+                        }
                         await repositoryApp.confirmPurchase(
                             id: e.id,
                             input: PurchaseConfirmationInput(
                                 finalAmount: finalAmount,
                                 purchaseDate: Date(),
-                                receiptAttachmentId: nil,
-                                note: receipt
+                                receiptAttachmentId: attachmentId,
+                                note: nil
                             )
                         )
                     }
                     popNav()
                 },
-                onMarkReimbursed: { method, receipt in
+                onMarkReimbursed: { method, receiptData, receiptFileName, receiptContentType in
                     Task {
+                        var attachmentId: String? = nil
+                        if let data = receiptData, let fileName = receiptFileName, let contentType = receiptContentType {
+                            let attachment = await repositoryApp.uploadAttachment(
+                                expenseId: e.id,
+                                upload: PendingReceiptUpload(
+                                    kind: .reimbursementProof,
+                                    fileName: fileName,
+                                    contentType: contentType,
+                                    data: data
+                                )
+                            )
+                            attachmentId = attachment?.id
+                        }
                         await repositoryApp.markReimbursed(
                             id: e.id,
                             input: ReimbursementInput(
                                 amount: e.amount,
                                 paymentMethod: method.repositoryMethod,
                                 paidAt: Date(),
-                                reference: receipt,
-                                proofAttachmentId: nil
+                                reference: nil,
+                                proofAttachmentId: attachmentId
                             )
                         )
                     }

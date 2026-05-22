@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
 
 // Reusable sheet components used by `DomainDetailView`:
 //   - `ReceiptPreview` / `ReceiptPreviewSheet` — loads + renders an attachment from Supabase Storage.
@@ -84,12 +86,18 @@ struct ReceiptPreviewSheet: View {
 
 struct PurchaseConfirmSheet: View {
     let initialAmount: Double
-    var onConfirm: (Double, String?) -> Void
+    var onConfirm: (Double, Data?, String?, String?) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var finalAmountText: String
-    @State private var receiptName: String? = nil
+    @State private var pickedData: Data? = nil
+    @State private var pickedFileName: String? = nil
+    @State private var pickedContentType: String? = nil
+    @State private var photosItem: PhotosPickerItem? = nil
+    @State private var showPickerOptions = false
+    @State private var showImagePicker = false
+    @State private var showFilePicker = false
 
-    init(initialAmount: Double, onConfirm: @escaping (Double, String?) -> Void) {
+    init(initialAmount: Double, onConfirm: @escaping (Double, Data?, String?, String?) -> Void) {
         self.initialAmount = initialAmount
         self.onConfirm = onConfirm
         _finalAmountText = State(initialValue: String(format: "%.2f", initialAmount))
@@ -134,35 +142,67 @@ struct PurchaseConfirmSheet: View {
                     .padding(.horizontal, 20)
 
                 Button {
-                    receiptName = receiptName == nil ? "receipt.pdf" : nil
+                    if pickedFileName != nil {
+                        pickedData = nil; pickedFileName = nil; pickedContentType = nil; photosItem = nil
+                    } else {
+                        showPickerOptions = true
+                    }
                 } label: {
                     HStack(spacing: 12) {
-                        Image(systemName: receiptName != nil ? "doc.fill" : "paperclip")
+                        Image(systemName: pickedFileName != nil ? "doc.fill" : "paperclip")
                             .font(.system(size: 16))
-                            .foregroundStyle(receiptName != nil ? Tokens.purchased : .secondary)
-                        Text(receiptName ?? tr("detail.add_receipt"))
+                            .foregroundStyle(pickedFileName != nil ? Tokens.purchased : .secondary)
+                        Text(pickedFileName ?? tr("detail.add_receipt"))
                             .font(.system(size: 14))
-                            .foregroundStyle(receiptName != nil ? Color.primary : .secondary)
+                            .foregroundStyle(pickedFileName != nil ? Color.primary : .secondary)
+                            .lineLimit(1)
                         Spacer()
-                        if receiptName != nil {
+                        if pickedFileName != nil {
                             Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                         }
                     }
                     .padding(14)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(
-                        receiptName != nil ? Tokens.purchased.opacity(0.4) : Color.white.opacity(0.4),
+                        pickedFileName != nil ? Tokens.purchased.opacity(0.4) : Color.white.opacity(0.4),
                         lineWidth: 0.5
                     ))
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 20)
+                .confirmationDialog("Add Receipt", isPresented: $showPickerOptions, titleVisibility: .visible) {
+                    Button("Photo Library") { showImagePicker = true }
+                    Button("Files") { showFilePicker = true }
+                    Button("Cancel", role: .cancel) {}
+                }
+                .photosPicker(isPresented: $showImagePicker, selection: $photosItem, matching: .images)
+                .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.pdf, .image]) { result in
+                    guard let url = try? result.get() else { return }
+                    guard url.startAccessingSecurityScopedResource() else { return }
+                    defer { url.stopAccessingSecurityScopedResource() }
+                    guard let data = try? Data(contentsOf: url) else { return }
+                    pickedData = data
+                    pickedFileName = url.lastPathComponent
+                    pickedContentType = url.pathExtension.lowercased() == "pdf" ? "application/pdf" : "image/jpeg"
+                }
+                .onChange(of: photosItem) { _, item in
+                    guard let item else { return }
+                    Task {
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            await MainActor.run {
+                                pickedData = data
+                                pickedFileName = "receipt-\(Int(Date().timeIntervalSince1970)).jpg"
+                                pickedContentType = "image/jpeg"
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer()
 
             Button {
-                onConfirm(finalAmount, receiptName)
+                onConfirm(finalAmount, pickedData, pickedFileName, pickedContentType)
                 dismiss()
             } label: {
                 Text(tr("detail.purchase_sheet.title"))
@@ -235,12 +275,17 @@ struct RejectReasonSheet: View {
 // MARK: – Reimbursement sheet (manager/financier)
 
 struct MarkAsPaidSheet: View {
-    var onConfirm: (PaymentMethod, String?) -> Void
+    var onConfirm: (PaymentMethod, Data?, String?, String?) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedMethod: PaymentMethod? = nil
-    @State private var receiptName: String? = nil
-    @State private var showReceiptPicker = false
+    @State private var pickedData: Data? = nil
+    @State private var pickedFileName: String? = nil
+    @State private var pickedContentType: String? = nil
+    @State private var photosItem: PhotosPickerItem? = nil
+    @State private var showPickerOptions = false
+    @State private var showImagePicker = false
+    @State private var showFilePicker = false
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
 
@@ -271,17 +316,22 @@ struct MarkAsPaidSheet: View {
                     .padding(.horizontal, 20)
 
                 Button {
-                    receiptName = receiptName == nil ? "payment_receipt.pdf" : nil
+                    if pickedFileName != nil {
+                        pickedData = nil; pickedFileName = nil; pickedContentType = nil; photosItem = nil
+                    } else {
+                        showPickerOptions = true
+                    }
                 } label: {
                     HStack(spacing: 12) {
-                        Image(systemName: receiptName != nil ? "doc.fill" : "paperclip")
+                        Image(systemName: pickedFileName != nil ? "doc.fill" : "paperclip")
                             .font(.system(size: 16))
-                            .foregroundStyle(receiptName != nil ? Tokens.reimbursed : .secondary)
-                        Text(receiptName ?? "Attach receipt (optional)")
+                            .foregroundStyle(pickedFileName != nil ? Tokens.reimbursed : .secondary)
+                        Text(pickedFileName ?? "Attach receipt (optional)")
                             .font(.system(size: 14))
-                            .foregroundStyle(receiptName != nil ? Color.primary : .secondary)
+                            .foregroundStyle(pickedFileName != nil ? Color.primary : .secondary)
+                            .lineLimit(1)
                         Spacer()
-                        if receiptName != nil {
+                        if pickedFileName != nil {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
                         }
@@ -289,20 +339,46 @@ struct MarkAsPaidSheet: View {
                     .padding(14)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(
-                        receiptName != nil ? Tokens.reimbursed.opacity(0.4) : Color.white.opacity(0.4),
+                        pickedFileName != nil ? Tokens.reimbursed.opacity(0.4) : Color.white.opacity(0.4),
                         lineWidth: 0.5
                     ))
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 20)
+                .confirmationDialog("Add Receipt", isPresented: $showPickerOptions, titleVisibility: .visible) {
+                    Button("Photo Library") { showImagePicker = true }
+                    Button("Files") { showFilePicker = true }
+                    Button("Cancel", role: .cancel) {}
+                }
+                .photosPicker(isPresented: $showImagePicker, selection: $photosItem, matching: .images)
+                .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.pdf, .image]) { result in
+                    guard let url = try? result.get() else { return }
+                    guard url.startAccessingSecurityScopedResource() else { return }
+                    defer { url.stopAccessingSecurityScopedResource() }
+                    guard let data = try? Data(contentsOf: url) else { return }
+                    pickedData = data
+                    pickedFileName = url.lastPathComponent
+                    pickedContentType = url.pathExtension.lowercased() == "pdf" ? "application/pdf" : "image/jpeg"
+                }
+                .onChange(of: photosItem) { _, item in
+                    guard let item else { return }
+                    Task {
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            await MainActor.run {
+                                pickedData = data
+                                pickedFileName = "receipt-\(Int(Date().timeIntervalSince1970)).jpg"
+                                pickedContentType = "image/jpeg"
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer()
 
             Button {
                 guard let method = selectedMethod else { return }
-                onConfirm(method, receiptName)
-
+                onConfirm(method, pickedData, pickedFileName, pickedContentType)
                 dismiss()
             } label: {
                 Text(selectedMethod == nil ? "Select a payment method" : "Confirm Reimbursement")
