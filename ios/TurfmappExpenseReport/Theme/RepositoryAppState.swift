@@ -271,6 +271,15 @@ final class RepositoryAppState: ObservableObject {
         }
     }
 
+    func signOut() async {
+        _ = try? await authRepository.signOut()
+        workspaces = []; selectedWorkspace = nil
+        projects = []; expenses = []; eventsByExpenseId = [:]
+        members = []; invites = []; categories = []; notifications = []
+        currentUserProfile = nil; lastError = nil
+        UserDefaults.standard.removeObject(forKey: selectedWorkspaceDefaultsKey)
+    }
+
     @discardableResult
     func signOutAllSessions() async -> Bool {
         do {

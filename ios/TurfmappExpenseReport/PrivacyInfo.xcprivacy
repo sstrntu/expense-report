@@ -73,7 +73,6 @@
             <key>NSPrivacyCollectedDataTypePurposes</key>
             <array>
                 <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-                <string>NSPrivacyCollectedDataTypePurposeAuthentication</string>
             </array>
         </dict>
     </array>

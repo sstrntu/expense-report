@@ -353,12 +353,14 @@ actor SupabaseRESTClient {
     }
 
     func currentMembershipId(workspaceId: String) async throws -> String {
+        guard let userId = currentUserId() else { throw SupabaseRepositoryError.missingSession }
         struct Row: Decodable { let id: String }
         let rows: [Row] = try await get(
             "workspace_memberships",
             queryItems: [
                 URLQueryItem(name: "select", value: "id"),
                 URLQueryItem(name: "workspace_id", value: "eq.\(workspaceId)"),
+                URLQueryItem(name: "user_id", value: "eq.\(userId)"),
                 URLQueryItem(name: "status", value: "eq.active"),
                 URLQueryItem(name: "limit", value: "1")
             ]
@@ -870,11 +872,13 @@ struct SupabaseProjectRepository: ProjectRepository {
     }
 
     private func currentMembershipId(workspaceId: String) async throws -> String {
+        guard let userId = await client.currentUserId() else { throw SupabaseRepositoryError.missingSession }
         let rows: [CurrentMembershipRow] = try await client.get(
             "workspace_memberships",
             queryItems: [
                 URLQueryItem(name: "select", value: "id"),
                 URLQueryItem(name: "workspace_id", value: "eq.\(workspaceId)"),
+                URLQueryItem(name: "user_id", value: "eq.\(userId)"),
                 URLQueryItem(name: "status", value: "eq.active"),
                 URLQueryItem(name: "limit", value: "1")
             ]
@@ -1115,11 +1119,13 @@ struct SupabaseExpenseRepository: ExpenseRepository {
     }
 
     private func currentMembershipId(workspaceId: String) async throws -> String {
+        guard let userId = await client.currentUserId() else { throw SupabaseRepositoryError.missingSession }
         let rows: [CurrentMembershipRow] = try await client.get(
             "workspace_memberships",
             queryItems: [
                 URLQueryItem(name: "select", value: "id"),
                 URLQueryItem(name: "workspace_id", value: "eq.\(workspaceId)"),
+                URLQueryItem(name: "user_id", value: "eq.\(userId)"),
                 URLQueryItem(name: "status", value: "eq.active"),
                 URLQueryItem(name: "limit", value: "1")
             ]

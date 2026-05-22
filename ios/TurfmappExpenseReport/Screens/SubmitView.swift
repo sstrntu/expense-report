@@ -658,16 +658,17 @@ struct SubmitView: View {
         let threshold = project.approvalThreshold.decimalValue
         let tint = willAutoApprove ? Tokens.approved : Tokens.pending
         let icon = willAutoApprove ? "bolt.fill" : "person.crop.circle.badge.clock"
-        let title = willAutoApprove ? autoRouteTitle : "Requires manager approval"
+        let title = willAutoApprove ? autoRouteTitle : tr("submit.routing.needs_approval")
+        let m = money(threshold, currency: project.budget.currency)
         let detail: String
         if willAutoApprove {
             detail = expenseKind == .preApproval
-                ? "Under \(money(threshold, currency: project.budget.currency)) limit for \(project.name). You can buy after submission."
-                : "Under \(money(threshold, currency: project.budget.currency)) limit for \(project.name). Finance can process reimbursement."
+                ? tr("submit.routing.auto.preapproval", m, project.name)
+                : tr("submit.routing.auto.expense", m, project.name)
         } else {
             detail = expenseKind == .preApproval
-                ? "Over \(money(threshold, currency: project.budget.currency)) limit for \(project.name). Wait for approval before purchasing."
-                : "Over \(money(threshold, currency: project.budget.currency)) limit for \(project.name). Manager review is required before reimbursement."
+                ? tr("submit.routing.manager.preapproval", m, project.name)
+                : tr("submit.routing.manager.expense", m, project.name)
         }
         return HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
@@ -685,8 +686,8 @@ struct SubmitView: View {
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(tint.opacity(0.25), lineWidth: 0.5))
     }
 
-    private var autoRouteTitle: String {
-        expenseKind == .preApproval ? "Auto-approved pre-approval" : "Routes to finance"
+    @MainActor private var autoRouteTitle: String {
+        expenseKind == .preApproval ? tr("submit.routing.auto_title.preapproval") : tr("submit.routing.auto_title.expense")
     }
 
     private func submitExpense() {

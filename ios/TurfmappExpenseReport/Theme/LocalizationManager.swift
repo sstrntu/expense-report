@@ -81,6 +81,9 @@ struct TText: View {
     }
 
     var body: some View {
-        Text(tr(key, arguments))
+        Text(arguments.isEmpty
+             ? tr(key)
+             : String(format: manager.localizationBundle.localizedString(forKey: key, value: key, table: nil),
+                      arguments: arguments))
     }
 }

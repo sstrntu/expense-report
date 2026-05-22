@@ -178,7 +178,10 @@ struct RootShell: View {
             ReviewView { e in navStack.append(.domainDetail(e)) }
                 .environmentObject(app)
         case .profile:
-            ProfileView(role: app.role, onSignOut: app.signOut) { key in
+            ProfileView(role: app.role, onSignOut: {
+                Task { await repositoryApp.signOut() }
+                app.signOut()
+            }) { key in
                 if key == "manageProjects" { navStack.append(.manageProjects) }
                 if key == "permissions"    { navStack.append(.permissions) }
                 if key == "workspace"      { navStack.append(.workspaceSettings) }

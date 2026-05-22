@@ -126,7 +126,6 @@
 "home.new_expense.subtitle" = "Submit before making the purchase";
 "home.drafts.count" = "%d draft";
 "home.drafts.count.plural" = "%d drafts";
-"home.drafts.continue" = "Tap to continue editing.";
 
 /* === Detail view sheets === */
 "detail.purchase_sheet.title" = "Confirm Purchase";
@@ -530,3 +529,13 @@
 "home.drafts.continue" = "Pick one to continue";
 "home.drafts.untitled" = "Untitled expense";
 "overview.drafts.continue" = "Pick one to continue";
+
+/* === Routing banner on submit screen === */
+/* %1$@ = threshold amount, %2$@ = project name */
+"submit.routing.needs_approval" = "Requires manager approval";
+"submit.routing.auto_title.preapproval" = "Auto-approved pre-approval";
+"submit.routing.auto_title.expense" = "Routes to finance";
+"submit.routing.auto.preapproval" = "Under %1$@ limit for %2$@. You can buy after submission.";
+"submit.routing.auto.expense" = "Under %1$@ limit for %2$@. Finance can process reimbursement.";
+"submit.routing.manager.preapproval" = "Over %1$@ limit for %2$@. Wait for approval before purchasing.";
+"submit.routing.manager.expense" = "Over %1$@ limit for %2$@. Manager review is required before reimbursement.";

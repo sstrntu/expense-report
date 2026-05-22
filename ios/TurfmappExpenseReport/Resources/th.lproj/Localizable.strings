@@ -126,7 +126,6 @@
 "home.new_expense.subtitle" = "ส่งก่อนทำการซื้อ";
 "home.drafts.count" = "ฉบับร่าง %d ฉบับ";
 "home.drafts.count.plural" = "ฉบับร่าง %d ฉบับ";
-"home.drafts.continue" = "แตะเพื่อแก้ไขต่อ";
 
 /* === Detail view sheets === */
 "detail.purchase_sheet.title" = "ยืนยันการซื้อ";
@@ -527,5 +526,14 @@
 "submit.fx.will_convert" = "จะถูกแปลงจาก %1$@ เป็น %2$@ เมื่อส่ง";
 
 "home.drafts.continue" = "เลือกหนึ่งรายการเพื่อแก้ไขต่อ";
+
+/* === Routing banner on submit screen === */
+"submit.routing.needs_approval" = "ต้องได้รับการอนุมัติจากผู้จัดการ";
+"submit.routing.auto_title.preapproval" = "อนุมัติล่วงหน้าอัตโนมัติ";
+"submit.routing.auto_title.expense" = "ส่งต่อไปยังฝ่ายการเงิน";
+"submit.routing.auto.preapproval" = "ต่ำกว่าวงเงิน %1$@ สำหรับ %2$@ สามารถซื้อได้หลังจากส่ง";
+"submit.routing.auto.expense" = "ต่ำกว่าวงเงิน %1$@ สำหรับ %2$@ ฝ่ายการเงินสามารถดำเนินการคืนเงินได้";
+"submit.routing.manager.preapproval" = "เกินวงเงิน %1$@ สำหรับ %2$@ รอการอนุมัติก่อนซื้อ";
+"submit.routing.manager.expense" = "เกินวงเงิน %1$@ สำหรับ %2$@ ต้องผ่านการตรวจสอบจากผู้จัดการก่อนคืนเงิน";
 "home.drafts.untitled" = "รายการไม่มีชื่อ";
 "overview.drafts.continue" = "เลือกหนึ่งรายการเพื่อแก้ไขต่อ";
