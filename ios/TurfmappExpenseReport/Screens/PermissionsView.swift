@@ -238,7 +238,7 @@ struct InviteMemberSheet: View {
                 .font(.system(size: 20, weight: .bold))
                 .padding(.horizontal, 20).padding(.top, 24)
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     HStack {
                         Text(tr("permissions.invite.email")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)

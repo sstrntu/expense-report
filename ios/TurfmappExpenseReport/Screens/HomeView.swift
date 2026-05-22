@@ -73,7 +73,7 @@ struct HomeView: View {
     }
 
     private func heroCard(pending: Double, approved: Double) -> some View {
-        GlassCard(padding: 18) {
+        GlassCard(padding: Tokens.padHero) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -146,7 +146,7 @@ struct HomeView: View {
     }
 
     private var projectsCard: some View {
-        GlassCard(padding: 14) {
+        GlassCard(padding: Tokens.padDense) {
             VStack(spacing: 14) {
                 ForEach(repositoryApp.projects.prefix(3)) { p in
                     DomainProjectRow(project: p, expenses: repositoryApp.expenses)

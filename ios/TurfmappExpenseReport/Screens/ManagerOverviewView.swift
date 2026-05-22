@@ -75,7 +75,7 @@ struct ManagerOverviewView: View {
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
-            GlassCard(padding: 18) {
+            GlassCard(padding: Tokens.padHero) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -130,7 +130,7 @@ struct ManagerOverviewView: View {
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, 4).padding(.top, 6)
 
-            GlassCard(padding: 14) {
+            GlassCard(padding: Tokens.padDense) {
                 if activeProjects.isEmpty {
                     Text(tr("overview.no_projects"))
                         .font(.system(size: 12))
@@ -160,7 +160,7 @@ struct ManagerOverviewView: View {
     }
 
     private func kpiCard(label: String, value: String, delta: String, positive: Bool) -> some View {
-        GlassCard(padding: 14) {
+        GlassCard(padding: Tokens.padDense) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.system(size: 10.5, weight: .semibold)).tracking(0.6).foregroundStyle(.tertiary)
                 Text(value).font(.system(size: 22, weight: .bold))

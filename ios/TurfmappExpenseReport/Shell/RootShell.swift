@@ -17,6 +17,21 @@ struct RootShell: View {
 
     private enum LaunchState { case restoring, ready }
 
+    private var tabBadges: [TabID: Int] {
+        if app.role == .employee {
+            let rejected = repositoryApp.expenses.filter { $0.status == .rejected }.count
+            return rejected > 0 ? [.activity: rejected] : [:]
+        }
+        let queueCount: Int = {
+            switch app.role {
+            case .finance: return repositoryApp.financeQueue.count
+            case .admin:   return repositoryApp.managerQueue.count + repositoryApp.financeQueue.count
+            default:       return repositoryApp.managerQueue.count
+            }
+        }()
+        return queueCount > 0 ? [.review: queueCount] : [:]
+    }
+
     var body: some View {
         Group {
             switch launchState {
@@ -111,7 +126,7 @@ struct RootShell: View {
 
             // Bottom tab bar (hidden when on add/stack screens)
             if navStack.isEmpty && selectedTab != .add {
-                BottomTabBar(selected: $selectedTab, role: app.role)
+                BottomTabBar(selected: $selectedTab, role: app.role, badgeCounts: tabBadges)
                     .padding(.bottom, 28)
                     .zIndex(20)
             }
@@ -343,6 +358,8 @@ struct RootShell: View {
 
     private var topBar: some View {
         let selectedWorkspace = repositoryApp.selectedWorkspace
+        let workspaceName = selectedWorkspace?.name ?? app.company.name
+        let hasUnread = repositoryApp.notifications.contains { !$0.isRead }
 
         return HStack {
             // Workspace picker — opens a dropdown menu
@@ -376,14 +393,17 @@ struct RootShell: View {
                 HStack(spacing: 8) {
                     WorkspaceBadge(
                         color: selectedWorkspace?.brandColor ?? app.company.color,
-                        name: selectedWorkspace?.name ?? app.company.name,
+                        name: workspaceName,
                         logoURL: selectedWorkspace?.logoUrl.flatMap(URL.init(string:)),
                         size: 26
                     )
-                    Text(selectedWorkspace?.name ?? app.company.name)
+                    Text(workspaceName)
                         .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: 180, alignment: .leading)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
+                        .font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
                 }
                 .padding(.leading, 6).padding(.trailing, 12).padding(.vertical, 6)
             }
@@ -399,6 +419,14 @@ struct RootShell: View {
                 Image(systemName: "bell.fill")
                     .font(.system(size: 16)).foregroundStyle(Color.primary)
                     .frame(width: 38, height: 38)
+                    .overlay(alignment: .topTrailing) {
+                        if hasUnread {
+                            Circle()
+                                .fill(Tokens.rejected)
+                                .frame(width: 8, height: 8)
+                                .offset(x: -4, y: 4)
+                        }
+                    }
             }
             .buttonStyle(.plain)
             .glassSurface(corner: 999)
@@ -484,7 +512,7 @@ struct AuthView: View {
                 showVerification = false
             }
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     authField(tr("auth.email"), text: $email, keyboard: .emailAddress)
                     Divider().opacity(0.4)
@@ -620,7 +648,7 @@ struct ProfileSetupView: View {
             Text(tr("setup.profile.subtitle"))
                 .font(.system(size: 14)).foregroundStyle(.secondary)
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     setupField(tr("setup.profile.fullname"), text: $name)
                     Divider().opacity(0.4)
@@ -668,7 +696,7 @@ struct WorkspaceSetupView: View {
             Text(tr("setup.workspace.subtitle"))
                 .font(.system(size: 14)).foregroundStyle(.secondary)
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 Picker(tr("setup.workspace.title"), selection: $mode) {
                     Text(tr("setup.workspace.mode.create")).tag(WorkspaceMode.create)
                     Text(tr("setup.workspace.mode.join")).tag(WorkspaceMode.join)
@@ -676,7 +704,7 @@ struct WorkspaceSetupView: View {
                 .pickerStyle(.segmented)
             }
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 if mode == .create {
                     VStack(spacing: 0) {
                         setupField(tr("setup.workspace.org_name"), text: $workspaceName)

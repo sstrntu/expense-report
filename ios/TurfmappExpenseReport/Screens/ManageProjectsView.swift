@@ -144,7 +144,7 @@ struct ManageProjectsView: View {
     }
 
     private var createForm: some View {
-        GlassCard(padding: 16) {
+        GlassCard(padding: Tokens.padCard) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text(tr("projects.new")).font(.system(size: 14, weight: .semibold))

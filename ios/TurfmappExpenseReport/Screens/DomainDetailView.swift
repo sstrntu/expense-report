@@ -181,7 +181,7 @@ struct DomainDetailView: View {
     }()
 
     private var detailsCard: some View {
-        GlassCard(padding: 16) {
+        GlassCard(padding: Tokens.padCard) {
             VStack(spacing: 0) {
                 FormFieldRow(label: tr("detail.field.type"), value: localizedKindLabel(expense.kind), showChevron: false)
                 Divider().opacity(0.4)
@@ -270,7 +270,7 @@ struct DomainDetailView: View {
     }
 
     private var timelineCard: some View {
-        GlassCard(padding: 14) {
+        GlassCard(padding: Tokens.padDense) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(tr("detail.timeline")).font(.system(size: 13, weight: .semibold))
                 if events.isEmpty {
@@ -309,7 +309,7 @@ struct DomainDetailView: View {
     private var notesCard: some View {
         let noted = events.filter { ($0.note?.isEmpty == false) }
         if !noted.isEmpty {
-            GlassCard(padding: 14) {
+            GlassCard(padding: Tokens.padDense) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(tr("detail.notes")).font(.system(size: 13, weight: .semibold))
                     ForEach(noted) { event in

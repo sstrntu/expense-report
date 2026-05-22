@@ -155,7 +155,7 @@ struct DashboardView: View {
 
             categoryCard(segments: segments, total: total)
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text(tr("dashboard.monthly")).font(.system(size: 13, weight: .semibold))
@@ -198,7 +198,7 @@ struct DashboardView: View {
     /// the old two-card row so users see the cash split without doing the
     /// arithmetic in their head.
     private func spendBreakdownCard(paid: Double, pending: Double) -> some View {
-        GlassCard(padding: 16) {
+        GlassCard(padding: Tokens.padCard) {
             HStack(alignment: .top, spacing: 0) {
                 breakdownColumn(
                     label: tr("dashboard.kpi.paid"),
@@ -234,7 +234,7 @@ struct DashboardView: View {
     }
 
     private func categoryCard(segments: [DonutChart.Segment], total: Double) -> some View {
-        GlassCard(padding: 16) {
+        GlassCard(padding: Tokens.padCard) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(tr("dashboard.category")).font(.system(size: 13, weight: .semibold))
                 HStack(spacing: 18) {

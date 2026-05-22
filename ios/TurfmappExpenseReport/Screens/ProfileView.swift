@@ -17,7 +17,7 @@ struct ProfileView: View {
             let avatarURL = repositoryApp.currentUserProfile?.avatarUrl.flatMap(URL.init(string:))
 
             Button { onNav("account") } label: {
-                GlassCard(padding: 18) {
+                GlassCard(padding: Tokens.padHero) {
                     HStack(spacing: 14) {
                         Avatar(
                             color: repositoryApp.selectedWorkspace?.brandColor ?? app.company.color,
@@ -95,7 +95,7 @@ struct ProfileView: View {
             }
 
             sectionHeader(tr("profile.section.access"))
-            GlassCard(padding: 14) {
+            GlassCard(padding: Tokens.padDense) {
                 VStack(alignment: .leading, spacing: 8) {
                     roleScopeRow(tr("role.employee"), tr("role.employee.description"), icon: "person.fill", active: role == .employee)
                     Divider().opacity(0.4)
@@ -446,7 +446,7 @@ struct AccountSettingsView: View {
         let avatarURL = repositoryApp.currentUserProfile?.avatarUrl.flatMap(URL.init(string:))
 
         settingsContainer(title: tr("account.title"), onBack: onBack) {
-            GlassCard(padding: 18) {
+            GlassCard(padding: Tokens.padHero) {
                 HStack(spacing: 14) {
                     PhotosPicker(selection: $avatarPick, matching: .images) {
                         ZStack(alignment: .bottomTrailing) {
@@ -493,7 +493,7 @@ struct AccountSettingsView: View {
                 }
             }
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     editableSetting(tr("account.name"), text: $name)
                     Divider().opacity(0.4)
@@ -650,7 +650,7 @@ struct ChangePasswordSheet: View {
             Text(tr("security.change_password")).font(.system(size: 20, weight: .bold))
                 .padding(.horizontal, 20).padding(.top, 24)
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     HStack {
                         Text(tr("security.password.new")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
@@ -707,7 +707,7 @@ struct AppPreferencesView: View {
         settingsContainer(title: tr("preferences.title"), onBack: onBack) {
             // Language picker — primary control, sits at the top so users
             // can find it without scrolling.
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(tr("preferences.language"))
                         .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
@@ -725,7 +725,7 @@ struct AppPreferencesView: View {
                 }
             }
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     FormFieldRow(label: tr("preferences.workspace_currency"),
                                  value: repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD",
@@ -752,7 +752,7 @@ struct ReportsExportView: View {
 
     var body: some View {
         settingsContainer(title: tr("reports.title"), onBack: onBack) {
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(repositoryApp.selectedWorkspace?.name ?? app.company.name).font(.system(size: 15, weight: .bold))
                     HStack {
@@ -872,7 +872,7 @@ struct HelpSupportView: View {
 
     var body: some View {
         settingsContainer(title: tr("help.title"), onBack: onBack) {
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(tr("help.workflow_title")).font(.system(size: 13.5, weight: .semibold))
                     Text(tr("help.workflow_body"))
@@ -881,7 +881,7 @@ struct HelpSupportView: View {
             }
 
             Link(destination: URL(string: "mailto:support@turfmapp.io?subject=Expenses%20app%20support")!) {
-                GlassCard(padding: 14) {
+                GlassCard(padding: Tokens.padDense) {
                     HStack(spacing: 12) {
                         Image(systemName: "envelope.fill")
                             .foregroundStyle(Tokens.slate500)
@@ -917,7 +917,7 @@ struct SystemStatesView: View {
     }
 
     private func stateCard(icon: String, title: String, message: String, tint: Color) -> some View {
-        GlassCard(padding: 14) {
+        GlassCard(padding: Tokens.padDense) {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .semibold))
@@ -950,7 +950,7 @@ struct LegalAboutView: View {
 
     var body: some View {
         settingsContainer(title: tr("legal.title"), onBack: onBack) {
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(tr("legal.app_name")).font(.system(size: 18, weight: .bold))
                     Text(tr("legal.version", marketingVersion)).font(.system(size: 12)).foregroundStyle(.secondary)
@@ -986,7 +986,7 @@ struct WorkspaceSettingsView: View {
         let logoURL = workspace?.logoUrl.flatMap(URL.init(string:))
 
         settingsContainer(title: tr("workspace.title"), onBack: onBack) {
-            GlassCard(padding: 18) {
+            GlassCard(padding: Tokens.padHero) {
                 HStack(spacing: 14) {
                     PhotosPicker(selection: $logoPick, matching: .images) {
                         ZStack(alignment: .bottomTrailing) {
@@ -1043,7 +1043,7 @@ struct WorkspaceSettingsView: View {
                            title: tr("workspace.update_failed"), message: lastError)
             }
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     HStack {
                         Text(tr("workspace.name")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)

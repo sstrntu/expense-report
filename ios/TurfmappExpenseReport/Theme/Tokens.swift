@@ -19,6 +19,10 @@ enum Tokens {
     static let radiusCard: CGFloat = 22
     static let radiusButton: CGFloat = 14
     static let radiusPill: CGFloat = 999
+
+    static let padHero: CGFloat = 18
+    static let padCard: CGFloat = 16
+    static let padDense: CGFloat = 14
 }
 
 extension Color {

@@ -121,7 +121,7 @@ struct SubmitView: View {
                 scanReviewCard
             }
 
-            GlassCard(padding: 16) {
+            GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     editableRow(label: tr("submit.field.vendor"),  placeholder: tr("submit.field.vendor.placeholder"), text: $vendor)
                     Divider().opacity(0.4)

@@ -14,6 +14,7 @@ struct TabItem {
 struct BottomTabBar: View {
     @Binding var selected: TabID
     let role: AppRole
+    var badgeCounts: [TabID: Int] = [:]
     // Subscribe so labels re-render immediately when the user switches language.
     @ObservedObject private var localization = LocalizationManager.shared
 
@@ -53,7 +54,8 @@ struct BottomTabBar: View {
     }
 
     private func tabButton(_ tab: TabItem) -> some View {
-        Button {
+        let badgeCount = badgeCounts[tab.id] ?? 0
+        return Button {
             selected = tab.id
         } label: {
             VStack(spacing: 3) {
@@ -68,6 +70,17 @@ struct BottomTabBar: View {
                     Image(systemName: tab.icon)
                         .font(.system(size: 20, weight: selected == tab.id ? .semibold : .regular))
                         .foregroundStyle(selected == tab.id ? Color.primary : Color.secondary)
+                        .overlay(alignment: .topTrailing) {
+                            if badgeCount > 0 {
+                                Text(badgeCount < 100 ? "\(badgeCount)" : "99+")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, badgeCount < 10 ? 4 : 5)
+                                    .padding(.vertical, 2)
+                                    .background(Tokens.rejected, in: Capsule())
+                                    .offset(x: 10, y: -6)
+                            }
+                        }
                 }
                 .frame(height: 26)
 
