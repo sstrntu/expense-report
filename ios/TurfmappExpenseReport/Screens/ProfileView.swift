@@ -1144,6 +1144,7 @@ func settingsContainer<Content: View>(title: String, onBack: @escaping () -> Voi
     settingsContainer(title: title, onBack: onBack, trailing: { EmptyView() }, content: content)
 }
 
+@MainActor
 func settingsContainer<Trailing: View, Content: View>(
     title: String,
     onBack: @escaping () -> Void,
