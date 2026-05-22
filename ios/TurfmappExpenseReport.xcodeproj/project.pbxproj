@@ -81,6 +81,7 @@
 		38CFAE9C5DE3B638DCBBB2C0 /* ManageProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageProjectsView.swift; sourceTree = "<group>"; };
 		3C5CFE6D9BFCF255BF6E508B /* MoneyAmountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyAmountTests.swift; sourceTree = "<group>"; };
 		3CCE3D5DFB96304D91AC7BF2 /* Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Charts.swift; sourceTree = "<group>"; };
+		3CF9695146CE7624CAEAC75C /* TurfmappExpenseReport.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TurfmappExpenseReport.entitlements; sourceTree = "<group>"; };
 		466EE58810E6FB5656121C98 /* FXAggregationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FXAggregationTests.swift; sourceTree = "<group>"; };
 		4DFD149BB0104E1ED7E06542 /* ExpensePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpensePresentationTests.swift; sourceTree = "<group>"; };
 		4F7038F8122D513472A92656 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -152,6 +153,7 @@
 				DBA109009158416677C78BCB /* Assets.xcassets */,
 				67A7AB0D0FD25CE844CAF051 /* Info.plist */,
 				DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */,
+				3CF9695146CE7624CAEAC75C /* TurfmappExpenseReport.entitlements */,
 				6F096F243857EBABB4129FEC /* TurfmappExpenseReportApp.swift */,
 				5DB722DD20EF464B46CAF8A1 /* Components */,
 				7B8012651CA7FE1D3BCB2FCC /* Config */,
@@ -449,8 +451,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = TurfmappExpenseReport/TurfmappExpenseReport.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				INFOPLIST_FILE = TurfmappExpenseReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -611,8 +614,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = TurfmappExpenseReport/TurfmappExpenseReport.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				INFOPLIST_FILE = TurfmappExpenseReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
