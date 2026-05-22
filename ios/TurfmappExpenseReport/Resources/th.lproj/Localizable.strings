@@ -251,9 +251,6 @@
 "detail.timeline.created" = "สร้าง";
 "detail.timeline.no_events" = "ยังไม่มีเหตุการณ์";
 "detail.notes" = "บันทึก";
-"detail.notes.submitted_for" = "ส่งสำหรับ %@";
-"detail.notes.reviewer_rejected" = "โปรดเพิ่มบริบทและวัตถุประสงค์ทางธุรกิจที่ชัดเจน";
-"detail.notes.manager_approved" = "อนุมัติตามนโยบายโครงการ";
 "detail.notes.author.reviewer" = "ผู้ตรวจสอบ";
 "detail.notes.author.manager" = "ผู้จัดการ";
 "detail.receipts.submitted" = "ใบเสร็จที่ส่ง";

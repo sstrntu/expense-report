@@ -304,17 +304,29 @@ struct DomainDetailView: View {
         }
     }
 
+    /// Surfaces only the events that carry a real human-authored note
+    /// (rejection reasons, approval comments, etc.). Hidden entirely when
+    /// there are none so we never render fake placeholder content.
+    @ViewBuilder
     private var notesCard: some View {
-        GlassCard(padding: 14) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(tr("detail.notes")).font(.system(size: 13, weight: .semibold))
-                noteRow("Sira", tr("detail.notes.submitted_for", projectName), tint: Tokens.slate500)
-                if expense.status == .rejected {
-                    noteRow(tr("detail.notes.author.reviewer"), tr("detail.notes.reviewer_rejected"), tint: Tokens.rejected)
-                } else if managerApproved {
-                    noteRow(tr("detail.notes.author.manager"), tr("detail.notes.manager_approved"), tint: Tokens.approved)
+        let noted = events.filter { ($0.note?.isEmpty == false) }
+        if !noted.isEmpty {
+            GlassCard(padding: 14) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(tr("detail.notes")).font(.system(size: 13, weight: .semibold))
+                    ForEach(noted) { event in
+                        noteRow(noteAuthor(for: event), event.note ?? "", tint: event.tint)
+                    }
                 }
             }
+        }
+    }
+
+    private func noteAuthor(for event: ExpenseWorkflowEvent) -> String {
+        switch event.eventType {
+        case "rejected": return tr("detail.notes.author.reviewer")
+        case "approved": return tr("detail.notes.author.manager")
+        default: return event.title
         }
     }
 

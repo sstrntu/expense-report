@@ -251,9 +251,6 @@
 "detail.timeline.created" = "Created";
 "detail.timeline.no_events" = "No repository events yet";
 "detail.notes" = "Notes";
-"detail.notes.submitted_for" = "Submitted for %@.";
-"detail.notes.reviewer_rejected" = "Please add more context and a clearer business purpose.";
-"detail.notes.manager_approved" = "Approved under project policy.";
 "detail.notes.author.reviewer" = "Reviewer";
 "detail.notes.author.manager" = "Manager";
 "detail.receipts.submitted" = "Submitted receipt";
