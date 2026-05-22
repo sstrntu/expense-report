@@ -96,11 +96,12 @@ final class FXAggregationTests: XCTestCase {
 
     func testFinanceQueueIncludesAllFinanceStages() {
         let expenses = makeQueueExpenses()
-        let queue = expenses.filter {
-            ($0.status == .approved && $0.kind != .preApproval) ||
-            $0.status == .purchaseConfirmed ||
-            $0.status == .pendingFinanceReview ||
-            $0.status == .readyForReimbursement
+        let queue = expenses.filter { e in
+            let isApprovedClaim = e.status == .approved && e.kind != .preApproval
+            let isFinanceStage = e.status == .purchaseConfirmed
+                || e.status == .pendingFinanceReview
+                || e.status == .readyForReimbursement
+            return isApprovedClaim || isFinanceStage
         }
         // approved-claim + purchaseConfirmed + pendingFinanceReview + readyForReimbursement = 4
         XCTAssertEqual(queue.count, 4)
@@ -113,11 +114,12 @@ final class FXAggregationTests: XCTestCase {
             amount: money(100, "USD"), amountInBase: nil,
             status: .approved, kind: .preApproval
         )
-        let queue = [approvedPreApproval].filter {
-            ($0.status == .approved && $0.kind != .preApproval) ||
-            $0.status == .purchaseConfirmed ||
-            $0.status == .pendingFinanceReview ||
-            $0.status == .readyForReimbursement
+        let queue = [approvedPreApproval].filter { e in
+            let isApprovedClaim = e.status == .approved && e.kind != .preApproval
+            let isFinanceStage = e.status == .purchaseConfirmed
+                || e.status == .pendingFinanceReview
+                || e.status == .readyForReimbursement
+            return isApprovedClaim || isFinanceStage
         }
         XCTAssertEqual(queue.count, 0)
     }
