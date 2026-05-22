@@ -735,9 +735,12 @@ struct ProfileSetupView: View {
 struct WorkspaceSetupView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
-    @State private var workspaceName = "Turfmapp"
-    @State private var inviteCode = "invite_finance_turfmapp"
+    @State private var workspaceName = ""
+    @State private var inviteCode = ""
+    @State private var defaultCurrency = "USD"
     @State private var mode: WorkspaceMode = .create
+
+    private static let currencyOptions = ["USD", "EUR", "GBP", "THB", "JPY", "SGD", "AUD", "CAD"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -760,7 +763,18 @@ struct WorkspaceSetupView: View {
                     VStack(spacing: 0) {
                         setupField(tr("setup.workspace.org_name"), text: $workspaceName)
                         Divider().opacity(0.4)
-                        FormFieldRow(label: tr("setup.workspace.default_currency"), value: "USD", showChevron: false)
+                        HStack {
+                            Text(tr("setup.workspace.default_currency"))
+                                .font(.system(size: 14))
+                            Spacer()
+                            Picker("", selection: $defaultCurrency) {
+                                ForEach(Self.currencyOptions, id: \.self) { code in
+                                    Text(code).tag(code)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+                        .padding(.vertical, 10)
                     }
                 } else {
                     VStack(spacing: 0) {
@@ -785,7 +799,7 @@ struct WorkspaceSetupView: View {
                 Task {
                     switch mode {
                     case .create:
-                        await repositoryApp.createWorkspace(name: workspaceName, defaultCurrency: "USD")
+                        await repositoryApp.createWorkspace(name: workspaceName, defaultCurrency: defaultCurrency)
                     case .join:
                         await repositoryApp.acceptInvite(id: inviteCode.trimmingCharacters(in: .whitespacesAndNewlines))
                     }
@@ -799,7 +813,10 @@ struct WorkspaceSetupView: View {
                 Text(mode == .create ? tr("setup.workspace.create_action") : tr("setup.workspace.join_action")).primaryActionLabel()
             }
             .buttonStyle(.plain)
-            .disabled(mode == .join && inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(
+                (mode == .create && workspaceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
+                (mode == .join && inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            )
 
             Spacer()
         }

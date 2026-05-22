@@ -42,7 +42,7 @@ struct DomainDetailView: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
         .sheet(isPresented: $showPurchaseSheet) {
-            PurchaseConfirmSheet(initialAmount: expense.amount.decimalValue) { finalAmount, data, fileName, contentType in
+            PurchaseConfirmSheet(initialAmount: expense.amount.decimalValue, currency: expense.amount.currency) { finalAmount, data, fileName, contentType in
                 onConfirmPurchase(
                     MoneyAmount(
                         minorUnits: Int((finalAmount * 100).rounded()),

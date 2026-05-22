@@ -86,6 +86,7 @@ struct ReceiptPreviewSheet: View {
 
 struct PurchaseConfirmSheet: View {
     let initialAmount: Double
+    let currency: String
     var onConfirm: (Double, Data?, String?, String?) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var finalAmountText: String
@@ -97,10 +98,22 @@ struct PurchaseConfirmSheet: View {
     @State private var showImagePicker = false
     @State private var showFilePicker = false
 
-    init(initialAmount: Double, onConfirm: @escaping (Double, Data?, String?, String?) -> Void) {
+    init(initialAmount: Double, currency: String, onConfirm: @escaping (Double, Data?, String?, String?) -> Void) {
         self.initialAmount = initialAmount
+        self.currency = currency
         self.onConfirm = onConfirm
         _finalAmountText = State(initialValue: String(format: "%.2f", initialAmount))
+    }
+
+    private var currencySymbol: String {
+        switch currency {
+        case "USD": return "$"
+        case "EUR": return "€"
+        case "GBP": return "£"
+        case "JPY": return "¥"
+        case "THB": return "฿"
+        default: return currency
+        }
     }
 
     var body: some View {
@@ -121,7 +134,7 @@ struct PurchaseConfirmSheet: View {
                     .padding(.horizontal, 20)
 
                 HStack {
-                    Text("$")
+                    Text(currencySymbol)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.secondary)
                     TextField("0.00", text: $finalAmountText)
