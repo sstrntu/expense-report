@@ -21,6 +21,10 @@
 		AA11BB22CC33DD44EE55FF66 /* CurrencyConverterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF01 /* CurrencyConverterTests.swift */; };
 		BB22CC33DD44EE55FF66AA11 /* MoneyAmountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF660011 /* MoneyAmountTests.swift */; };
 		CC33DD44EE55FF66AA11BB22 /* FXAggregationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC33DD44EE55FF66AA110022 /* FXAggregationTests.swift */; };
+		DD44EE55FF66AA11BB22CC33 /* StatusPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44EE55FF66AA11BB220033 /* StatusPresentationTests.swift */; };
+		EE55FF66AA11BB22CC33DD44 /* ExpensePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE55FF66AA11BB22CC330044 /* ExpensePresentationTests.swift */; };
+		FF66AA11BB22CC33DD44EE55 /* BudgetTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF66AA11BB22CC33DD440055 /* BudgetTrackingTests.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* WorkflowEdgeCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D00066 /* WorkflowEdgeCaseTests.swift */; };
 		33D75A9DB439478097014021 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ABE7DE6913E857B352AF659 /* AppEnvironment.swift */; };
 		40834B5A7CB85792D6B041B7 /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */; };
 		443FA1297503350D3A53D578 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231934AADFA8013182DE19B6 /* StatusPill.swift */; };
@@ -81,6 +85,10 @@
 		AA11BB22CC33DD44EE55FF01 /* CurrencyConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyConverterTests.swift; sourceTree = "<group>"; };
 		BB22CC33DD44EE55FF660011 /* MoneyAmountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyAmountTests.swift; sourceTree = "<group>"; };
 		CC33DD44EE55FF66AA110022 /* FXAggregationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FXAggregationTests.swift; sourceTree = "<group>"; };
+		DD44EE55FF66AA11BB220033 /* StatusPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresentationTests.swift; sourceTree = "<group>"; };
+		EE55FF66AA11BB22CC330044 /* ExpensePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpensePresentationTests.swift; sourceTree = "<group>"; };
+		FF66AA11BB22CC33DD440055 /* BudgetTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetTrackingTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D00066 /* WorkflowEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowEdgeCaseTests.swift; sourceTree = "<group>"; };
 		5FC5205A5E412F3544FBF6C8 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
 		649767E02DA13AB1CCBFD0E9 /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
 		65032653E0FA8C25647EE99C /* ExpenseWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseWorkflowTests.swift; sourceTree = "<group>"; };
@@ -119,6 +127,10 @@
 				AA11BB22CC33DD44EE55FF01 /* CurrencyConverterTests.swift */,
 				BB22CC33DD44EE55FF660011 /* MoneyAmountTests.swift */,
 				CC33DD44EE55FF66AA110022 /* FXAggregationTests.swift */,
+				DD44EE55FF66AA11BB220033 /* StatusPresentationTests.swift */,
+				EE55FF66AA11BB22CC330044 /* ExpensePresentationTests.swift */,
+				FF66AA11BB22CC33DD440055 /* BudgetTrackingTests.swift */,
+				A1B2C3D4E5F6A7B8C9D00066 /* WorkflowEdgeCaseTests.swift */,
 			);
 			path = TurfmappExpenseReportTests;
 			sourceTree = "<group>";
@@ -399,6 +411,10 @@
 				AA11BB22CC33DD44EE55FF66 /* CurrencyConverterTests.swift in Sources */,
 				BB22CC33DD44EE55FF66AA11 /* MoneyAmountTests.swift in Sources */,
 				CC33DD44EE55FF66AA11BB22 /* FXAggregationTests.swift in Sources */,
+				DD44EE55FF66AA11BB22CC33 /* StatusPresentationTests.swift in Sources */,
+				EE55FF66AA11BB22CC33DD44 /* ExpensePresentationTests.swift in Sources */,
+				FF66AA11BB22CC33DD44EE55 /* BudgetTrackingTests.swift in Sources */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* WorkflowEdgeCaseTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
