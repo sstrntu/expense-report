@@ -154,6 +154,10 @@ final class RepositoryAppState: ObservableObject {
     func bootstrap() async {
         await loadCurrentUserProfile()
         await loadWorkspaces(selecting: selectedWorkspace?.id ?? UserDefaults.standard.string(forKey: selectedWorkspaceDefaultsKey))
+        // Register any APNs token that arrived before appShell was rendered.
+        if let token = UserDefaults.standard.string(forKey: "apns.device.token") {
+            await registerDeviceToken(token)
+        }
     }
 
     /// True if a saved session resumed cleanly. False means the user must

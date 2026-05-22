@@ -6,7 +6,8 @@ extension Notification.Name {
     static let pushNotificationOpened = Notification.Name("com.turfmapp.pushNotificationOpened")
 }
 
-final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, @unchecked Sendable {
+@MainActor
+final class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
@@ -14,7 +15,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         requestPushPermission()
-        // Cold-start: app was killed, user tapped a push — handle immediately
         if let payload = launchOptions?[.remoteNotification] as? [String: Any] {
             handlePayload(payload)
         }
@@ -23,14 +23,38 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        // Persist so bootstrap can register it even if the token arrives before appShell renders.
+        UserDefaults.standard.set(token, forKey: "apns.device.token")
         NotificationCenter.default.post(name: .deviceTokenReceived, object: nil, userInfo: ["token": token])
     }
 
-    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        // Silently ignored — Simulator always fails; device users only lose push, not core features.
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {}
+
+    private func requestPushPermission() {
+        Task {
+            let granted = (try? await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
+            if granted {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
+        }
     }
 
-    // Show banner + sound when notification arrives while app is in foreground
+    fileprivate func handlePayload(_ payload: [String: Any]) {
+        guard let expenseId = payload["expense_id"] as? String ?? payload["expenseId"] as? String,
+              !expenseId.isEmpty else { return }
+        NotificationCenter.default.post(
+            name: .pushNotificationOpened,
+            object: nil,
+            userInfo: ["expenseId": expenseId]
+        )
+    }
+}
+
+// @preconcurrency suppresses the Swift 6 crossing warning — UNUserNotificationCenterDelegate
+// is not @MainActor-annotated in the SDK, but its callbacks always arrive on the main thread.
+extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -39,7 +63,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         completionHandler([.banner, .sound])
     }
 
-    // User tapped a notification from the lock screen / notification center
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -47,26 +70,5 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) {
         handlePayload(response.notification.request.content.userInfo as? [String: Any] ?? [:])
         completionHandler()
-    }
-
-    private func requestPushPermission() {
-        Task {
-            let granted = (try? await UNUserNotificationCenter.current()
-                .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
-            if granted {
-                await MainActor.run { UIApplication.shared.registerForRemoteNotifications() }
-            }
-        }
-    }
-
-    private func handlePayload(_ payload: [String: Any]) {
-        // APNs custom payload: { "expense_id": "<uuid>" }
-        guard let expenseId = payload["expense_id"] as? String ?? payload["expenseId"] as? String,
-              !expenseId.isEmpty else { return }
-        NotificationCenter.default.post(
-            name: .pushNotificationOpened,
-            object: nil,
-            userInfo: ["expenseId": expenseId]
-        )
     }
 }

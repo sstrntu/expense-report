@@ -313,10 +313,10 @@ actor SupabaseRESTClient {
     /// `path` must include `?on_conflict=<column>`, e.g. `"device_tokens?on_conflict=device_token"`.
     func upsert<RequestBody: Encodable>(_ path: String, body: RequestBody) async throws {
         let data = try JSONEncoder.supabase.encode(body)
-        let _: EmptyResponse = try await request(
+        let _: [EmptyResponse] = try await request(
             path: "rest/v1/\(path)",
             method: "POST",
-            headers: ["Prefer": "resolution=merge-duplicates,return=minimal"],
+            headers: ["Prefer": "resolution=merge-duplicates,return=representation"],
             body: data
         )
     }
