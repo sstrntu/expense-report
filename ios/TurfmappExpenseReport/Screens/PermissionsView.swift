@@ -275,15 +275,29 @@ struct InviteMemberSheet: View {
             Spacer()
 
             Button {
-                onInvite(email.isEmpty ? "new.member@company.com" : email, role)
+                onInvite(email, role)
                 dismiss()
             } label: {
                 Text(tr("permissions.invite.send")).primaryActionLabel()
             }
             .buttonStyle(.plain)
+            .opacity(canSend ? 1 : 0.5)
+            .disabled(!canSend)
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
         }
+    }
+
+    /// Treat anything without "name@domain" shape as not-yet-ready. Stops
+    /// the previous fallback that invited a fake `new.member@company.com`
+    /// when the field was empty.
+    private var canSend: Bool {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let at = trimmed.firstIndex(of: "@"),
+              at != trimmed.startIndex,
+              at != trimmed.index(before: trimmed.endIndex) else { return false }
+        let domain = trimmed[trimmed.index(after: at)...]
+        return domain.contains(".")
     }
 }
 

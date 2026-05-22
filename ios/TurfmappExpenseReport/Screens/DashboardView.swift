@@ -233,24 +233,6 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func legendDot(color: Color, label: String) -> some View {
-        HStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 8, height: 8)
-            Text(label).font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
-        }
-    }
-
-    private func kpiCard(label: String, value: String, delta: String, positive: Bool) -> some View {
-        GlassCard(padding: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.system(size: 10.5, weight: .semibold)).tracking(0.6).foregroundStyle(.tertiary)
-                Text(value).font(.system(size: 22, weight: .bold)).tracking(-0.5)
-                Text(delta).font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(positive ? Tokens.approved : Tokens.rejected)
-            }
-        }
-    }
-
     private func categoryCard(segments: [DonutChart.Segment], total: Double) -> some View {
         GlassCard(padding: 16) {
             VStack(alignment: .leading, spacing: 12) {

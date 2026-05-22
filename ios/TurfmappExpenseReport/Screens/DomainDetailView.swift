@@ -189,9 +189,7 @@ struct DomainDetailView: View {
                 Divider().opacity(0.4)
                 FormFieldRow(label: tr("detail.field.project"), value: projectName)
                 Divider().opacity(0.4)
-                FormFieldRow(label: tr("detail.field.submitted_by"), value: "Sira Sasitorn")
-                Divider().opacity(0.4)
-                FormFieldRow(label: tr("detail.field.receipt"), value: receiptLabel)
+                FormFieldRow(label: tr("detail.field.submitted_by"), value: submitterName, showChevron: false)
             }
         }
     }
@@ -276,7 +274,7 @@ struct DomainDetailView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(tr("detail.timeline")).font(.system(size: 13, weight: .semibold))
                 if events.isEmpty {
-                    timelineRow("Created", "No repository events yet", complete: true, tint: Tokens.slate500)
+                    timelineRow(tr("detail.timeline.created"), tr("detail.timeline.no_events"), complete: true, tint: Tokens.slate500)
                 } else {
                     ForEach(events) { event in
                         timelineRow(
@@ -450,16 +448,19 @@ struct DomainDetailView: View {
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(tint.opacity(0.25), lineWidth: 0.5))
     }
 
-    private var receiptLabel: String {
-        expense.kind == .reimbursementClaim ? "receipt.pdf" : "supporting_document.pdf"
+    /// Resolves the submitter membership id to a real display name, falling
+    /// back to a generic label when the lookup fails (e.g. membership
+    /// removed, or members haven't loaded yet). Previously this was a
+    /// hardcoded "Sira Sasitorn" placeholder.
+    private var submitterName: String {
+        if let member = repositoryApp.members.first(where: { $0.id == expense.submittedByMembershipId }) {
+            return member.displayName
+        }
+        return tr("detail.field.submitted_by.unknown")
     }
 
     private var managerApproved: Bool {
         [.approved, .purchaseConfirmed, .pendingFinanceReview, .readyForReimbursement, .reimbursed].contains(expense.status)
-    }
-
-    private var financeReady: Bool {
-        [.pendingFinanceReview, .readyForReimbursement, .reimbursed].contains(expense.status)
     }
 
     private var statusTint: Color {

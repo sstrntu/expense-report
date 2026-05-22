@@ -396,10 +396,27 @@ struct NotificationDetailSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .top, spacing: 12) {
+                Circle().fill(notification.tint)
+                    .frame(width: 10, height: 10)
+                    .padding(.top, 8)
+                VStack(alignment: .leading, spacing: 6) {
                     Text(notification.title).font(.system(size: 20, weight: .bold))
-                    Text(notification.subtitle).font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(notification.subtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 6) {
+                        Text(notification.kind.label)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(notification.tint)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(notification.tint.opacity(0.12), in: Capsule())
+                        Text(notification.time)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.top, 2)
                 }
                 Spacer()
                 Button { dismiss() } label: {
@@ -409,11 +426,6 @@ struct NotificationDetailSheet: View {
                 .background(Color.primary.opacity(0.06), in: Circle())
             }
             .padding(.top, 24).padding(.horizontal, 20)
-
-            infoBanner(icon: "arrowshape.turn.up.right.fill", tint: notification.tint,
-                       title: notification.action,
-                       message: "Production tap-through should deep-link to the relevant expense, proof, or workspace invite.")
-                .padding(.horizontal, 20)
 
             Spacer()
         }
@@ -924,17 +936,29 @@ struct SystemStatesView: View {
 struct LegalAboutView: View {
     var onBack: () -> Void
 
+    /// Marketing version (CFBundleShortVersionString) — what users recognise
+    /// as "1.2". Falls back to "—" only if the plist key is missing, which
+    /// shouldn't happen in any shipped build.
+    private var marketingVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+
+    /// Build number (CFBundleVersion) — increments per TestFlight upload.
+    private var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+    }
+
     var body: some View {
         settingsContainer(title: tr("legal.title"), onBack: onBack) {
             GlassCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(tr("legal.app_name")).font(.system(size: 18, weight: .bold))
-                    Text(tr("legal.version", "1.0")).font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(tr("legal.version", marketingVersion)).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    FormFieldRow(label: tr("legal.build"), value: "1.0 (1)", showChevron: false)
+                    FormFieldRow(label: tr("legal.build"), value: "\(marketingVersion) (\(buildNumber))", showChevron: false)
                     Divider().opacity(0.4)
                     FormFieldRow(label: tr("legal.backend"), value: "Supabase", showChevron: false)
                 }

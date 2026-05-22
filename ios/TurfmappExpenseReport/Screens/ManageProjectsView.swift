@@ -100,7 +100,7 @@ struct ManageProjectsView: View {
                     RoundedRectangle(cornerRadius: 4).fill(Tokens.slate500).frame(width: 6, height: 32)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(p.name).font(.system(size: 13.5, weight: .semibold))
-                        Text("\(p.currentUserProjectRole?.label ?? "Member") · \(p.visibility)")
+                        Text("\(p.currentUserProjectRole?.label ?? tr("projects.role.member")) · \(localizedVisibility(p.visibility))")
                             .font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -112,9 +112,9 @@ struct ManageProjectsView: View {
             .buttonStyle(.plain)
 
             HStack {
-                Text("\(MoneyAmount.format(amount: spent, currency: p.budget.currency)) spent")
+                Text(tr("projects.spent.label", MoneyAmount.format(amount: spent, currency: p.budget.currency)))
                 Spacer()
-                Text("\(p.budget.formatted) budget")
+                Text(tr("projects.budget.label", p.budget.formatted))
             }
             .font(.system(size: 11)).foregroundStyle(.secondary)
 
@@ -125,7 +125,7 @@ struct ManageProjectsView: View {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(Tokens.approved)
-                    Text("Auto-approve under")
+                    Text(tr("projects.auto_approve_under"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -155,32 +155,32 @@ struct ManageProjectsView: View {
                 }
                 .padding(.bottom, 10)
 
-                createField("Name", text: $projectName, placeholder: "Project name")
+                createField(tr("projects.field.name"), text: $projectName, placeholder: tr("projects.field.name.placeholder"))
                 Divider().opacity(0.4)
                 currencyPickerRow
                 Divider().opacity(0.4)
-                createField("Budget", text: $projectBudget, placeholder: "25000", prefix: effectiveCurrencySymbol)
+                createField(tr("projects.field.budget"), text: $projectBudget, placeholder: tr("projects.field.budget.placeholder"), prefix: effectiveCurrencySymbol)
                 Divider().opacity(0.4)
-                createField("Owner", text: $projectOwner, placeholder: app.userName)
+                createField(tr("projects.field.owner"), text: $projectOwner, placeholder: app.userName)
                 Divider().opacity(0.4)
-                createField("Auto-approve under", text: $projectThreshold, placeholder: "100", prefix: effectiveCurrencySymbol)
+                createField(tr("projects.auto_approve_under"), text: $projectThreshold, placeholder: tr("projects.field.threshold.placeholder"), prefix: effectiveCurrencySymbol)
 
-                Text("Visibility")
+                Text(tr("projects.visibility"))
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                     .padding(.top, 12).padding(.bottom, 6)
 
-                ForEach(["Private", "Team", "Org-wide"], id: \.self) { v in
+                ForEach(visibilityOptions, id: \.value) { option in
                     Button {
-                        projectVisibility = v
+                        projectVisibility = option.value
                     } label: {
                         HStack(spacing: 10) {
                             ZStack {
                                 Circle().strokeBorder(Color.secondary.opacity(0.4), lineWidth: 1.5).frame(width: 18, height: 18)
-                                if v == projectVisibility {
+                                if option.value == projectVisibility {
                                     Circle().fill(Tokens.slate500).frame(width: 9, height: 9)
                                 }
                             }
-                            Text(v).font(.system(size: 13))
+                            Text(option.label).font(.system(size: 13))
                         }
                         .padding(.vertical, 8)
                     }
@@ -196,7 +196,7 @@ struct ManageProjectsView: View {
                     let newProject = DomainProject(
                         id: UUID().uuidString,
                         workspaceId: workspaceId,
-                        name: projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled project" : projectName,
+                        name: projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? tr("projects.untitled") : projectName,
                         budget: MoneyAmount(minorUnits: Int((max(budget, 0)) * 100), currency: currency),
                         budgetPeriod: "quarterly",
                         ownerMembershipId: "",
@@ -260,9 +260,31 @@ struct ManageProjectsView: View {
         }
     }
 
+    /// Tuple keeps the stored value ("private", "team", "workspace") stable
+    /// while the label refreshes with the active language.
+    @MainActor private var visibilityOptions: [(value: String, label: String)] {
+        [
+            ("Private", tr("projects.visibility.private")),
+            ("Team", tr("projects.visibility.team")),
+            ("Org-wide", tr("projects.visibility.org_wide"))
+        ]
+    }
+
+    /// Resolves a stored visibility token (Private / Team / Org-wide /
+    /// private / team / workspace — both casings occur historically) to its
+    /// localized label. Falls back to the raw value when nothing matches.
+    @MainActor func localizedVisibility(_ raw: String) -> String {
+        switch raw.lowercased() {
+        case "private":             return tr("projects.visibility.private")
+        case "team":                return tr("projects.visibility.team")
+        case "org-wide", "workspace": return tr("projects.visibility.org_wide")
+        default:                    return raw
+        }
+    }
+
     private var currencyPickerRow: some View {
         HStack {
-            Text("Base currency").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+            Text(tr("projects.field.base_currency")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
             Spacer()
             Menu {
                 ForEach(Self.currencyOptions, id: \.self) { code in
@@ -286,14 +308,14 @@ struct ManageProjectsView: View {
     }
 }
 
-private extension ProjectRole {
-    var label: String {
+extension ProjectRole {
+    @MainActor var label: String {
         switch self {
-        case .viewer: return "Viewer"
-        case .submitter: return "Submitter"
-        case .approver: return "Approver"
-        case .finance: return "Finance"
-        case .projectAdmin: return "Project admin"
+        case .viewer: return tr("projects.role.viewer")
+        case .submitter: return tr("projects.role.submitter")
+        case .approver: return tr("projects.role.approver")
+        case .finance: return tr("projects.role.finance")
+        case .projectAdmin: return tr("projects.role.project_admin")
         }
     }
 }
@@ -310,21 +332,34 @@ struct DomainThresholdEditorSheet: View {
         _amountText = State(initialValue: String(format: "%.0f", project.approvalThreshold.decimalValue))
     }
 
+    /// Currency-aware prefix so a THB project shows "฿" instead of "$".
+    /// Falls back to the ISO code for currencies without a single short symbol.
+    private var currencyPrefix: String {
+        switch project.approvalThreshold.currency {
+        case "USD": return "$"
+        case "EUR": return "€"
+        case "GBP": return "£"
+        case "JPY": return "¥"
+        case "THB": return "฿"
+        default:    return project.approvalThreshold.currency
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Auto-approve threshold").font(.system(size: 18, weight: .bold))
+                Text(tr("projects.auto_approve_threshold")).font(.system(size: 18, weight: .bold))
                 Text(project.name).font(.system(size: 13)).foregroundStyle(.secondary)
             }
             .padding(.top, 24).padding(.horizontal, 20)
 
-            Text("Expenses at or below this amount follow the project's routing mode.")
+            Text(tr("projects.auto_approve_threshold.subtitle"))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 20)
 
             HStack {
-                Text("$").font(.system(size: 28, weight: .bold)).foregroundStyle(.secondary)
+                Text(currencyPrefix).font(.system(size: 28, weight: .bold)).foregroundStyle(.secondary)
                 TextField("0", text: $amountText)
                     .font(.system(size: 36, weight: .bold))
                     .keyboardType(.numberPad)
@@ -337,7 +372,7 @@ struct DomainThresholdEditorSheet: View {
                 if let v = Double(amountText), v >= 0 { onSave(v) }
                 dismiss()
             } label: {
-                Text("Save").primaryActionLabel()
+                Text(tr("common.save")).primaryActionLabel()
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
@@ -380,7 +415,7 @@ struct DomainProjectDetailSheet: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(project.name).font(.system(size: 20, weight: .bold))
-                    Text("\(project.currentUserProjectRole?.label ?? "Member") · \(project.visibility)").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text("\(project.currentUserProjectRole?.label ?? tr("projects.role.member")) · \(localizedVisibilityFree(project.visibility))").font(.system(size: 12)).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button {
@@ -407,7 +442,7 @@ struct DomainProjectDetailSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Assigned members")
+                Text(tr("projects.assigned_members"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                 HStack(spacing: -8) {
@@ -416,11 +451,11 @@ struct DomainProjectDetailSheet: View {
                             .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 1))
                     }
                     Spacer()
-                    Text("\(repositoryApp.members.count) total")
+                    Text(tr("projects.member_total", repositoryApp.members.count))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
-                Text("All active workspace members are eligible for assignment.")
+                Text(tr("projects.member_assignment_note"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -433,7 +468,7 @@ struct DomainProjectDetailSheet: View {
                         await MainActor.run { dismiss() }
                     }
                 } label: {
-                    Label("Archive Project", systemImage: "archivebox")
+                    Label(tr("projects.archive_project"), systemImage: "archivebox")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Tokens.rejected)
                         .frame(maxWidth: .infinity)
@@ -446,7 +481,7 @@ struct DomainProjectDetailSheet: View {
                     Button {
                         savePolicy()
                     } label: {
-                        Text("Save Policy")
+                        Text(tr("projects.save_policy"))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -465,21 +500,21 @@ struct DomainProjectDetailSheet: View {
 
     private var policySummary: some View {
         VStack(spacing: 0) {
-            FormFieldRow(label: "Budget", value: project.budget.formatted, showChevron: false)
+            FormFieldRow(label: tr("projects.field.budget"), value: project.budget.formatted, showChevron: false)
             Divider().opacity(0.4)
-            FormFieldRow(label: "Budget period", value: project.budgetPeriod.capitalized, showChevron: false)
+            FormFieldRow(label: tr("projects.budget_period"), value: localizedBudgetPeriod(project.budgetPeriod), showChevron: false)
             Divider().opacity(0.4)
-            FormFieldRow(label: "Spent", value: MoneyAmount.format(amount: spent, currency: project.budget.currency), showChevron: false)
+            FormFieldRow(label: tr("projects.field.spent"), value: MoneyAmount.format(amount: spent, currency: project.budget.currency), showChevron: false)
             Divider().opacity(0.4)
-            FormFieldRow(label: "Auto-approve under", value: project.approvalThreshold.formatted, showChevron: false)
+            FormFieldRow(label: tr("projects.auto_approve_under"), value: project.approvalThreshold.formatted, showChevron: false)
             Divider().opacity(0.4)
-            FormFieldRow(label: "Receipt required over", value: project.receiptRequiredThreshold.formatted, showChevron: false)
+            FormFieldRow(label: tr("projects.field.receipt_required_over"), value: project.receiptRequiredThreshold.formatted, showChevron: false)
             Divider().opacity(0.4)
-            FormFieldRow(label: "Routing", value: project.routingMode.label, showChevron: false)
+            FormFieldRow(label: tr("projects.routing"), value: project.routingMode.label, showChevron: false)
             Divider().opacity(0.4)
-            FormFieldRow(label: "Over budget", value: project.overBudgetBehavior.rawValue.capitalized, showChevron: false)
+            FormFieldRow(label: tr("projects.over_budget"), value: localizedOverBudget(project.overBudgetBehavior), showChevron: false)
             Divider().opacity(0.4)
-            FormFieldRow(label: "Allowed categories", value: allowedCategoryLabel(project.allowedCategoryIds), showChevron: false)
+            FormFieldRow(label: tr("projects.allowed_categories"), value: allowedCategoryLabel(project.allowedCategoryIds), showChevron: false)
         }
         .padding(16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
@@ -488,15 +523,15 @@ struct DomainProjectDetailSheet: View {
 
     private var policyEditor: some View {
         VStack(spacing: 0) {
-            editTextRow("Name", text: $nameText)
+            editTextRow(tr("projects.field.name"), text: $nameText)
             Divider().opacity(0.4)
-            editTextRow("Budget", text: $budgetText, prefix: "$")
+            editTextRow(tr("projects.field.budget"), text: $budgetText, prefix: currencyPrefix)
             Divider().opacity(0.4)
-            editTextRow("Auto-approve under", text: $thresholdText, prefix: "$")
+            editTextRow(tr("projects.auto_approve_under"), text: $thresholdText, prefix: currencyPrefix)
             Divider().opacity(0.4)
-            editTextRow("Receipt required over", text: $receiptThresholdText, prefix: "$")
+            editTextRow(tr("projects.field.receipt_required_over"), text: $receiptThresholdText, prefix: currencyPrefix)
             Divider().opacity(0.4)
-            pickerRow("Budget period", selection: $budgetPeriod, options: ["monthly", "quarterly", "annual"])
+            budgetPeriodPicker
             Divider().opacity(0.4)
             routingPicker
             Divider().opacity(0.4)
@@ -525,16 +560,16 @@ struct DomainProjectDetailSheet: View {
         .padding(.vertical, 10)
     }
 
-    private func pickerRow(_ label: String, selection: Binding<String>, options: [String]) -> some View {
+    private var budgetPeriodPicker: some View {
         Menu {
-            ForEach(options, id: \.self) { option in
-                Button(option.capitalized) { selection.wrappedValue = option }
+            ForEach(["monthly", "quarterly", "annual"], id: \.self) { option in
+                Button(localizedBudgetPeriod(option)) { budgetPeriod = option }
             }
         } label: {
             HStack {
-                Text(label).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                Text(tr("projects.budget_period")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
-                Text(selection.wrappedValue.capitalized).font(.system(size: 13.5, weight: .medium))
+                Text(localizedBudgetPeriod(budgetPeriod)).font(.system(size: 13.5, weight: .medium))
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }
             .padding(.vertical, 10)
@@ -548,7 +583,7 @@ struct DomainProjectDetailSheet: View {
             }
         } label: {
             HStack {
-                Text("Routing").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                Text(tr("projects.routing")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
                 Text(routingMode.label).font(.system(size: 13.5, weight: .medium))
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
@@ -560,13 +595,13 @@ struct DomainProjectDetailSheet: View {
     private var overBudgetPicker: some View {
         Menu {
             ForEach(OverBudgetBehavior.allCases, id: \.self) { behavior in
-                Button(behavior.rawValue.capitalized) { overBudgetBehavior = behavior }
+                Button(localizedOverBudget(behavior)) { overBudgetBehavior = behavior }
             }
         } label: {
             HStack {
-                Text("Over budget").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                Text(tr("projects.over_budget")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
-                Text(overBudgetBehavior.rawValue.capitalized).font(.system(size: 13.5, weight: .medium))
+                Text(localizedOverBudget(overBudgetBehavior)).font(.system(size: 13.5, weight: .medium))
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }
             .padding(.vertical, 10)
@@ -588,12 +623,37 @@ struct DomainProjectDetailSheet: View {
             }
         } label: {
             HStack {
-                Text("Allowed categories").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                Text(tr("projects.allowed_categories")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
                 Text(allowedCategoryLabel(Array(allowedCategoryIds))).font(.system(size: 13.5, weight: .medium))
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }
             .padding(.vertical, 10)
+        }
+    }
+
+    /// Currency-aware prefix for the budget/threshold inputs. Mirrors the
+    /// resolution used by the create form so an editor reopened on a THB
+    /// project shows ฿ instead of $.
+    private var currencyPrefix: String {
+        switch project.budget.currency {
+        case "USD": return "$"
+        case "EUR": return "€"
+        case "GBP": return "£"
+        case "JPY": return "¥"
+        case "THB": return "฿"
+        default:    return project.budget.currency
+        }
+    }
+
+    /// Sheet-scoped visibility localizer (the view-level one above lives in
+    /// ManageProjectsView; this sheet doesn't share that scope).
+    @MainActor func localizedVisibilityFree(_ raw: String) -> String {
+        switch raw.lowercased() {
+        case "private":             return tr("projects.visibility.private")
+        case "team":                return tr("projects.visibility.team")
+        case "org-wide", "workspace": return tr("projects.visibility.org_wide")
+        default:                    return raw
         }
     }
 
@@ -641,20 +701,37 @@ struct DomainProjectDetailSheet: View {
     }
 
     private func allowedCategoryLabel(_ ids: [String]) -> String {
-        if ids.isEmpty { return "All categories" }
+        if ids.isEmpty { return tr("projects.categories.all") }
         let names = categories.filter { ids.contains($0.id) }.map { $0.label }
-        return names.isEmpty ? "Custom" : names.joined(separator: ", ")
+        return names.isEmpty ? tr("projects.categories.custom") : names.joined(separator: ", ")
     }
 }
 
-private extension ProjectRoutingMode {
-    var label: String {
+extension ProjectRoutingMode {
+    @MainActor var label: String {
         switch self {
-        case .managerOnly: return "Manager only"
-        case .financeOnly: return "Finance only"
-        case .managerThenFinance: return "Manager then finance"
-        case .autoApproveThenFinance: return "Auto-approve then finance"
-        case .autoReimburse: return "Auto reimburse"
+        case .managerOnly: return tr("projects.routing.manager_only")
+        case .financeOnly: return tr("projects.routing.finance_only")
+        case .managerThenFinance: return tr("projects.routing.manager_then_finance")
+        case .autoApproveThenFinance: return tr("projects.routing.auto_approve_then_finance")
+        case .autoReimburse: return tr("projects.routing.auto_reimburse")
         }
+    }
+}
+
+@MainActor func localizedBudgetPeriod(_ period: String) -> String {
+    switch period.lowercased() {
+    case "monthly":   return tr("projects.budget_period.monthly")
+    case "quarterly": return tr("projects.budget_period.quarterly")
+    case "annual":    return tr("projects.budget_period.annual")
+    default:          return period.capitalized
+    }
+}
+
+@MainActor func localizedOverBudget(_ behavior: OverBudgetBehavior) -> String {
+    switch behavior {
+    case .warn:     return tr("projects.over_budget.warn")
+    case .escalate: return tr("projects.over_budget.escalate")
+    case .block:    return tr("projects.over_budget.block")
     }
 }

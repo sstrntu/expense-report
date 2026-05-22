@@ -65,9 +65,7 @@ struct HomeView: View {
             sectionHeader(title: tr("home.recent"), action: tr("home.see_all")) { selectedTab = .activity }
             recentList
 
-            Text(tr("overview.project_budgets"))
-                .font(.system(size: 13, weight: .semibold))
-                .padding(.horizontal, 4).padding(.top, 6)
+            simpleSectionHeader(tr("overview.project_budgets"))
             projectsCard
         }
         .padding(.horizontal, 16)
@@ -90,68 +88,26 @@ struct HomeView: View {
                         .frame(height: 50)
                 }
 
-                HStack {
+                // Three equal columns so each label/value sits in its own
+                // visual slot. Previous Spacer()-separated layout put the
+                // middle stat slightly left of true center because the
+                // VStack inside hugged leading.
+                HStack(alignment: .top, spacing: 12) {
                     miniStat(tr("home.stat.pending"),  money(pending, currency: workspaceCurrency))
-                    Spacer()
                     miniStat(tr("home.stat.approved"), money(approved, currency: workspaceCurrency))
-                    Spacer()
                     miniStat(tr("home.stat.rejected"), money(rejected, currency: workspaceCurrency))
                 }
             }
         }
     }
 
-    /// Inline drafts panel: replaces the old "X drafts" stub card with a
-    /// per-row picker, so the user can see what each draft is *about* and
-    /// pick one directly. Tap → SubmitView opens with that draft loaded.
-    @ViewBuilder
     private var draftsCard: some View {
-        let drafts = repositoryApp.draftExpenses
-        if !drafts.isEmpty {
-            GlassCard(padding: 0) {
-                VStack(spacing: 0) {
-                    HStack {
-                        Text(tr(drafts.count == 1 ? "home.drafts.count" : "home.drafts.count.plural", drafts.count))
-                            .font(.system(size: 13, weight: .semibold))
-                        Spacer()
-                        Text(tr("home.drafts.continue"))
-                            .font(.system(size: 11)).foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
-
-                    ForEach(Array(drafts.prefix(3).enumerated()), id: \.element.id) { idx, draft in
-                        Divider().opacity(0.4)
-                        Button { onOpenDraft(draft.id) } label: {
-                            draftRow(draft)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-    }
-
-    private func draftRow(_ draft: DomainExpense) -> some View {
-        HStack(spacing: 12) {
-            Text(draft.icon).font(.system(size: 18))
-                .frame(width: 32, height: 32)
-                .background(Tokens.pending.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(draft.merchant.isEmpty ? tr("home.drafts.untitled") : draft.merchant)
-                    .font(.system(size: 13.5, weight: .semibold))
-                Text("\(draft.projectName(in: repositoryApp.projects)) · \(draft.displayDate)")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(draft.amount.minorUnits == 0 ? "—" : draft.amount.formatted)
-                    .font(.system(size: 13, weight: .semibold))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.horizontal, 14).padding(.vertical, 11)
+        DraftsCard(
+            drafts: repositoryApp.draftExpenses,
+            projects: repositoryApp.projects,
+            copyPrefix: "home.drafts",
+            onOpen: onOpenDraft
+        )
     }
 
     private var scanReceiptButton: some View {
@@ -201,42 +157,34 @@ struct HomeView: View {
 
     private func sectionHeader(title: String, action: String, onTap: @escaping () -> Void) -> some View {
         HStack {
-            Text(title).font(.system(size: 13, weight: .semibold))
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .semibold)).tracking(0.6)
+                .foregroundStyle(.tertiary)
             Spacer()
             Button(action, action: onTap)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 4).padding(.top, 6)
+    }
+
+    /// Section title without a trailing action — matches the same uppercase
+    /// tertiary style as `sectionHeader`, kept on Activity/Review so all
+    /// list-style screens read the same.
+    private func simpleSectionHeader(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.system(size: 11, weight: .semibold)).tracking(0.6)
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 4).padding(.top, 6)
     }
 
     private func miniStat(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(label).font(.system(size: 11, weight: .medium)).foregroundStyle(.tertiary)
             Text(value).font(.system(size: 17, weight: .semibold))
+                .minimumScaleFactor(0.7).lineLimit(1)
         }
-    }
-}
-
-struct ExpenseRow: View {
-    let expense: Expense
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(expense.icon).font(.system(size: 18))
-                .frame(width: 36, height: 36)
-                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(expense.merchant).font(.system(size: 13.5, weight: .semibold))
-                Text("\(expense.category) · \(expense.date)")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(money(expense.amount)).font(.system(size: 13.5, weight: .semibold))
-                StatusPill(status: expense.status)
-            }
-        }
-        .padding(.horizontal, 14).padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -282,23 +230,6 @@ struct DomainExpenseRow: View {
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 12)
-    }
-}
-
-struct ProjectRow: View {
-    let project: Project
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(project.name).font(.system(size: 12.5, weight: .medium))
-                Spacer()
-                Text("$\(Int(project.spent / 1000))k / $\(Int(project.budget / 1000))k")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-            }
-            ProgressView(value: project.progress)
-                .progressViewStyle(.linear)
-                .tint(project.color)
-        }
     }
 }
 

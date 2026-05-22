@@ -75,7 +75,10 @@ struct ActivityView: View {
                     .buttonStyle(.plain)
                     .glassSurface(corner: 999)
                 }
-                Text(tr("activity.title")).font(.system(size: 26, weight: .bold))
+                // Smaller header when pushed onto a stack (matches the
+                // settingsContainer pattern); full 26pt when shown as the
+                // root Activity tab.
+                Text(tr("activity.title")).font(.system(size: onBack == nil ? 26 : 18, weight: .bold))
                 Spacer()
             }
             .padding(.horizontal, 4).padding(.top, 4)
@@ -92,13 +95,10 @@ struct ActivityView: View {
                 .padding(.horizontal, 4)
             }
 
-            let today    = Array(filtered.prefix(2))
-            let thisWeek = filtered.count > 2 ? Array(filtered[2..<min(5, filtered.count)]) : []
-            let earlier  = filtered.count > 5 ? Array(filtered.suffix(from: 5)) : []
-
-            if !today.isEmpty    { section(title: tr("activity.section.today"),     items: today) }
-            if !thisWeek.isEmpty { section(title: tr("activity.section.this_week"), items: thisWeek) }
-            if !earlier.isEmpty  { section(title: tr("activity.section.earlier"),   items: earlier) }
+            let buckets = bucketByDate(filtered)
+            if !buckets.today.isEmpty    { section(title: tr("activity.section.today"),     items: buckets.today) }
+            if !buckets.thisWeek.isEmpty { section(title: tr("activity.section.this_week"), items: buckets.thisWeek) }
+            if !buckets.earlier.isEmpty  { section(title: tr("activity.section.earlier"),   items: buckets.earlier) }
 
             if filtered.isEmpty {
                 GlassCard(padding: 24) {
@@ -129,6 +129,29 @@ struct ActivityView: View {
                 secondaryButton: .cancel(Text(tr("common.cancel")))
             )
         }
+    }
+
+    /// Buckets expenses by submit/create date relative to "now". This
+    /// replaces the old index-based split (first 2 / next 3 / rest) which
+    /// could label a month-old expense as "Today".
+    private func bucketByDate(_ items: [DomainExpense]) -> (today: [DomainExpense], thisWeek: [DomainExpense], earlier: [DomainExpense]) {
+        let calendar = Calendar.current
+        let now = Date()
+        var today: [DomainExpense] = []
+        var thisWeek: [DomainExpense] = []
+        var earlier: [DomainExpense] = []
+
+        for item in items {
+            let date = item.submittedAt ?? item.purchaseDate ?? item.createdAt
+            if calendar.isDateInToday(date) {
+                today.append(item)
+            } else if calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
+                thisWeek.append(item)
+            } else {
+                earlier.append(item)
+            }
+        }
+        return (today, thisWeek, earlier)
     }
 
     private var emptyTitle: String {
@@ -169,10 +192,14 @@ struct ActivityView: View {
                 }
                 .buttonStyle(.plain)
 
+                // Date filter pill is purely informational for now —
+                // there's no underlying range picker yet. Greyed out so it
+                // doesn't read as tappable.
                 Label(tr("activity.all_time"), systemImage: "calendar")
                     .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.tertiary)
                     .padding(.horizontal, 12).padding(.vertical, 8)
-                    .background(Color.primary.opacity(0.06), in: Capsule())
+                    .background(Color.primary.opacity(0.04), in: Capsule())
 
                 Spacer()
             }

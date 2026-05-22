@@ -76,12 +76,12 @@ struct SubmitView: View {
     }
     private var validationMessages: [String] {
         var messages: [String] = []
-        if trimmedVendor.isEmpty { messages.append("Vendor is required.") }
-        if amount <= 0 { messages.append("Amount must be greater than $0.") }
-        if selectedProject == nil { messages.append("Project is required.") }
-        if trimmedPurpose.isEmpty { messages.append("Business purpose is required.") }
+        if trimmedVendor.isEmpty { messages.append(tr("submit.validation.vendor_required")) }
+        if amount <= 0 { messages.append(tr("submit.validation.amount_required")) }
+        if selectedProject == nil { messages.append(tr("submit.validation.project_required")) }
+        if trimmedPurpose.isEmpty { messages.append(tr("submit.validation.purpose_required")) }
         if expenseKind == .reimbursementClaim, purchaseDate > Date() {
-            messages.append("Purchase date cannot be in the future.")
+            messages.append(tr("submit.validation.purchase_date_future"))
         }
         return messages
     }
@@ -198,7 +198,7 @@ struct SubmitView: View {
             }
             .presentationDetents([.medium])
         }
-        .confirmationDialog("Discard this expense?", isPresented: $showDiscardConfirm, titleVisibility: .visible) {
+        .confirmationDialog(tr("submit.discard.title"), isPresented: $showDiscardConfirm, titleVisibility: .visible) {
             Button(tr("submit.discard.action"), role: .destructive) { onClose() }
             Button(tr("submit.discard.keep"), role: .cancel) {}
         } message: {
@@ -267,7 +267,7 @@ struct SubmitView: View {
                                     .frame(width: 32, height: 32)
                                     .background(Tokens.pending.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(draft.merchant.isEmpty ? "Untitled expense" : draft.merchant)
+                                    Text(draft.merchant.isEmpty ? tr("home.drafts.untitled") : draft.merchant)
                                         .font(.system(size: 13.5, weight: .semibold))
                                     Text(draft.projectName(in: repositoryApp.projects))
                                         .font(.system(size: 11)).foregroundStyle(.secondary)
@@ -581,7 +581,7 @@ struct SubmitView: View {
             .labelsHidden()
             .datePickerStyle(.compact)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 11)
     }
 
     private var validationCard: some View {
@@ -727,8 +727,8 @@ struct SubmitView: View {
         saveDraftError = nil
         guard let project = selectedProject else {
             saveDraftError = activeProjects.isEmpty
-                ? "Create a project first — drafts live inside a project."
-                : "Pick a project before saving a draft."
+                ? tr("submit.draft.no_projects")
+                : tr("submit.draft.no_project_selected")
             return
         }
         isSavingDraft = true
@@ -747,7 +747,7 @@ struct SubmitView: View {
                 if didSave {
                     onClose()
                 } else {
-                    saveDraftError = repositoryApp.lastError ?? "Could not save draft. Check connection and try again."
+                    saveDraftError = repositoryApp.lastError ?? tr("submit.draft.save_failed")
                 }
             }
         }
@@ -763,7 +763,7 @@ struct SubmitView: View {
             workspaceId: project.workspaceId,
             projectId: project.id,
             kind: expenseKind,
-            merchant: trimmedVendor.isEmpty ? "Untitled expense" : trimmedVendor,
+            merchant: trimmedVendor.isEmpty ? tr("home.drafts.untitled") : trimmedVendor,
             amount: MoneyAmount(minorUnits: Int((amount * 100).rounded()), currency: resolvedCurrency),
             categoryId: categoryId,
             businessPurpose: trimmedPurpose,
@@ -776,15 +776,6 @@ struct SubmitView: View {
         )
     }
 
-    private func iconFor(_ category: String) -> String {
-        switch category {
-        case "Meals":    return "🍱"
-        case "Travel":   return "✈️"
-        case "Software": return "💻"
-        case "Office":   return "🏢"
-        default:         return "🧾"
-        }
-    }
 }
 
 // MARK: – Scanning sheet

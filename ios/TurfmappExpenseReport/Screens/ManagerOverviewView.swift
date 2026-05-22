@@ -125,8 +125,9 @@ struct ManagerOverviewView: View {
                 .padding(.horizontal, 4)
             }
 
-            Text(tr("overview.project_budgets"))
-                .font(.system(size: 13, weight: .semibold))
+            Text(tr("overview.project_budgets").uppercased())
+                .font(.system(size: 11, weight: .semibold)).tracking(0.6)
+                .foregroundStyle(.tertiary)
                 .padding(.horizontal, 4).padding(.top, 6)
 
             GlassCard(padding: 14) {
@@ -149,57 +150,13 @@ struct ManagerOverviewView: View {
         .padding(.bottom, 100)
     }
 
-    /// Inline drafts panel. Same shape as `HomeView.draftsCard` but with
-    /// "overview.*" copy keys so the heading reads consistently with the
-    /// manager-context strings used elsewhere on this screen.
-    @ViewBuilder
     private var draftsCard: some View {
-        let drafts = repositoryApp.draftExpenses
-        if !drafts.isEmpty {
-            GlassCard(padding: 0) {
-                VStack(spacing: 0) {
-                    HStack {
-                        Text(tr(drafts.count == 1 ? "overview.drafts.count" : "overview.drafts.count.plural", drafts.count))
-                            .font(.system(size: 13, weight: .semibold))
-                        Spacer()
-                        Text(tr("overview.drafts.continue"))
-                            .font(.system(size: 11)).foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
-
-                    ForEach(Array(drafts.prefix(3).enumerated()), id: \.element.id) { _, draft in
-                        Divider().opacity(0.4)
-                        Button { onOpenDraft(draft.id) } label: {
-                            draftRow(draft)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-    }
-
-    private func draftRow(_ draft: DomainExpense) -> some View {
-        HStack(spacing: 12) {
-            Text(draft.icon).font(.system(size: 18))
-                .frame(width: 32, height: 32)
-                .background(Tokens.pending.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(draft.merchant.isEmpty ? tr("home.drafts.untitled") : draft.merchant)
-                    .font(.system(size: 13.5, weight: .semibold))
-                Text("\(draft.projectName(in: repositoryApp.projects)) · \(draft.displayDate)")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(draft.amount.minorUnits == 0 ? "—" : draft.amount.formatted)
-                    .font(.system(size: 13, weight: .semibold))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.horizontal, 14).padding(.vertical, 11)
+        DraftsCard(
+            drafts: repositoryApp.draftExpenses,
+            projects: repositoryApp.projects,
+            copyPrefix: "overview.drafts",
+            onOpen: onOpenDraft
+        )
     }
 
     private func kpiCard(label: String, value: String, delta: String, positive: Bool) -> some View {

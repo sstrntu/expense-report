@@ -147,6 +147,50 @@ struct ReviewView: View {
         }
     }
 
+    /// Single Button row — the whole row opens the expense. The project
+    /// chip is a separate trailing Button so taps on it bring up the
+    /// project history sheet without the outer row swallowing the gesture.
+    /// Replaces the previous structure that nested three overlapping
+    /// `.onTapGesture` calls on one HStack.
+    private func queueRow(_ e: DomainExpense, tint: Color) -> some View {
+        Button { onOpen(e) } label: {
+            HStack(spacing: 12) {
+                Text(e.icon)
+                    .font(.system(size: 18))
+                    .frame(width: 36, height: 36)
+                    .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(e.merchant).font(.system(size: 13.5, weight: .semibold))
+                    Text("\(repositoryApp.displayCategoryName(forId: e.categoryId)) · \(e.displayDate)")
+                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                    StatusPill(text: localizedStatusLabel(e.status), tint: tint)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(e.amount.formatted).font(.system(size: 14, weight: .bold))
+                    Button {
+                        if let project = repositoryApp.projects.first(where: { $0.id == e.projectId }) {
+                            projectHistory = ProjectHistoryContext(projectId: project.id, projectName: project.name)
+                        }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "clock.arrow.circlepath").font(.system(size: 9, weight: .semibold))
+                            Text(e.projectName(in: repositoryApp.projects)).font(.system(size: 10.5, weight: .medium))
+                        }
+                        .foregroundStyle(Tokens.slate500)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func queueSection(title: String, items: [DomainExpense], tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -162,42 +206,7 @@ struct ReviewView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, e in
                         if idx > 0 { Divider().opacity(0.4) }
-                        HStack(spacing: 12) {
-                            Text(e.icon)
-                                .font(.system(size: 18))
-                                .frame(width: 40, height: 40)
-                                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(e.merchant).font(.system(size: 13.5, weight: .semibold))
-                                Text("\(repositoryApp.displayCategoryName(forId: e.categoryId)) · \(e.displayDate)")
-                                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                                StatusPill(text: localizedStatusLabel(e.status), tint: tint)
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture { onOpen(e) }
-
-                            Spacer()
-
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(e.amount.formatted).font(.system(size: 14, weight: .bold))
-                                Button {
-                                    if let project = repositoryApp.projects.first(where: { $0.id == e.projectId }) {
-                                        projectHistory = ProjectHistoryContext(projectId: project.id, projectName: project.name)
-                                    }
-                                } label: {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "clock.arrow.circlepath").font(.system(size: 9, weight: .semibold))
-                                        Text(e.projectName(in: repositoryApp.projects)).font(.system(size: 10.5, weight: .medium))
-                                    }
-                                    .foregroundStyle(Tokens.slate500)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, 14).padding(.vertical, 14)
-                        .contentShape(Rectangle())
-                        .onTapGesture { onOpen(e) }
+                        queueRow(e, tint: tint)
                     }
                 }
             }

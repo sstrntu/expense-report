@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0151543DF9C962D18EA3EA2A /* TurfmappExpenseReportApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F096F243857EBABB4129FEC /* TurfmappExpenseReportApp.swift */; };
+		033FAA81CA463676F32438FF /* DraftsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7308954FD71CE684A0764452 /* DraftsCard.swift */; };
 		0581D62D224E38D8E3201A9D /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7038F8122D513472A92656 /* ProfileView.swift */; };
 		0982BE8186C0B5D411254834 /* AppConfig.local.xcconfig.example in Resources */ = {isa = PBXBuildFile; fileRef = FF8327C50FEE23C95BB2274C /* AppConfig.local.xcconfig.example */; };
 		16AFC42C4F44934D90CD8C68 /* ManagerOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53DEF6879D81BC1B1ED4918 /* ManagerOverviewView.swift */; };
@@ -81,6 +82,7 @@
 		67EC6D7BD90D039BB416ED74 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		6ABE7DE6913E857B352AF659 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		6F096F243857EBABB4129FEC /* TurfmappExpenseReportApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurfmappExpenseReportApp.swift; sourceTree = "<group>"; };
+		7308954FD71CE684A0764452 /* DraftsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsCard.swift; sourceTree = "<group>"; };
 		8941FC76E8EADAC392D24D4C /* BottomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomTabBar.swift; sourceTree = "<group>"; };
 		8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
 		9D1A529E6050B7B6F915F71D /* V1Domain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V1Domain.swift; sourceTree = "<group>"; };
@@ -175,6 +177,7 @@
 			children = (
 				CA4CB3A46FA47E4715A510B1 /* Avatar.swift */,
 				3CCE3D5DFB96304D91AC7BF2 /* Charts.swift */,
+				7308954FD71CE684A0764452 /* DraftsCard.swift */,
 				8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */,
 				231934AADFA8013182DE19B6 /* StatusPill.swift */,
 			);
@@ -353,6 +356,7 @@
 				741A4BD84FE8A4F61135B0D5 /* DetailView.swift in Sources */,
 				D81A57A8F08D8D3AD7B5844E /* DomainDetailView.swift in Sources */,
 				A9F8FDD9BFBD4C1BEC6A4ABF /* DomainPresentation.swift in Sources */,
+				033FAA81CA463676F32438FF /* DraftsCard.swift in Sources */,
 				2F34697B2E31FBBCFBE5DAA8 /* ExpenseWorkflow.swift in Sources */,
 				40834B5A7CB85792D6B041B7 /* GlassCard.swift in Sources */,
 				2493E01868B610DD3193D13D /* HomeView.swift in Sources */,
