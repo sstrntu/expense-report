@@ -22,7 +22,10 @@ enum TourTarget: String, Hashable {
 /// with `latest wins` so a target that re-emits (e.g. on scroll) updates
 /// its frame rather than clobbering itself with a stale rect.
 struct TourTargetPreference: PreferenceKey {
-    static var defaultValue: [TourTarget: CGRect] = [:]
+    // Swift 6 concurrency: PreferenceKey only requires a getter for defaultValue,
+    // so `let` satisfies the protocol and avoids the "nonisolated global shared
+    // mutable state" diagnostic that comes with `static var`.
+    static let defaultValue: [TourTarget: CGRect] = [:]
     static func reduce(value: inout [TourTarget: CGRect], nextValue: () -> [TourTarget: CGRect]) {
         for (key, rect) in nextValue() { value[key] = rect }
     }
