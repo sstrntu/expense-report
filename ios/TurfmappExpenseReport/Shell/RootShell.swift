@@ -141,10 +141,12 @@ struct RootShell: View {
                 if !active { tourCompleted = true }
             }
             // Pump frames captured by .tourTarget modifiers into the coordinator.
-            // Every page that participates in the tour writes into the same
-            // TourTargetPreference, and this onPreferenceChange unifies them.
-            .onPreferenceChange(TourTargetPreference.self) { frames in
-                tourCoordinator.frames.merge(frames) { _, new in new }
+            // The modifier uses onGeometryChange + a shared TourTargetCollector
+            // which posts a Notification we listen for here.
+            .onReceive(NotificationCenter.default.publisher(for: .tourTargetFrameChanged)) { note in
+                guard let target = note.userInfo?["target"] as? TourTarget,
+                      let rect = note.userInfo?["rect"] as? CGRect else { return }
+                tourCoordinator.frames[target] = rect
             }
             .onReceive(NotificationCenter.default.publisher(for: .replayFeatureTour)) { _ in
                 tourCoordinator.start(for: app.role)

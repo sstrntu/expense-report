@@ -21,29 +21,53 @@ enum TourTarget: String, Hashable {
 /// Per-target → CGRect mapping built by the .tourTarget modifier. We merge
 /// with `latest wins` so a target that re-emits (e.g. on scroll) updates
 /// its frame rather than clobbering itself with a stale rect.
-struct TourTargetPreference: PreferenceKey {
-    // Swift 6 concurrency: PreferenceKey only requires a getter for defaultValue,
-    // so `let` satisfies the protocol and avoids the "nonisolated global shared
-    // mutable state" diagnostic that comes with `static var`.
-    static let defaultValue: [TourTarget: CGRect] = [:]
-    static func reduce(value: inout [TourTarget: CGRect], nextValue: () -> [TourTarget: CGRect]) {
-        for (key, rect) in nextValue() { value[key] = rect }
-    }
-}
-
 extension View {
     /// Tags this view as a tour target. Its global frame is reported into
     /// `TourTargetPreference` so the overlay can spotlight it.
+    ///
+    /// We use `.onGeometryChange` instead of the older
+    /// `.background(GeometryReader)` pattern: that pattern can over-report a
+    /// view's size when it's inside a `ViewBuilder`-style `if/else if/else`
+    /// computed property (the captured background ends up sized for the
+    /// containing layout group, not the conditional view that returned).
     func tourTarget(_ target: TourTarget) -> some View {
-        background(
-            GeometryReader { geo in
-                Color.clear.preference(
-                    key: TourTargetPreference.self,
-                    value: [target: geo.frame(in: .global)]
-                )
-            }
+        onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .global)
+        } action: { rect in
+            // Re-publish through a preference so the parent can collect across
+            // many target sites in a single onPreferenceChange.
+            TourTargetCollector.shared.publish(target: target, rect: rect)
+        }
+    }
+}
+
+/// Bridge between the `.tourTarget` modifier and the coordinator. The
+/// onGeometryChange action closure runs outside the SwiftUI view tree, so
+/// we can't directly write a `PreferenceKey` from it. Instead we route
+/// through a shared @Observable-style collector that the coordinator subscribes
+/// to via NotificationCenter.
+@MainActor
+final class TourTargetCollector {
+    static let shared = TourTargetCollector()
+    private var rects: [TourTarget: CGRect] = [:]
+
+    func publish(target: TourTarget, rect: CGRect) {
+        // Skip zero-size emits and identical re-emits.
+        guard rect.width > 4, rect.height > 4 else { return }
+        if let existing = rects[target], existing == rect { return }
+        rects[target] = rect
+        NotificationCenter.default.post(
+            name: .tourTargetFrameChanged,
+            object: nil,
+            userInfo: ["target": target, "rect": rect]
         )
     }
+
+    func snapshot() -> [TourTarget: CGRect] { rects }
+}
+
+extension Notification.Name {
+    static let tourTargetFrameChanged = Notification.Name("com.turfmapp.tourTargetFrameChanged")
 }
 
 // MARK: – Step model
@@ -174,24 +198,25 @@ struct FeatureTour: View {
     private let spotlightCorner: CGFloat = 16
 
     var body: some View {
+        // The outer GeometryReader needs to span the full window so its
+        // coordinate space matches the global frames we captured with
+        // `.frame(in: .global)`. Without `.ignoresSafeArea()` the reader's
+        // origin sits at the safe-area top, which means a target at window-y
+        // 540 would get drawn at y 540 + safe-area-top — visibly mis-aligned.
         GeometryReader { geo in
             let step = coordinator.current
             let target = step?.target
-            // Tolerate tiny height frames that GeometryReader sometimes emits
-            // mid-layout: only treat it as "found" once we have a sensible
-            // rectangle to draw against.
             let rect: CGRect? = {
-                guard let t = target, let r = coordinator.frames[t], r.width > 4, r.height > 4 else { return nil }
+                guard let t = target,
+                      let r = coordinator.frames[t],
+                      r.width > 4, r.height > 4 else { return nil }
                 return r
             }()
 
             ZStack {
-                // Dim layer with optional cutout
                 dimLayer(spotlightRect: rect, screenSize: geo.size)
-                    .ignoresSafeArea()
-                    .allowsHitTesting(true) // Block stray taps; only our buttons should respond
+                    .allowsHitTesting(true)
 
-                // Soft glow around the cutout to draw the eye
                 if let rect {
                     RoundedRectangle(cornerRadius: spotlightCorner)
                         .stroke(Color.white.opacity(0.85), lineWidth: 2)
@@ -204,13 +229,12 @@ struct FeatureTour: View {
                         .allowsHitTesting(false)
                 }
 
-                // Tooltip card — anchored above or below the spotlight depending
-                // on which half of the screen the target sits in.
                 tooltipPosition(rect: rect, screenSize: geo.size)
             }
-            .animation(.spring(response: 0.32, dampingFraction: 0.85), value: coordinator.currentStepIndex)
-            .animation(.spring(response: 0.32, dampingFraction: 0.85), value: rect)
         }
+        .ignoresSafeArea()
+        .animation(.spring(response: 0.32, dampingFraction: 0.85),
+                   value: coordinator.currentStepIndex)
     }
 
     // MARK: – Dim with cutout
