@@ -48,37 +48,33 @@ struct SocialAuthButtons: View {
     var body: some View {
         VStack(spacing: 10) {
             Button(action: onGoogle) {
-                // ZStack so the icon and label can be positioned independently:
-                // the icon hugs the leading edge, the label is centered against
-                // the full button width — matching how SignInWithAppleButton
-                // lays out its mark + text.
-                ZStack {
+                // Icon and label sit next to each other as a single centered
+                // unit, matching how SignInWithAppleButton lays out its mark.
+                HStack(spacing: 10) {
+                    GoogleGlyph()
+                        .frame(width: 20, height: 20)
                     Text(tr(mode.googleTextKey))
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(Color.primary)
-                        .frame(maxWidth: .infinity)
-                    HStack {
-                        GoogleGlyph()
-                            .frame(width: 22, height: 22)
-                        Spacer()
-                    }
                 }
-                .padding(.horizontal, 18)
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 14))
                 .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
             }
             .buttonStyle(.plain)
 
-            // Apple's official button. Label verb tracks `mode` so the two
-            // buttons stay verb-aligned with each other and with the segmented
-            // control above. The asynchronous bridging happens in `onApple`:
-            // we ignore the system's request/completion callbacks and call our
-            // own AppleAuthCoordinator from the parent.
+            // Apple's official button. The label verb tracks `mode` so it
+            // stays aligned with the segmented control above. The native
+            // button wraps a UIKit _ASAuthorizationAppleIDButton whose label
+            // is baked in at init — SwiftUI's diffing reuses the view across
+            // state changes, so flipping `mode` alone wouldn't re-render the
+            // text. `.id(mode)` forces SwiftUI to discard and rebuild the
+            // wrapped view when the verb changes.
             SignInWithAppleButton(mode.appleLabel) { _ in onApple() } onCompletion: { _ in }
                 .signInWithAppleButtonStyle(.black)
                 .frame(height: 50)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
+                .id(mode)
         }
     }
 }
