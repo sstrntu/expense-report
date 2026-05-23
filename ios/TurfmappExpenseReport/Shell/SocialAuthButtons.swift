@@ -17,7 +17,7 @@ struct SocialAuthButtons: View {
             Button(action: onGoogle) {
                 HStack(spacing: 12) {
                     GoogleGlyph()
-                        .frame(width: 18, height: 18)
+                        .frame(width: 20, height: 20)
                     Text(tr("auth.continue_with_google"))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.primary)
@@ -54,27 +54,63 @@ struct SocialAuthButtons: View {
     }
 }
 
-/// Vector-ish G glyph. Drawing it ourselves avoids shipping the Google logo
-/// asset and the brand-guidelines hassle that comes with it. Four arcs +
-/// a single horizontal bar approximating the trademark mark; close enough
-/// to read as "Google" without using the real PNG.
+/// Google "G" mark in its trademark four colors. Drawn programmatically with
+/// SwiftUI's Circle().trim(...) — no asset shipped, scales cleanly with any
+/// frame size. Colours match Google's identity guidelines:
+///   Blue   #4285F4
+///   Red    #EA4335
+///   Yellow #FBBC05
+///   Green  #34A853
+///
+/// Layout: a circular ring split into four arc segments with a notch on the
+/// right side where the horizontal "G" bar enters. Going clockwise from 12
+/// o'clock, the arc trim percentages map to the reference logo as follows:
+///   0.000 – 0.250   BLUE   top-right
+///   0.250 – 0.330   (gap — the bar enters here)
+///   0.330 – 0.500   GREEN  bottom-right
+///   0.500 – 0.750   YELLOW bottom-left
+///   0.750 – 1.000   RED    top-left
 private struct GoogleGlyph: View {
     var body: some View {
-        ZStack {
-            // Outer disc clipped to a ring
-            Circle().stroke(Color.primary.opacity(0.5), lineWidth: 2.4)
-            // Horizontal "G" bar from the centre out the right side
-            Path { p in
-                p.move(to: CGPoint(x: 9, y: 10))
-                p.addLine(to: CGPoint(x: 17.5, y: 10))
+        GeometryReader { geo in
+            let size = min(geo.size.width, geo.size.height)
+            let lineWidth = size * 0.22
+            let radius = (size - lineWidth) / 2
+            let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+
+            ZStack {
+                arc(0.000, 0.250, color: blue,   radius: radius, lineWidth: lineWidth, center: center)
+                arc(0.330, 0.500, color: green,  radius: radius, lineWidth: lineWidth, center: center)
+                arc(0.500, 0.750, color: yellow, radius: radius, lineWidth: lineWidth, center: center)
+                arc(0.750, 1.000, color: red,    radius: radius, lineWidth: lineWidth, center: center)
+
+                // Horizontal blue bar entering through the gap. Starts at the
+                // centre of the ring and extends out to where the inner edge
+                // of the arc would be at ~3:30 position.
+                Capsule()
+                    .fill(blue)
+                    .frame(width: radius * 0.95, height: lineWidth)
+                    .position(x: center.x + radius * 0.42, y: center.y + lineWidth * 0.55)
             }
-            .stroke(Color.primary.opacity(0.7), lineWidth: 2.4)
-            // Inner notch — short vertical going down from the bar
-            Path { p in
-                p.move(to: CGPoint(x: 16.5, y: 10))
-                p.addLine(to: CGPoint(x: 16.5, y: 14))
-            }
-            .stroke(Color.primary.opacity(0.7), lineWidth: 2.4)
         }
+        .aspectRatio(1, contentMode: .fit)
+    }
+
+    private let blue   = Color(red: 66/255,  green: 133/255, blue: 244/255)
+    private let red    = Color(red: 234/255, green: 67/255,  blue: 53/255)
+    private let yellow = Color(red: 251/255, green: 188/255, blue: 5/255)
+    private let green  = Color(red: 52/255,  green: 168/255, blue: 83/255)
+
+    private func arc(_ start: CGFloat, _ end: CGFloat,
+                     color: Color,
+                     radius: CGFloat,
+                     lineWidth: CGFloat,
+                     center: CGPoint) -> some View {
+        Circle()
+            .trim(from: start, to: end)
+            .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
+            .rotationEffect(.degrees(-90))
+            .frame(width: radius * 2, height: radius * 2)
+            .position(x: center.x, y: center.y)
     }
 }
