@@ -41,6 +41,16 @@ enum ExpenseWorkflow {
         expense.kind == .preApproval && expense.status == .approved
     }
 
+    /// Authorization-aware overload: only the submitter can confirm their own
+    /// purchase. Server-side RLS ("submitters can update own draft expenses")
+    /// already enforces this, but the iOS UI previously exposed the action to
+    /// anyone with reviewer/finance visibility — confusing UX and a foot-gun.
+    static func canConfirmPurchase(_ expense: DomainExpense, currentMembershipId: String?) -> Bool {
+        guard canConfirmPurchase(expense) else { return false }
+        guard let me = currentMembershipId else { return false }
+        return expense.submittedByMembershipId == me
+    }
+
     static func canApprove(_ expense: DomainExpense) -> Bool {
         expense.status == .pendingManagerApproval
     }

@@ -379,7 +379,12 @@ struct DomainDetailView: View {
                 }
             }
         case .approved:
-            if (role == .employee || role == .admin) && expense.kind == .preApproval {
+            // "I made the purchase" must be limited to the submitter — anyone
+            // else seeing the button is both a security foot-gun and a UX trap
+            // (the server-side RLS rejects non-submitters with a permission
+            // error). canConfirmPurchase(_:currentMembershipId:) does the
+            // status + kind + submitter check in one place.
+            if ExpenseWorkflow.canConfirmPurchase(expense, currentMembershipId: repositoryApp.currentMembershipId) {
                 Button { showPurchaseSheet = true } label: {
                     Label(tr("detail.action.purchased"), systemImage: "bag.fill")
                         .font(.system(size: 15, weight: .semibold))
