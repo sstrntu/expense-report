@@ -771,87 +771,395 @@ struct ReportsExportView: View {
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
 
-    @State private var csvFile: URL?
+    // Filters
+    @State private var fromDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    @State private var toDate: Date = Date()
+    @State private var useDateRange: Bool = false
+    @State private var searchText: String = ""
+    @State private var selectedProjectId: String? = nil
+    @State private var selectedStatus: ExpenseWorkflowStatus? = nil
+
+    // Output
+    @State private var pdfFile: URL? = nil
+    @State private var csvFile: URL? = nil
+    @State private var isExporting = false
+    @State private var exportError: String? = nil
+
+    // Filtered set drives both the preview and the export buttons.
+    private var filteredExpenses: [DomainExpense] {
+        let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return repositoryApp.expenses.filter { expense in
+            if useDateRange {
+                let date = expense.purchaseDate ?? expense.submittedAt ?? expense.createdAt
+                let lower = Calendar.current.startOfDay(for: fromDate)
+                let upper = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: toDate)) ?? toDate
+                if date < lower || date >= upper { return false }
+            }
+            if let projectId = selectedProjectId, expense.projectId != projectId { return false }
+            if let status = selectedStatus, expense.status != status { return false }
+            if !trimmedSearch.isEmpty {
+                let haystack = "\(expense.merchant) \(expense.businessPurpose)".lowercased()
+                if !haystack.contains(trimmedSearch) { return false }
+            }
+            return true
+        }
+    }
+
+    private var filteredTotal: Double {
+        // Re-project to the workspace currency so the preview total matches what the PDF prints.
+        let ids = Set(filteredExpenses.map(\.id))
+        return repositoryApp.expensesInDefaultCurrency
+            .filter { ids.contains($0.id) }
+            .reduce(0) { $0 + $1.amount.decimalValue }
+    }
 
     var body: some View {
         settingsContainer(title: tr("reports.title"), onBack: onBack) {
-            GlassCard(padding: Tokens.padCard) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(repositoryApp.selectedWorkspace?.name ?? app.company.name).font(.system(size: 15, weight: .bold))
-                    HStack {
-                        reportMetric(tr("reports.stat.expenses"), "\(repositoryApp.expenses.count)")
-                        Spacer()
-                        reportMetric(tr("reports.stat.spend"),
-                            money(repositoryApp.expensesInDefaultCurrency.reduce(0) { $0 + $1.amount.decimalValue },
-                                  currency: repositoryApp.aggregationCurrency))
-                        Spacer()
-                        reportMetric(tr("reports.stat.pending"), "\(repositoryApp.managerQueue.count)")
-                    }
-                }
-            }
-
             if repositoryApp.expenses.isEmpty {
                 infoBanner(icon: "tray", tint: Tokens.slate500,
                            title: tr("reports.empty.title"),
                            message: tr("reports.empty.subtitle"))
             } else {
-                Button { csvFile = makeCSVFile() } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundStyle(.white)
-                            .frame(width: 30, height: 30)
-                            .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 9))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(tr("reports.export_csv")).font(.system(size: 13.5, weight: .semibold))
-                                .foregroundStyle(Color.primary)
-                            Text(tr("reports.csv_columns", repositoryApp.expenses.count))
-                                .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
-                        }
-                        Spacer()
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                filtersCard
+                previewCard
+                exportButtons
+                if let err = exportError {
+                    infoBanner(icon: "exclamationmark.triangle.fill", tint: Tokens.rejected,
+                               title: tr("reports.export_failed"),
+                               message: err)
                 }
-                .buttonStyle(.plain)
-                .glassSurface(corner: 18)
-
-                if let csvFile {
-                    ShareLink(item: csvFile) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "paperplane.fill")
-                                .foregroundStyle(Tokens.approved)
-                                .frame(width: 30, height: 30)
-                                .background(Tokens.approved.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(tr("reports.share", csvFile.lastPathComponent))
-                                    .font(.system(size: 13.5, weight: .semibold))
-                                    .foregroundStyle(Color.primary)
-                                Text(tr("reports.share.subtitle"))
-                                    .font(.system(size: 11)).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .glassSurface(corner: 18)
-                }
+                shareLinks
             }
-
-            infoBanner(icon: "info.circle.fill", tint: Tokens.slate500,
-                       title: tr("reports.pdf_soon"),
-                       message: tr("reports.pdf_soon.message"))
         }
     }
+
+    // MARK: – Filters
+
+    private var filtersCard: some View {
+        GlassCard(padding: Tokens.padCard) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Date range
+                HStack {
+                    Text(tr("reports.filter.date_range"))
+                        .font(.system(size: 11, weight: .semibold)).tracking(0.4)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    Toggle("", isOn: $useDateRange).labelsHidden()
+                }
+                if useDateRange {
+                    HStack(spacing: 10) {
+                        DatePicker(tr("reports.filter.from"), selection: $fromDate, in: ...toDate, displayedComponents: .date)
+                            .labelsHidden()
+                        Image(systemName: "arrow.right").foregroundStyle(.tertiary).font(.system(size: 11))
+                        DatePicker(tr("reports.filter.to"), selection: $toDate, in: fromDate..., displayedComponents: .date)
+                            .labelsHidden()
+                        Spacer()
+                    }
+                }
+
+                Divider().opacity(0.4)
+
+                // Search
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.tertiary).font(.system(size: 12))
+                    TextField(tr("reports.filter.search"), text: $searchText)
+                        .font(.system(size: 13))
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    if !searchText.isEmpty {
+                        Button { searchText = "" } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Divider().opacity(0.4)
+
+                // Project + Status pickers
+                HStack(spacing: 8) {
+                    Menu {
+                        Button(tr("reports.filter.all_projects")) { selectedProjectId = nil }
+                        Divider()
+                        ForEach(repositoryApp.projects, id: \.id) { project in
+                            Button(project.name) { selectedProjectId = project.id }
+                        }
+                    } label: {
+                        filterPill(
+                            icon: "folder",
+                            label: selectedProjectId.flatMap { id in repositoryApp.projects.first(where: { $0.id == id })?.name }
+                                ?? tr("reports.filter.all_projects"),
+                            highlighted: selectedProjectId != nil
+                        )
+                    }
+
+                    Menu {
+                        Button(tr("reports.filter.all_statuses")) { selectedStatus = nil }
+                        Divider()
+                        ForEach(ExpenseWorkflowStatus.allCases, id: \.self) { status in
+                            Button(status.displayLabel) { selectedStatus = status }
+                        }
+                    } label: {
+                        filterPill(
+                            icon: "checkmark.seal",
+                            label: selectedStatus?.displayLabel ?? tr("reports.filter.all_statuses"),
+                            highlighted: selectedStatus != nil
+                        )
+                    }
+
+                    Spacer()
+
+                    if hasActiveFilters {
+                        Button { resetFilters() } label: {
+                            Text(tr("reports.filter.reset"))
+                                .font(.system(size: 11.5, weight: .semibold))
+                                .foregroundStyle(Tokens.slate500)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var hasActiveFilters: Bool {
+        useDateRange || !searchText.isEmpty || selectedProjectId != nil || selectedStatus != nil
+    }
+
+    private func resetFilters() {
+        useDateRange = false
+        searchText = ""
+        selectedProjectId = nil
+        selectedStatus = nil
+    }
+
+    private func filterPill(icon: String, label: String, highlighted: Bool) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon).font(.system(size: 10, weight: .semibold))
+            Text(label).font(.system(size: 11.5, weight: .medium)).lineLimit(1)
+            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+        }
+        .foregroundStyle(highlighted ? Tokens.slate500 : Color.primary.opacity(0.7))
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(
+            (highlighted ? Tokens.slate500.opacity(0.12) : Color.primary.opacity(0.06)),
+            in: Capsule()
+        )
+    }
+
+    // MARK: – Preview
+
+    private var previewCard: some View {
+        GlassCard(padding: 0) {
+            VStack(spacing: 0) {
+                HStack {
+                    Text(tr("reports.preview.count", filteredExpenses.count))
+                        .font(.system(size: 12, weight: .semibold))
+                    Spacer()
+                    Text(money(filteredTotal, currency: repositoryApp.aggregationCurrency))
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+
+                if filteredExpenses.isEmpty {
+                    Divider().opacity(0.4)
+                    Text(tr("reports.preview.empty"))
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 18)
+                } else {
+                    // Show up to 8 rows in the preview to keep the screen scrollable.
+                    // The export still uses the full filtered set.
+                    ForEach(Array(filteredExpenses.prefix(8).enumerated()), id: \.element.id) { _, e in
+                        Divider().opacity(0.4)
+                        previewRow(e)
+                    }
+                    if filteredExpenses.count > 8 {
+                        Divider().opacity(0.4)
+                        Text("+ \(filteredExpenses.count - 8) more")
+                            .font(.system(size: 11)).foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 8)
+                    }
+                }
+            }
+        }
+    }
+
+    private func previewRow(_ e: DomainExpense) -> some View {
+        let date = e.purchaseDate ?? e.submittedAt ?? e.createdAt
+        return HStack(spacing: 10) {
+            Text(Self.previewDateFormatter.string(from: date))
+                .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                .frame(width: 48, alignment: .leading)
+            Text(e.merchant).font(.system(size: 12.5, weight: .semibold)).lineLimit(1)
+            Spacer()
+            Text(e.amount.formatted).font(.system(size: 12, weight: .semibold))
+        }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+    }
+
+    private static let previewDateFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "MMM d"
+        return df
+    }()
+
+    // MARK: – Export actions
+
+    private var exportButtons: some View {
+        HStack(spacing: 10) {
+            Button { Task { await runPDFExport() } } label: {
+                HStack(spacing: 8) {
+                    if isExporting {
+                        ProgressView().tint(.white).scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "doc.richtext.fill")
+                    }
+                    Text(isExporting ? tr("reports.exporting") : tr("reports.export_pdf"))
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity).padding(14)
+                .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .disabled(filteredExpenses.isEmpty || isExporting)
+            .opacity(filteredExpenses.isEmpty ? 0.5 : 1)
+
+            Button { csvFile = makeCSVFile() } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "tablecells")
+                    Text(tr("reports.export_csv"))
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(Color.primary)
+                .frame(maxWidth: .infinity).padding(14)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.white.opacity(0.4), lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
+            .disabled(filteredExpenses.isEmpty)
+            .opacity(filteredExpenses.isEmpty ? 0.5 : 1)
+        }
+    }
+
+    @ViewBuilder
+    private var shareLinks: some View {
+        if let pdfFile {
+            ShareLink(item: pdfFile) {
+                shareRow(icon: "doc.richtext.fill", tint: Tokens.approved, fileName: pdfFile.lastPathComponent)
+            }
+            .glassSurface(corner: 18)
+        }
+        if let csvFile {
+            ShareLink(item: csvFile) {
+                shareRow(icon: "paperplane.fill", tint: Tokens.slate500, fileName: csvFile.lastPathComponent)
+            }
+            .glassSurface(corner: 18)
+        }
+    }
+
+    private func shareRow(icon: String, tint: Color, fileName: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(tint)
+                .frame(width: 30, height: 30)
+                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(tr("reports.share", fileName))
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                Text(tr("reports.share.subtitle"))
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: – PDF build (fetches receipts then renders)
+
+    private func runPDFExport() async {
+        guard !filteredExpenses.isEmpty else { return }
+        isExporting = true
+        exportError = nil
+        defer { isExporting = false }
+
+        // Resolve the rows: project/category labels + receipt image (if any).
+        // Pulling all attachments + downloading their bytes is the slowest step;
+        // we run them serially so we don't slam the storage bucket with N parallel
+        // requests for a large export. For ~50 expenses this is still fast enough.
+        let projectsById = Dictionary(uniqueKeysWithValues: repositoryApp.projects.map { ($0.id, $0.name) })
+        var rows: [ReportPDFRenderer.Row] = []
+        for expense in filteredExpenses {
+            let projectName = projectsById[expense.projectId] ?? "—"
+            let categoryName = repositoryApp.displayCategoryName(forId: expense.categoryId)
+            let image = await fetchReceiptImage(for: expense)
+            rows.append(.init(
+                expense: expense,
+                projectName: projectName,
+                categoryName: categoryName,
+                receiptImage: image
+            ))
+        }
+
+        let range: ClosedRange<Date>? = useDateRange ? fromDate...toDate : nil
+        let renderContext = ReportPDFRenderer.Context(
+            workspaceName: repositoryApp.selectedWorkspace?.name ?? app.company.name,
+            aggregationCurrency: repositoryApp.aggregationCurrency,
+            dateRange: range,
+            rows: rows,
+            totalInAggregationCurrency: filteredTotal
+        )
+
+        let pdfData = ReportPDFRenderer.render(renderContext)
+        do {
+            let stamp = filenameStamp()
+            let workspaceSlug = (repositoryApp.selectedWorkspace?.name ?? "expenses")
+                .lowercased().replacingOccurrences(of: " ", with: "-")
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(workspaceSlug)-statement-\(stamp).pdf")
+            try pdfData.write(to: url, options: .atomic)
+            pdfFile = url
+        } catch {
+            exportError = error.localizedDescription
+        }
+    }
+
+    /// Picks the most-relevant receipt for the expense and returns its image,
+    /// or nil if none can be loaded (no attachment, or it's a PDF, or download fails).
+    /// Priority: reimbursementProof > purchaseReceipt > submittedReceipt > supportingDocument.
+    private func fetchReceiptImage(for expense: DomainExpense) async -> UIImage? {
+        let attachments = await repositoryApp.listAttachments(for: expense.id)
+        guard !attachments.isEmpty else { return nil }
+        let priority: [ExpenseAttachment.Kind] = [.reimbursementProof, .purchaseReceipt, .submittedReceipt, .supportingDocument]
+        let sorted = priority.compactMap { kind in attachments.first { $0.kind == kind } }
+        for attachment in sorted {
+            // Only embed image attachments. PDFs aren't rasterised here; they'd
+            // need PDFKit to draw, which is doable but adds complexity. Skipping
+            // for now leaves the row in the table without a receipt page.
+            guard attachment.contentType.hasPrefix("image/") else { continue }
+            if let data = await repositoryApp.downloadAttachment(attachment),
+               let image = UIImage(data: data) {
+                return image
+            }
+        }
+        return nil
+    }
+
+    // MARK: – CSV build (respects current filter)
 
     private func makeCSVFile() -> URL? {
         let projectsById = Dictionary(uniqueKeysWithValues: repositoryApp.projects.map { ($0.id, $0.name) })
         var rows: [String] = ["id,date,project,category,merchant,amount,currency,status"]
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime]
-        for e in repositoryApp.expenses {
+        for e in filteredExpenses {
             let date = e.submittedAt ?? e.purchaseDate ?? e.createdAt
             let project = projectsById[e.projectId] ?? e.projectId
             let category = repositoryApp.categoryName(forId: e.categoryId)
@@ -860,8 +1168,7 @@ struct ReportsExportView: View {
             rows.append(cols.map(csvEscape).joined(separator: ","))
         }
         let csv = rows.joined(separator: "\n").appending("\n")
-        let stamp = ISO8601DateFormatter().string(from: Date())
-            .replacingOccurrences(of: ":", with: "-")
+        let stamp = filenameStamp()
         let workspaceSlug = (repositoryApp.selectedWorkspace?.name ?? "expenses")
             .lowercased().replacingOccurrences(of: " ", with: "-")
         let url = FileManager.default.temporaryDirectory
@@ -881,13 +1188,11 @@ struct ReportsExportView: View {
         return value
     }
 
-    private func reportMetric(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(.tertiary)
-            Text(value).font(.system(size: 15, weight: .bold))
-        }
+    private func filenameStamp() -> String {
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd-HHmm"
+        return df.string(from: Date())
     }
-
 }
 
 struct HelpSupportView: View {

@@ -12,6 +12,7 @@
 		033FAA81CA463676F32438FF /* DraftsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7308954FD71CE684A0764452 /* DraftsCard.swift */; };
 		0581D62D224E38D8E3201A9D /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7038F8122D513472A92656 /* ProfileView.swift */; };
 		0982BE8186C0B5D411254834 /* AppConfig.local.xcconfig.example in Resources */ = {isa = PBXBuildFile; fileRef = FF8327C50FEE23C95BB2274C /* AppConfig.local.xcconfig.example */; };
+		0BB124B943DB99FE4645B745 /* ReportPDFRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B134195922AD7F8925BE7C /* ReportPDFRenderer.swift */; };
 		16AFC42C4F44934D90CD8C68 /* ManagerOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53DEF6879D81BC1B1ED4918 /* ManagerOverviewView.swift */; };
 		1EBDAF336E8CB243B5BF07D1 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67EC6D7BD90D039BB416ED74 /* ReviewView.swift */; };
 		2493E01868B610DD3193D13D /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3C217BB946FC793FCE5377 /* HomeView.swift */; };
@@ -113,6 +114,7 @@
 		DBA109009158416677C78BCB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E267442BEA226AA91190BCA2 /* SupabaseRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseRepositories.swift; sourceTree = "<group>"; };
+		E6B134195922AD7F8925BE7C /* ReportPDFRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportPDFRenderer.swift; sourceTree = "<group>"; };
 		E6C1348EECDE16A1827E2010 /* RepositoryAppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryAppState.swift; sourceTree = "<group>"; };
 		EA14ACD9CE6B450907E4C1E5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EB3C217BB946FC793FCE5377 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -269,6 +271,7 @@
 				D53DEF6879D81BC1B1ED4918 /* ManagerOverviewView.swift */,
 				649767E02DA13AB1CCBFD0E9 /* PermissionsView.swift */,
 				4F7038F8122D513472A92656 /* ProfileView.swift */,
+				E6B134195922AD7F8925BE7C /* ReportPDFRenderer.swift */,
 				67EC6D7BD90D039BB416ED74 /* ReviewView.swift */,
 				38494852C1A233217A4B4CAF /* SubmitView.swift */,
 			);
@@ -395,6 +398,7 @@
 				F2A21797BBFB2DFBB4576CA6 /* Models.swift in Sources */,
 				5FB4E6907640C710222DF67F /* PermissionsView.swift in Sources */,
 				0581D62D224E38D8E3201A9D /* ProfileView.swift in Sources */,
+				0BB124B943DB99FE4645B745 /* ReportPDFRenderer.swift in Sources */,
 				7448C44EE0C996244E94403C /* RepositoryAppState.swift in Sources */,
 				7E9A53D69CC02AA267DE44B4 /* RepositoryContracts.swift in Sources */,
 				1EBDAF336E8CB243B5BF07D1 /* ReviewView.swift in Sources */,

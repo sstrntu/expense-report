@@ -528,11 +528,37 @@
 "reports.empty.title" = "ยังไม่มีอะไรให้ส่งออก";
 "reports.empty.subtitle" = "ส่งค่าใช้จ่ายแรกของคุณ แล้วการส่งออก CSV จะพร้อมที่นี่";
 "reports.export_csv" = "ส่งออก CSV";
+"reports.export_pdf" = "ส่งออก PDF";
 "reports.share" = "แชร์ %@";
 "reports.share.subtitle" = "ส่งไปยังเมล ไฟล์ AirDrop, …";
 "reports.pdf_soon" = "แพ็คเกจ PDF & ใบเสร็จ";
 "reports.pdf_soon.message" = "เร็ว ๆ นี้ — ใช้ CSV ในโปรแกรมสเปรดชีตได้ก่อน";
 "reports.csv_columns" = "%d แถว — id, วันที่, โครงการ, หมวดหมู่, ร้านค้า, จำนวนเงิน, สกุลเงิน, สถานะ";
+"reports.filter.date_range" = "ช่วงวันที่";
+"reports.filter.from" = "จาก";
+"reports.filter.to" = "ถึง";
+"reports.filter.search" = "ค้นหาร้านค้าหรือวัตถุประสงค์";
+"reports.filter.project" = "โครงการ";
+"reports.filter.status" = "สถานะ";
+"reports.filter.all_projects" = "ทุกโครงการ";
+"reports.filter.all_statuses" = "ทุกสถานะ";
+"reports.filter.reset" = "รีเซ็ต";
+"reports.preview.count" = "%d รายการ";
+"reports.preview.empty" = "ไม่พบรายการที่ตรงกับตัวกรอง";
+"reports.exporting" = "กำลังสร้าง PDF…";
+"reports.export_failed" = "ส่งออกไม่สำเร็จ";
+"reports.pdf.statement_title" = "ใบสรุปค่าใช้จ่าย";
+"reports.pdf.generated" = "สร้างเมื่อ %@";
+"reports.pdf.period" = "%@ – %@";
+"reports.pdf.totals" = "รวม: %@ จาก %d รายการ";
+"reports.pdf.col_date" = "วันที่";
+"reports.pdf.col_merchant" = "ร้านค้า";
+"reports.pdf.col_project" = "โครงการ";
+"reports.pdf.col_category" = "หมวดหมู่";
+"reports.pdf.col_status" = "สถานะ";
+"reports.pdf.col_amount" = "จำนวนเงิน";
+"reports.pdf.receipts_header" = "ใบเสร็จ";
+"reports.pdf.no_receipt" = "ไม่มีใบเสร็จแนบ";
 
 /* === Help & legal === */
 "help.title" = "ช่วยเหลือ";

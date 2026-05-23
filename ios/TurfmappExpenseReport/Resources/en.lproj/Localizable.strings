@@ -528,11 +528,37 @@
 "reports.empty.title" = "Nothing to export yet";
 "reports.empty.subtitle" = "Submit your first expense and the CSV export will be ready here.";
 "reports.export_csv" = "Export CSV";
+"reports.export_pdf" = "Export PDF";
 "reports.share" = "Share %@";
 "reports.share.subtitle" = "Send to Mail, Files, AirDrop, …";
 "reports.pdf_soon" = "PDF & receipt bundle";
 "reports.pdf_soon.message" = "Coming soon — for now use the CSV in any spreadsheet tool.";
 "reports.csv_columns" = "%d rows — id, date, project, category, merchant, amount, currency, status";
+"reports.filter.date_range" = "Date range";
+"reports.filter.from" = "From";
+"reports.filter.to" = "To";
+"reports.filter.search" = "Search merchant or purpose";
+"reports.filter.project" = "Project";
+"reports.filter.status" = "Status";
+"reports.filter.all_projects" = "All projects";
+"reports.filter.all_statuses" = "All statuses";
+"reports.filter.reset" = "Reset";
+"reports.preview.count" = "%d expenses";
+"reports.preview.empty" = "No expenses match these filters";
+"reports.exporting" = "Building PDF…";
+"reports.export_failed" = "Export failed";
+"reports.pdf.statement_title" = "Expense statement";
+"reports.pdf.generated" = "Generated %@";
+"reports.pdf.period" = "%@ – %@";
+"reports.pdf.totals" = "Total: %@ across %d expenses";
+"reports.pdf.col_date" = "Date";
+"reports.pdf.col_merchant" = "Merchant";
+"reports.pdf.col_project" = "Project";
+"reports.pdf.col_category" = "Category";
+"reports.pdf.col_status" = "Status";
+"reports.pdf.col_amount" = "Amount";
+"reports.pdf.receipts_header" = "Receipts";
+"reports.pdf.no_receipt" = "No receipt attached";
 
 /* === Help & legal === */
 "help.title" = "Help";
