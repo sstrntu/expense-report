@@ -1,139 +1,306 @@
 import SwiftUI
 
-/// Coach-marks-style guided tour that points at the bottom tab bar and
-/// explains what each tab does. Triggered:
-///   - automatically once, right after a fresh signup finishes onboarding
-///     (gated by `@AppStorage("tour.completed")` in RootShell)
-///   - manually from Profile → "Replay app tour"
-///
-/// The overlay dims the underlying app and intercepts touches so the user
-/// can't accidentally tap a tab mid-tour. Each "tab" step also drops a
-/// pulsing highlight ring at the computed tab center so it's obvious which
-/// area the tooltip is talking about.
-struct FeatureTour: View {
-    let role: AppRole
-    var onFinish: () -> Void
+// MARK: – Tour targets (the UI elements the tour can spotlight)
 
-    @State private var stepIndex: Int = 0
+/// Strongly typed catalog of UI elements the tour can highlight. Each app
+/// screen that participates in the tour tags one or more elements with
+/// `.tourTarget(.someCase)`; the modifier writes the element's global frame
+/// into a preference, and the overlay reads it to draw a cutout + tooltip.
+enum TourTarget: String, Hashable {
+    case homeHero
+    case homeRecent
+    case submitScan
+    case submitForm
+    case activitySearch
+    case activityFilters
+    case reviewQueues
+    case profileWorkspace
+    case profileTourReplay
+}
 
-    // MARK: – Step model
+/// Per-target → CGRect mapping built by the .tourTarget modifier. We merge
+/// with `latest wins` so a target that re-emits (e.g. on scroll) updates
+/// its frame rather than clobbering itself with a stale rect.
+struct TourTargetPreference: PreferenceKey {
+    static var defaultValue: [TourTarget: CGRect] = [:]
+    static func reduce(value: inout [TourTarget: CGRect], nextValue: () -> [TourTarget: CGRect]) {
+        for (key, rect) in nextValue() { value[key] = rect }
+    }
+}
 
-    /// A tour step is either a centered welcome/finish card or a
-    /// tab-targeted tooltip with a highlight ring + downward chevron.
-    private enum Step {
-        case intro
-        case tab(target: TabID, title: String, body: String)
-        case done
+extension View {
+    /// Tags this view as a tour target. Its global frame is reported into
+    /// `TourTargetPreference` so the overlay can spotlight it.
+    func tourTarget(_ target: TourTarget) -> some View {
+        background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: TourTargetPreference.self,
+                    value: [target: geo.frame(in: .global)]
+                )
+            }
+        )
+    }
+}
 
-        var isTabbed: Bool { if case .tab = self { return true }; return false }
+// MARK: – Step model
+
+struct TourStep: Identifiable {
+    let id = UUID()
+    /// Tab to switch to before showing this step. Nil means "stay on current".
+    let tab: TabID?
+    /// UI element to spotlight. Nil means a centered intro/outro card.
+    let target: TourTarget?
+    let title: String
+    let body: String
+}
+
+// MARK: – Coordinator
+
+@MainActor
+final class TourCoordinator: ObservableObject {
+    @Published var isActive: Bool = false
+    @Published var currentStepIndex: Int = 0
+    /// Frames captured from the live UI via the .tourTarget modifier.
+    @Published var frames: [TourTarget: CGRect] = [:]
+    /// Set when the tour wants to switch tabs; RootShell observes this and
+    /// updates the bound selectedTab. We use a side-channel rather than
+    /// passing a binding into the coordinator to keep it free of SwiftUI types.
+    @Published var requestedTab: TabID? = nil
+
+    private(set) var steps: [TourStep] = []
+
+    var current: TourStep? {
+        guard isActive, steps.indices.contains(currentStepIndex) else { return nil }
+        return steps[currentStepIndex]
     }
 
-    private var steps: [Step] {
-        var list: [Step] = [.intro]
-        list.append(.tab(target: .home,
-                         title: tr("tour.home.title"),
-                         body: tr("tour.home.body")))
-        list.append(.tab(target: .add,
-                         title: tr("tour.add.title"),
-                         body: tr("tour.add.body")))
-        // Branch by role: employees see Activity in slot 3, managers/finance/admin
-        // see Review instead. We mirror BottomTabBar's tab ordering exactly so
-        // the highlight ring lands on the right spot.
-        if role == .employee {
-            list.append(.tab(target: .activity,
-                             title: tr("tour.activity.title"),
-                             body: tr("tour.activity.body")))
-        } else {
-            list.append(.tab(target: .review,
-                             title: tr("tour.review.title"),
-                             body: tr("tour.review.body")))
+    var isFirst: Bool { currentStepIndex == 0 }
+    var isLast: Bool { currentStepIndex == steps.count - 1 }
+    var stepNumber: Int { currentStepIndex + 1 }
+    var totalSteps: Int { steps.count }
+
+    func start(for role: AppRole) {
+        steps = Self.buildSteps(for: role)
+        currentStepIndex = 0
+        if let tab = steps.first?.tab { requestedTab = tab }
+        isActive = true
+    }
+
+    func next() {
+        guard isActive else { return }
+        if currentStepIndex >= steps.count - 1 {
+            stop()
+            return
         }
-        list.append(.tab(target: .profile,
-                         title: tr("tour.profile.title"),
-                         body: tr("tour.profile.body")))
-        list.append(.done)
+        currentStepIndex += 1
+        if let tab = current?.tab { requestedTab = tab }
+    }
+
+    func back() {
+        guard currentStepIndex > 0 else { return }
+        currentStepIndex -= 1
+        if let tab = current?.tab { requestedTab = tab }
+    }
+
+    func stop() {
+        isActive = false
+        requestedTab = nil
+    }
+
+    /// Per-role step list. Employees route through Activity; managers/finance/
+    /// admin route through Review (the role-tabbed queues we built earlier).
+    private static func buildSteps(for role: AppRole) -> [TourStep] {
+        var list: [TourStep] = []
+        list.append(.init(tab: nil, target: nil,
+                          title: tr("tour.intro.title"),
+                          body: tr("tour.intro.body")))
+
+        list.append(.init(tab: .home, target: .homeHero,
+                          title: tr("tour.home.hero.title"),
+                          body: tr("tour.home.hero.body")))
+        list.append(.init(tab: .home, target: .homeRecent,
+                          title: tr("tour.home.recent.title"),
+                          body: tr("tour.home.recent.body")))
+
+        list.append(.init(tab: .add, target: .submitScan,
+                          title: tr("tour.submit.scan.title"),
+                          body: tr("tour.submit.scan.body")))
+        list.append(.init(tab: .add, target: .submitForm,
+                          title: tr("tour.submit.form.title"),
+                          body: tr("tour.submit.form.body")))
+
+        if role == .employee {
+            list.append(.init(tab: .activity, target: .activitySearch,
+                              title: tr("tour.activity.search.title"),
+                              body: tr("tour.activity.search.body")))
+            list.append(.init(tab: .activity, target: .activityFilters,
+                              title: tr("tour.activity.filters.title"),
+                              body: tr("tour.activity.filters.body")))
+        } else {
+            list.append(.init(tab: .review, target: .reviewQueues,
+                              title: tr("tour.review.title"),
+                              body: tr("tour.review.body")))
+        }
+
+        list.append(.init(tab: .profile, target: .profileWorkspace,
+                          title: tr("tour.profile.workspace.title"),
+                          body: tr("tour.profile.workspace.body")))
+        list.append(.init(tab: .profile, target: .profileTourReplay,
+                          title: tr("tour.profile.replay.title"),
+                          body: tr("tour.profile.replay.body")))
+
+        list.append(.init(tab: nil, target: nil,
+                          title: tr("tour.done.title"),
+                          body: tr("tour.done.body")))
         return list
     }
+}
 
-    private var current: Step { steps[stepIndex] }
-    private var lastIndex: Int { steps.count - 1 }
+// MARK: – Overlay view
+
+/// Full-screen overlay that dims the app, cuts a "spotlight" hole around the
+/// currently-targeted UI element, and floats a tooltip card next to it. The
+/// underlying UI is visible inside the spotlight so users can see exactly
+/// what's being described.
+struct FeatureTour: View {
+    @ObservedObject var coordinator: TourCoordinator
+
+    // 12pt of breathing room around the highlighted element.
+    private let spotlightPadding: CGFloat = 12
+    private let spotlightCorner: CGFloat = 16
 
     var body: some View {
         GeometryReader { geo in
-            ZStack {
-                // Dim everything underneath
-                Color.black.opacity(0.55)
-                    .ignoresSafeArea()
-                    .allowsHitTesting(true)
+            let step = coordinator.current
+            let target = step?.target
+            // Tolerate tiny height frames that GeometryReader sometimes emits
+            // mid-layout: only treat it as "found" once we have a sensible
+            // rectangle to draw against.
+            let rect: CGRect? = {
+                guard let t = target, let r = coordinator.frames[t], r.width > 4, r.height > 4 else { return nil }
+                return r
+            }()
 
-                // Pulsing highlight ring at the targeted tab (for tab steps only)
-                if case .tab(let target, _, _) = current,
-                   let tabCenter = tabCenterPoint(for: target, in: geo.size) {
-                    HighlightRing()
-                        .position(tabCenter)
+            ZStack {
+                // Dim layer with optional cutout
+                dimLayer(spotlightRect: rect, screenSize: geo.size)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(true) // Block stray taps; only our buttons should respond
+
+                // Soft glow around the cutout to draw the eye
+                if let rect {
+                    RoundedRectangle(cornerRadius: spotlightCorner)
+                        .stroke(Color.white.opacity(0.85), lineWidth: 2)
+                        .frame(
+                            width: rect.width + spotlightPadding * 2,
+                            height: rect.height + spotlightPadding * 2
+                        )
+                        .position(x: rect.midX, y: rect.midY)
+                        .shadow(color: Color.white.opacity(0.5), radius: 12)
+                        .allowsHitTesting(false)
                 }
 
-                // Tooltip card
-                VStack {
+                // Tooltip card — anchored above or below the spotlight depending
+                // on which half of the screen the target sits in.
+                tooltipPosition(rect: rect, screenSize: geo.size)
+            }
+            .animation(.spring(response: 0.32, dampingFraction: 0.85), value: coordinator.currentStepIndex)
+            .animation(.spring(response: 0.32, dampingFraction: 0.85), value: rect)
+        }
+    }
+
+    // MARK: – Dim with cutout
+
+    @ViewBuilder
+    private func dimLayer(spotlightRect: CGRect?, screenSize: CGSize) -> some View {
+        if let rect = spotlightRect {
+            // SwiftUI cutout via the destination-out blend mode + compositing
+            // group: draw the full dim, then knock out a rounded rect over the
+            // target so the live UI underneath shows through.
+            Color.black.opacity(0.62)
+                .overlay(
+                    RoundedRectangle(cornerRadius: spotlightCorner)
+                        .frame(
+                            width: rect.width + spotlightPadding * 2,
+                            height: rect.height + spotlightPadding * 2
+                        )
+                        .position(x: rect.midX, y: rect.midY)
+                        .blendMode(.destinationOut)
+                )
+                .compositingGroup()
+        } else {
+            Color.black.opacity(0.55)
+        }
+    }
+
+    // MARK: – Tooltip placement
+
+    @ViewBuilder
+    private func tooltipPosition(rect: CGRect?, screenSize: CGSize) -> some View {
+        if let rect {
+            let aboveTarget = rect.midY > screenSize.height * 0.55
+            VStack(spacing: 0) {
+                if aboveTarget {
                     Spacer()
                     tooltipCard
                         .padding(.horizontal, 22)
-                        // For tab-step, sit just above the tab bar. Center for intro/done.
-                        .padding(.bottom, current.isTabbed ? 124 : geo.size.height / 2 - 110)
+                        .padding(.bottom, max(20, screenSize.height - rect.minY + spotlightPadding + 12))
+                } else {
+                    Spacer().frame(height: rect.maxY + spotlightPadding + 16)
+                    tooltipCard
+                        .padding(.horizontal, 22)
+                    Spacer()
                 }
             }
+        } else {
+            // Centered for intro/outro steps
+            VStack {
+                Spacer()
+                tooltipCard
+                    .padding(.horizontal, 22)
+                Spacer()
+            }
         }
-        .transition(.opacity)
     }
 
     // MARK: – Tooltip card
 
     private var tooltipCard: some View {
-        let (title, body): (String, String) = {
-            switch current {
-            case .intro:
-                return (tr("tour.intro.title"), tr("tour.intro.body"))
-            case .tab(_, let t, let b):
-                return (t, b)
-            case .done:
-                return (tr("tour.done.title"), tr("tour.done.body"))
-            }
-        }()
-
+        let step = coordinator.current
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text(tr("tour.step_label", stepIndex + 1, steps.count))
+                Text(tr("tour.step_label", coordinator.stepNumber, coordinator.totalSteps))
                     .font(.system(size: 10, weight: .bold)).tracking(0.8)
                     .foregroundStyle(.tertiary)
                 Spacer()
-                Button(tr("tour.skip")) { finish() }
+                Button(tr("tour.skip")) { coordinator.stop() }
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Tokens.slate500)
                     .buttonStyle(.plain)
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(.system(size: 18, weight: .bold))
-                Text(body)
+                Text(step?.title ?? "")
+                    .font(.system(size: 18, weight: .bold))
+                Text(step?.body ?? "")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            // Progress dots so the user can see where they are.
             HStack(spacing: 5) {
-                ForEach(0..<steps.count, id: \.self) { idx in
+                ForEach(0..<coordinator.totalSteps, id: \.self) { idx in
                     Capsule()
-                        .fill(idx == stepIndex ? Tokens.slate500 : Color.primary.opacity(0.15))
-                        .frame(width: idx == stepIndex ? 16 : 6, height: 4)
-                        .animation(.spring(response: 0.25, dampingFraction: 0.85), value: stepIndex)
+                        .fill(idx == coordinator.currentStepIndex ? Tokens.slate500 : Color.primary.opacity(0.15))
+                        .frame(width: idx == coordinator.currentStepIndex ? 16 : 6, height: 4)
                 }
                 Spacer()
             }
 
             HStack(spacing: 10) {
-                if stepIndex > 0 {
-                    Button { back() } label: {
+                if !coordinator.isFirst {
+                    Button { coordinator.back() } label: {
                         Text(tr("tour.back"))
                             .font(.system(size: 13.5, weight: .semibold))
                             .foregroundStyle(Color.primary)
@@ -144,8 +311,8 @@ struct FeatureTour: View {
                     .buttonStyle(.plain)
                 }
 
-                Button { next() } label: {
-                    Text(stepIndex == lastIndex ? tr("tour.finish") : tr("tour.next"))
+                Button { coordinator.next() } label: {
+                    Text(coordinator.isLast ? tr("tour.finish") : tr("tour.next"))
                         .font(.system(size: 13.5, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 12)
@@ -158,86 +325,5 @@ struct FeatureTour: View {
         .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5))
         .shadow(color: Color.black.opacity(0.35), radius: 28, y: 18)
-    }
-
-    // MARK: – Navigation
-
-    private func next() {
-        if stepIndex == lastIndex {
-            finish()
-        } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                stepIndex += 1
-            }
-        }
-    }
-
-    private func back() {
-        guard stepIndex > 0 else { return }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-            stepIndex -= 1
-        }
-    }
-
-    private func finish() {
-        withAnimation(.easeOut(duration: 0.2)) {
-            onFinish()
-        }
-    }
-
-    // MARK: – Geometry: where does each tab sit on screen?
-
-    /// Mirrors BottomTabBar's layout so the highlight ring lines up. The bar
-    /// has 16pt outer horizontal padding and 8pt inner horizontal padding, then
-    /// five equal-width tabs filling the rest. The bar's bottom edge sits at
-    /// safeArea.bottom + 28 (the .padding(.bottom, 28) in RootShell).
-    private func tabCenterPoint(for tab: TabID, in size: CGSize) -> CGPoint? {
-        let tabsForRole: [TabID] = (role == .employee)
-            ? [.home, .dashboard, .add, .activity, .profile]
-            : [.home, .dashboard, .add, .review, .profile]
-        guard let index = tabsForRole.firstIndex(of: tab) else { return nil }
-
-        // Horizontal: inner = screenWidth - 2*16 (outer) - 2*8 (inner) = w - 48
-        let outerPadding: CGFloat = 16
-        let innerPadding: CGFloat = 8
-        let innerWidth = size.width - 2 * (outerPadding + innerPadding)
-        let tabWidth = innerWidth / CGFloat(tabsForRole.count)
-        let x = outerPadding + innerPadding + (CGFloat(index) + 0.5) * tabWidth
-
-        // Vertical: the tab bar's frame.height = 64; it sits .padding(.bottom, 28)
-        // from the safe-area bottom. We don't have the safe-area inset directly
-        // here so we approximate from the GeometryReader bounds. The numbers
-        // are close enough that the highlight covers the tab even with a 10pt
-        // discrepancy across device sizes.
-        let barCenterFromBottom: CGFloat = 28 + 32
-        let y = size.height - barCenterFromBottom
-
-        return CGPoint(x: x, y: y)
-    }
-}
-
-/// Pulsing ring used to call out the targeted tab. Two concentric circles —
-/// a solid white ring and an outer "halo" that scales up and fades. Looks
-/// like the standard system "look here" callout without bringing in any
-/// extra dependencies.
-private struct HighlightRing: View {
-    @State private var animate = false
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.9), lineWidth: 2)
-                .frame(width: 52, height: 52)
-            Circle()
-                .stroke(Color.white.opacity(0.5), lineWidth: 1)
-                .frame(width: 78, height: 78)
-                .scaleEffect(animate ? 1.15 : 0.95)
-                .opacity(animate ? 0 : 0.6)
-        }
-        .onAppear {
-            withAnimation(.easeOut(duration: 1.2).repeatForever(autoreverses: false)) {
-                animate = true
-            }
-        }
     }
 }

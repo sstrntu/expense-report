@@ -39,6 +39,7 @@ struct ProfileView: View {
                 }
             }
             .buttonStyle(.plain)
+            .tourTarget(.profileWorkspace)
 
             if role == .manager || role == .admin {
                 sectionHeader(tr("profile.section.workspace_admin"))
@@ -95,6 +96,7 @@ struct ProfileView: View {
                            sub: tr("profile.nav.tour.sub")) {
                         NotificationCenter.default.post(name: .replayFeatureTour, object: nil)
                     }
+                    .tourTarget(.profileTourReplay)
                     Divider().opacity(0.4)
                     navRow(icon: "info.circle.fill", label: tr("profile.nav.legal")) { onNav("legal") }
                 }

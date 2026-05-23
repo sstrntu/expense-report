@@ -116,6 +116,7 @@ struct SubmitView: View {
             expenseTypePicker
 
             scanCard
+                .tourTarget(.submitScan)
 
             if !scanFields.isEmpty {
                 scanReviewCard
@@ -139,6 +140,7 @@ struct SubmitView: View {
                     editableRow(label: tr("submit.field.purpose"), placeholder: tr("submit.field.purpose.placeholder"), text: $purpose)
                 }
             }
+            .tourTarget(.submitForm)
 
             if hasAnyInput && !validationMessages.isEmpty {
                 validationCard

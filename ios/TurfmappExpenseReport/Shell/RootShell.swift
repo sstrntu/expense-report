@@ -24,9 +24,9 @@ struct RootShell: View {
     /// to true when WorkspaceSetupView finishes, then back to false when
     /// the user taps "Go to Home" or one of the quick-action tiles.
     @State private var showCompletion: Bool = false
-    /// Drives the FeatureTour overlay. True both for the auto-trigger after
-    /// completion and for manual replays from Profile.
-    @State private var showTour: Bool = false
+    /// Coordinator for the in-app feature tour. Drives tab switches +
+    /// holds the captured frames for spotlighted UI elements.
+    @StateObject private var tourCoordinator = TourCoordinator()
 
     private enum LaunchState { case restoring, ready }
 
@@ -119,18 +119,35 @@ struct RootShell: View {
             ZStack {
                 appShell
                     .environmentObject(repositoryApp)
-                if showTour {
-                    FeatureTour(role: app.role) {
-                        tourCompleted = true
-                        showTour = false
-                    }
-                    .environmentObject(app)
-                    .zIndex(100)
-                    .transition(.opacity)
+                    .environmentObject(tourCoordinator)
+                if tourCoordinator.isActive {
+                    FeatureTour(coordinator: tourCoordinator)
+                        .zIndex(100)
+                        .transition(.opacity)
                 }
             }
+            // The coordinator publishes requestedTab when it wants to navigate.
+            // We translate that into a selectedTab change here. Wrapping in a
+            // tiny delay lets the previous step's UI fully unmount before the
+            // next page's .tourTarget modifiers re-emit their frames.
+            .onChange(of: tourCoordinator.requestedTab) { _, tab in
+                guard let tab else { return }
+                selectedTab = tab
+            }
+            // Latch tourCompleted once we observe the active flag go false.
+            // Attaching this above the FeatureTour view (rather than on it)
+            // ensures the observer outlives the overlay being removed.
+            .onChange(of: tourCoordinator.isActive) { _, active in
+                if !active { tourCompleted = true }
+            }
+            // Pump frames captured by .tourTarget modifiers into the coordinator.
+            // Every page that participates in the tour writes into the same
+            // TourTargetPreference, and this onPreferenceChange unifies them.
+            .onPreferenceChange(TourTargetPreference.self) { frames in
+                tourCoordinator.frames.merge(frames) { _, new in new }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .replayFeatureTour)) { _ in
-                showTour = true
+                tourCoordinator.start(for: app.role)
             }
         }
     }
@@ -140,10 +157,10 @@ struct RootShell: View {
         selectedTab = tab
         if startTour {
             // Defer one tick so the appShell renders first; otherwise the
-            // overlay's tab-center calculation runs before the tab bar has
-            // settled into its final on-screen position.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                showTour = true
+            // overlay's frame lookups run before the page's .tourTarget
+            // modifiers have emitted their initial rectangles.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                tourCoordinator.start(for: app.role)
             }
         }
     }

@@ -57,6 +57,7 @@ struct HomeView: View {
             .padding(.top, 4)
 
             heroCard(pending: pending, approved: approved)
+                .tourTarget(.homeHero)
 
             scanReceiptButton
 
@@ -64,6 +65,7 @@ struct HomeView: View {
 
             sectionHeader(title: tr("home.recent"), action: tr("home.see_all")) { selectedTab = .activity }
             recentList
+                .tourTarget(.homeRecent)
 
             simpleSectionHeader(tr("overview.project_budgets"))
             projectsCard

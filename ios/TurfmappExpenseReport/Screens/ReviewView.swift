@@ -63,45 +63,8 @@ struct ReviewView: View {
                 .buttonStyle(.plain)
             }
 
-            if pending.isEmpty && financeQueue.isEmpty && awaitingPurchase.isEmpty {
-                GlassCard(padding: 24) {
-                    VStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle").font(.system(size: 28)).foregroundStyle(Tokens.approved)
-                        Text(tr("review.empty.title")).font(.system(size: 14, weight: .semibold))
-                        Text(tr("review.empty.subtitle")).font(.system(size: 12)).foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            } else {
-                // Section headers spell out which role the user is acting in.
-                // For a multi-hat user (e.g. a Manager who also handles Finance),
-                // this is the only way they can tell at a glance which numbers
-                // correspond to which queue.
-                if !pending.isEmpty {
-                    queueSection(
-                        roleIcon: "person.badge.shield.checkmark.fill",
-                        roleLabel: tr("review.role.manager"),
-                        actionLabel: tr("review.action.to_approve"),
-                        items: pending, tint: Tokens.pending
-                    )
-                }
-                if !financeQueue.isEmpty {
-                    queueSection(
-                        roleIcon: "creditcard.fill",
-                        roleLabel: tr("review.role.finance"),
-                        actionLabel: tr("review.action.to_reimburse"),
-                        items: financeQueue, tint: Tokens.reimbursed
-                    )
-                }
-                if !awaitingPurchase.isEmpty {
-                    queueSection(
-                        roleIcon: "eye.fill",
-                        roleLabel: tr("review.role.watching"),
-                        actionLabel: tr("review.action.awaiting_purchase"),
-                        items: awaitingPurchase, tint: Tokens.purchased
-                    )
-                }
-            }
+            queueStack
+                .tourTarget(.reviewQueues)
 
             if !projectsWithHistory.isEmpty {
                 pastActivitySection
@@ -120,6 +83,51 @@ struct ReviewView: View {
             )
             .environmentObject(repositoryApp)
             .presentationDetents([.large])
+        }
+    }
+
+    /// Combined queue stack — empty state OR one section per non-empty queue.
+    /// Extracted into a computed property so the whole block can be tagged as
+    /// the tour target (.reviewQueues) without breaking the existing if/else
+    /// layout. Section headers spell out which role the user is acting in,
+    /// which matters for a multi-hat user (e.g. a Manager who also handles
+    /// Finance).
+    @ViewBuilder
+    private var queueStack: some View {
+        if pending.isEmpty && financeQueue.isEmpty && awaitingPurchase.isEmpty {
+            GlassCard(padding: 24) {
+                VStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle").font(.system(size: 28)).foregroundStyle(Tokens.approved)
+                    Text(tr("review.empty.title")).font(.system(size: 14, weight: .semibold))
+                    Text(tr("review.empty.subtitle")).font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        } else {
+            if !pending.isEmpty {
+                queueSection(
+                    roleIcon: "person.badge.shield.checkmark.fill",
+                    roleLabel: tr("review.role.manager"),
+                    actionLabel: tr("review.action.to_approve"),
+                    items: pending, tint: Tokens.pending
+                )
+            }
+            if !financeQueue.isEmpty {
+                queueSection(
+                    roleIcon: "creditcard.fill",
+                    roleLabel: tr("review.role.finance"),
+                    actionLabel: tr("review.action.to_reimburse"),
+                    items: financeQueue, tint: Tokens.reimbursed
+                )
+            }
+            if !awaitingPurchase.isEmpty {
+                queueSection(
+                    roleIcon: "eye.fill",
+                    roleLabel: tr("review.role.watching"),
+                    actionLabel: tr("review.action.awaiting_purchase"),
+                    items: awaitingPurchase, tint: Tokens.purchased
+                )
+            }
         }
     }
 

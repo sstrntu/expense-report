@@ -84,6 +84,7 @@ struct ActivityView: View {
             .padding(.horizontal, 4).padding(.top, 4)
 
             searchAndProjectFilters
+                .tourTarget(.activitySearch)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
@@ -94,6 +95,7 @@ struct ActivityView: View {
                 }
                 .padding(.horizontal, 4)
             }
+            .tourTarget(.activityFilters)
 
             let buckets = bucketByDate(filtered)
             if !buckets.today.isEmpty    { section(title: tr("activity.section.today"),     items: buckets.today) }
