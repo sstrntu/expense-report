@@ -89,23 +89,57 @@ struct ReportPDFRenderer {
     }
 
     private static func drawTotals(context: Context, startY: CGFloat, in bounds: CGRect, ctx: UIGraphicsPDFRendererContext) -> CGFloat {
-        let totalsText = String(
-            format: NSLocalizedString("reports.pdf.totals", comment: ""),
-            formatCurrency(context.totalInAggregationCurrency, code: context.aggregationCurrency),
-            context.rows.count
-        )
-        totalsText.draw(at: CGPoint(x: margin, y: startY), withAttributes: [
-            .font: UIFont.systemFont(ofSize: 13, weight: .semibold),
-            .foregroundColor: UIColor.label
-        ])
-        // Divider rule
-        let rulePath = UIBezierPath()
-        rulePath.move(to: CGPoint(x: margin, y: startY + 24))
-        rulePath.addLine(to: CGPoint(x: bounds.width - margin, y: startY + 24))
-        UIColor.separator.setStroke()
-        rulePath.lineWidth = 0.5
-        rulePath.stroke()
-        return startY + 36
+        // Four-column metric strip: Expenses · Total · Reimbursed · Pending.
+        // Reimbursed = rows in .reimbursed state. Pending = anything still moving
+        // through the workflow (submitted through ready-for-reimbursement). Rejected,
+        // cancelled, archived, and drafts are excluded from the pending bucket so
+        // the two sub-totals add up to "total amount in flight" cleanly.
+        let pendingStatuses: Set<ExpenseWorkflowStatus> = [
+            .submitted, .pendingManagerApproval, .approved, .purchaseConfirmed,
+            .pendingFinanceReview, .readyForReimbursement
+        ]
+        let reimbursed = context.rows.filter { $0.expense.status == .reimbursed }
+        let pending = context.rows.filter { pendingStatuses.contains($0.expense.status) }
+        let reimbursedTotal = reimbursed.reduce(0) { $0 + $1.expense.amount.decimalValue }
+        let pendingTotal = pending.reduce(0) { $0 + $1.expense.amount.decimalValue }
+
+        let metrics: [(label: String, value: String)] = [
+            ("EXPENSES", "\(context.rows.count)"),
+            ("TOTAL", formatCurrency(context.totalInAggregationCurrency, code: context.aggregationCurrency)),
+            ("REIMBURSED", "\(reimbursed.count) · " + formatCurrency(reimbursedTotal, code: context.aggregationCurrency)),
+            ("PENDING", "\(pending.count) · " + formatCurrency(pendingTotal, code: context.aggregationCurrency))
+        ]
+
+        let stripHeight: CGFloat = 44
+        let columnWidth = (bounds.width - 2 * margin) / CGFloat(metrics.count)
+
+        // Faint background tint behind the strip — gives it the bank-statement feel.
+        let stripRect = CGRect(x: margin, y: startY, width: bounds.width - 2 * margin, height: stripHeight)
+        UIColor.secondarySystemBackground.setFill()
+        UIBezierPath(roundedRect: stripRect, cornerRadius: 6).fill()
+
+        for (index, metric) in metrics.enumerated() {
+            let x = margin + CGFloat(index) * columnWidth
+            metric.label.draw(at: CGPoint(x: x + 10, y: startY + 6), withAttributes: [
+                .font: UIFont.systemFont(ofSize: 8, weight: .bold),
+                .foregroundColor: UIColor.tertiaryLabel,
+                .kern: 0.6
+            ])
+            metric.value.draw(at: CGPoint(x: x + 10, y: startY + 20), withAttributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                .foregroundColor: UIColor.label
+            ])
+            // Thin vertical separator between columns (skip after the last one).
+            if index < metrics.count - 1 {
+                let sep = UIBezierPath()
+                sep.move(to: CGPoint(x: x + columnWidth, y: startY + 8))
+                sep.addLine(to: CGPoint(x: x + columnWidth, y: startY + stripHeight - 8))
+                UIColor.separator.setStroke()
+                sep.lineWidth = 0.5
+                sep.stroke()
+            }
+        }
+        return startY + stripHeight + 16
     }
 
     // MARK: – Table (page 1..N)
@@ -214,22 +248,15 @@ struct ReportPDFRenderer {
         let rowsWithReceipts = context.rows.enumerated().filter { $0.element.receiptImage != nil }
         guard !rowsWithReceipts.isEmpty else { return }
 
-        ctx.beginPage()
-        let header = NSLocalizedString("reports.pdf.receipts_header", comment: "")
-        header.draw(at: CGPoint(x: margin, y: margin), withAttributes: [
-            .font: UIFont.systemFont(ofSize: 18, weight: .bold),
-            .foregroundColor: UIColor.label
-        ])
-
-        var first = true
+        // Each receipt gets its own clean page. We don't draw a separate
+        // "Receipts" intro page — the first-page table already establishes
+        // what the rest of the document contains, and an extra header just
+        // ended up overlapping with the first receipt's heading.
         let df = DateFormatter()
         df.dateFormat = "MMM d, yyyy"
 
         for (index, row) in rowsWithReceipts {
-            if !first {
-                ctx.beginPage()
-            }
-            first = false
+            ctx.beginPage()
 
             let exp = row.expense
             let date = exp.purchaseDate ?? exp.submittedAt ?? exp.createdAt
