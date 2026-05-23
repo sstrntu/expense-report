@@ -5,19 +5,37 @@ import PhotosUI
 
 /// Top-of-screen progress indicator shared by every onboarding step.
 ///
-/// Shows three connected dots (filled up to `current`) plus a small "Step N
-/// of 3" label. We render the dots manually rather than using `ProgressView`
-/// so the visual matches the glass / pill aesthetic used elsewhere.
+/// Shows N connected capsules (filled up to `current`) plus a "Step N of M"
+/// label and a "Back" escape hatch. The back button calls `onBack` which
+/// each step routes to the appropriate exit (ProfileSetup → sign out to auth,
+/// WorkspaceSetup → backwards to ProfileSetup). Always present so a user
+/// stuck mid-flow can recover without force-quitting.
 struct OnboardingProgress: View {
     let current: Int
     let total: Int
+    /// Optional escape hatch. When nil, the back button is hidden (e.g. for
+    /// future screens that genuinely can't go back).
+    var onBack: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(tr("onboarding.step.label", current, total))
-                .font(.system(size: 10.5, weight: .bold))
-                .tracking(0.8)
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 8) {
+                if let onBack {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 30, height: 30)
+                            .background(Color.primary.opacity(0.06), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                Text(tr("onboarding.step.label", current, total))
+                    .font(.system(size: 10.5, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(.tertiary)
+                Spacer()
+            }
 
             HStack(spacing: 6) {
                 ForEach(0..<total, id: \.self) { index in
@@ -171,7 +189,7 @@ struct ProfileSetupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingProgress(current: 1, total: 2)
+            OnboardingProgress(current: 1, total: 2, onBack: { exitToAuth() })
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
@@ -272,6 +290,17 @@ struct ProfileSetupView: View {
         .overlay(
             Circle().strokeBorder(Color.white.opacity(0.5), lineWidth: 1)
         )
+    }
+
+    /// Escape hatch for users stuck on the profile step. Signs out so the
+    /// router lands them back on AuthView (with the welcome flag intact, so
+    /// they don't see Welcome again unnecessarily). Best-effort — we don't
+    /// surface errors because the user is already trying to get out.
+    private func exitToAuth() {
+        Task {
+            await repositoryApp.signOut()
+            await MainActor.run { app.signOut() }
+        }
     }
 
     private func saveProfile() async {

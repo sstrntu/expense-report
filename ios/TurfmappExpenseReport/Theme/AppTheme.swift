@@ -47,6 +47,15 @@ final class AppState: ObservableObject {
         profileComplete = true
         role = .employee
     }
+
+    /// Rewind from WorkspaceSetup back to ProfileSetup. The saved name + avatar
+    /// stay (RepositoryAppState already wrote them to Supabase) so the user
+    /// just sees their values pre-filled when ProfileSetup re-renders.
+    func returnToProfileSetup() {
+        profileComplete = false
+        workspaceReady = false
+        needsSetup = true
+    }
 }
 
 extension View {

@@ -826,7 +826,7 @@ struct WorkspaceSetupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingProgress(current: 2, total: 2)
+            OnboardingProgress(current: 2, total: 2, onBack: { app.returnToProfileSetup() })
             stepContent
         }
     }
