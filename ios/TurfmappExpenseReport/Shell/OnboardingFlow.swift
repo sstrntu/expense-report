@@ -37,6 +37,7 @@ struct OnboardingProgress: View {
 
 struct WelcomeView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var repositoryApp: RepositoryAppState
     var onGetStarted: () -> Void
     var onSignIn: () -> Void
 
@@ -84,8 +85,34 @@ struct WelcomeView: View {
             Spacer()
 
             VStack(spacing: 10) {
+                // Social sign-in is the fastest path for new users, so we
+                // surface it directly on the welcome screen. After a
+                // successful flow the repository has already loaded the
+                // session; we just flip app.signIn and let the router move
+                // us to ProfileSetup (or straight to Home if a workspace
+                // already exists for this user).
+                SocialAuthButtons(
+                    onGoogle: {
+                        Task {
+                            let ok = await repositoryApp.signInWithGoogle()
+                            if ok { finishSocialSignIn() }
+                        }
+                    },
+                    onApple: {
+                        Task {
+                            let ok = await repositoryApp.signInWithApple()
+                            if ok { finishSocialSignIn() }
+                        }
+                    }
+                )
+
                 Button(action: onGetStarted) {
-                    Text(tr("onboarding.welcome.get_started")).primaryActionLabel()
+                    Text(tr("onboarding.welcome.get_started"))
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(Tokens.slate500)
+                        .frame(maxWidth: .infinity).padding(.vertical, 14)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
                 }
                 .buttonStyle(.plain)
 
@@ -99,6 +126,16 @@ struct WelcomeView: View {
             .padding(.bottom, 32)
         }
         .padding(.horizontal, 22)
+    }
+
+    private func finishSocialSignIn() {
+        guard repositoryApp.lastError == nil else { return }
+        let signedInEmail = repositoryApp.currentUserProfile?.email ?? ""
+        app.signIn(email: signedInEmail, needsSetup: repositoryApp.workspaces.isEmpty)
+        if let workspace = repositoryApp.selectedWorkspace {
+            app.company = workspace.legacyCompany
+            app.role = workspace.currentUserRole.appRole
+        }
     }
 
     private func featureRow(icon: String, tint: Color, title: String, subtitle: String) -> some View {

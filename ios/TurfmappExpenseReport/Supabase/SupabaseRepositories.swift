@@ -65,6 +65,8 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
 
     func signIn(email: String, password: String) async throws { throw error }
     func signUp(email: String, password: String) async throws { throw error }
+    func signInWithOAuth(provider: OAuthProvider) async throws { throw error }
+    func signInWithIdToken(provider: OAuthProvider, idToken: String, nonce: String?) async throws { throw error }
     func signOut() async throws { throw error }
     func hasPersistedSession() async -> Bool { false }
     func currentUserId() async throws -> String? { throw error }
@@ -222,6 +224,52 @@ actor SupabaseRESTClient {
 
     func signOut() {
         clearSession()
+    }
+
+    /// Native OAuth via id_token grant. Apple Sign-In on iOS gives us an
+    /// identity token directly; Supabase verifies the JWT signature against
+    /// Apple's published keys and issues a Supabase session for the matched user.
+    func signInWithIdToken(provider: String, idToken: String, nonce: String?) async throws {
+        clearSession()
+        struct Body: Encodable {
+            let provider: String
+            let id_token: String
+            let nonce: String?
+        }
+        let session: AuthSession = try await authRequest(
+            path: "token?grant_type=id_token",
+            body: Body(provider: provider, id_token: idToken, nonce: nonce)
+        )
+        guard session.accessToken?.isEmpty == false else {
+            throw SupabaseRepositoryError.invalidResponse
+        }
+        save(session)
+    }
+
+    /// Build the URL the OAuth flow should open. The caller drives the actual
+    /// browser session (ASWebAuthenticationSession lives in the SwiftUI layer
+    /// because it needs a presentation context).
+    func oauthAuthorizeURL(provider: String, redirectScheme: String) -> URL? {
+        let base = baseURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        var components = URLComponents(string: "\(base)/auth/v1/authorize")
+        components?.queryItems = [
+            URLQueryItem(name: "provider", value: provider),
+            URLQueryItem(name: "redirect_to", value: "\(redirectScheme)://login-callback")
+        ]
+        return components?.url
+    }
+
+    /// Persist tokens we extracted from an OAuth callback URL. Used by the
+    /// SwiftUI presenter after ASWebAuthenticationSession completes.
+    func saveOAuthTokens(accessToken: String, refreshToken: String?, expiresIn: Int?) {
+        let oauthSession = AuthSession(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            user: nil,
+            expiresIn: expiresIn,
+            savedAt: Date()
+        )
+        save(oauthSession)
     }
 
     func sendPasswordResetEmail(_ email: String) async throws {
@@ -516,6 +564,26 @@ struct SupabaseAuthRepository: AuthRepository {
         if await !client.hasAccessToken() {
             throw SupabaseRepositoryError.confirmationRequired
         }
+    }
+
+    func signInWithOAuth(provider: OAuthProvider) async throws {
+        // Build the /authorize URL and hand off to ASWebAuthenticationSession.
+        // The presenter must run on MainActor since it touches UIWindow.
+        let scheme = await MainActor.run { WebOAuthPresenter.redirectScheme }
+        guard let url = await client.oauthAuthorizeURL(provider: provider.rawValue, redirectScheme: scheme) else {
+            throw SocialAuthError.missingURL
+        }
+        let tokens = try await MainActor.run { WebOAuthPresenter.shared }
+            .start(authorizeURL: url)
+        await client.saveOAuthTokens(
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            expiresIn: tokens.expiresIn
+        )
+    }
+
+    func signInWithIdToken(provider: OAuthProvider, idToken: String, nonce: String?) async throws {
+        try await client.signInWithIdToken(provider: provider.rawValue, idToken: idToken, nonce: nonce)
     }
 
     func signOut() async throws {

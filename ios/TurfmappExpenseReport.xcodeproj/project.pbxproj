@@ -20,6 +20,7 @@
 		2A38DBEAE2ACA435E822BB54 /* ManageProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38CFAE9C5DE3B638DCBBB2C0 /* ManageProjectsView.swift */; };
 		2F34697B2E31FBBCFBE5DAA8 /* ExpenseWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057E30DAAC213F6C11654F4F /* ExpenseWorkflow.swift */; };
 		316F8FA301DEBD3B60C8FE6C /* ExpenseWorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65032653E0FA8C25647EE99C /* ExpenseWorkflowTests.swift */; };
+		31D7DA90A3344E0B9C7C0A18 /* SocialAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 777BB0E474A49438A6041E44 /* SocialAuth.swift */; };
 		33D75A9DB439478097014021 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ABE7DE6913E857B352AF659 /* AppEnvironment.swift */; };
 		40834B5A7CB85792D6B041B7 /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */; };
 		443FA1297503350D3A53D578 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231934AADFA8013182DE19B6 /* StatusPill.swift */; };
@@ -44,6 +45,7 @@
 		916271724F6586B58CC7D66C /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6E88799E3A97175A67C294 /* LocalizationManager.swift */; };
 		98000D0F105320FD2AEF70B2 /* SubmitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38494852C1A233217A4B4CAF /* SubmitView.swift */; };
 		A9F8FDD9BFBD4C1BEC6A4ABF /* DomainPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B483F7B06ED933848952D5F /* DomainPresentation.swift */; };
+		BFBB382222740FBED587AC44 /* SocialAuthButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF7A75B1F90F57756C02336 /* SocialAuthButtons.swift */; };
 		C6DD40BF0F22226F17CD100B /* Charts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCE3D5DFB96304D91AC7BF2 /* Charts.swift */; };
 		C74D1D05A2740E2F343FCA4D /* V1Domain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D1A529E6050B7B6F915F71D /* V1Domain.swift */; };
 		CC9FDDC6A08A8B2C2D9A3B8A /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FC5205A5E412F3544FBF6C8 /* MockData.swift */; };
@@ -102,12 +104,14 @@
 		6D17D771B2C971AB6E5D3983 /* FeatureTour.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureTour.swift; sourceTree = "<group>"; };
 		6F096F243857EBABB4129FEC /* TurfmappExpenseReportApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurfmappExpenseReportApp.swift; sourceTree = "<group>"; };
 		7308954FD71CE684A0764452 /* DraftsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsCard.swift; sourceTree = "<group>"; };
+		777BB0E474A49438A6041E44 /* SocialAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialAuth.swift; sourceTree = "<group>"; };
 		7DCA382B613E7898446D5C53 /* StatusPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresentationTests.swift; sourceTree = "<group>"; };
 		7ED53BC4E511F04457682A55 /* BudgetTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetTrackingTests.swift; sourceTree = "<group>"; };
 		8941FC76E8EADAC392D24D4C /* BottomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomTabBar.swift; sourceTree = "<group>"; };
 		8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
 		9D1A529E6050B7B6F915F71D /* V1Domain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V1Domain.swift; sourceTree = "<group>"; };
 		A2E1528C7366ED9C0B1743FF /* MockRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRepositories.swift; sourceTree = "<group>"; };
+		BDF7A75B1F90F57756C02336 /* SocialAuthButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialAuthButtons.swift; sourceTree = "<group>"; };
 		BEE31180D60EFA1E623F42E8 /* WorkflowEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowEdgeCaseTests.swift; sourceTree = "<group>"; };
 		BFCEF355C532DA04E3146431 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		CA4CB3A46FA47E4715A510B1 /* Avatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Avatar.swift; sourceTree = "<group>"; };
@@ -198,6 +202,7 @@
 		55D6DCDB63472D3C1443D2BA /* Supabase */ = {
 			isa = PBXGroup;
 			children = (
+				777BB0E474A49438A6041E44 /* SocialAuth.swift */,
 				E267442BEA226AA91190BCA2 /* SupabaseRepositories.swift */,
 			);
 			path = Supabase;
@@ -261,6 +266,7 @@
 				6D17D771B2C971AB6E5D3983 /* FeatureTour.swift */,
 				2F5EE3FE32C4F519E6DA9F5F /* OnboardingFlow.swift */,
 				536DAABDF76A6F8DFD29DEEF /* RootShell.swift */,
+				BDF7A75B1F90F57756C02336 /* SocialAuthButtons.swift */,
 			);
 			path = Shell;
 			sourceTree = "<group>";
@@ -411,6 +417,8 @@
 				7E9A53D69CC02AA267DE44B4 /* RepositoryContracts.swift in Sources */,
 				1EBDAF336E8CB243B5BF07D1 /* ReviewView.swift in Sources */,
 				5D5D8C1FC9CA7F24D41815A7 /* RootShell.swift in Sources */,
+				31D7DA90A3344E0B9C7C0A18 /* SocialAuth.swift in Sources */,
+				BFBB382222740FBED587AC44 /* SocialAuthButtons.swift in Sources */,
 				443FA1297503350D3A53D578 /* StatusPill.swift in Sources */,
 				98000D0F105320FD2AEF70B2 /* SubmitView.swift in Sources */,
 				D9CB48D5495FA003F53A9239 /* SupabaseRepositories.swift in Sources */,

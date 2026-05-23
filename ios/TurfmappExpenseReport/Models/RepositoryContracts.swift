@@ -49,9 +49,26 @@ struct PendingReceiptUpload: Codable, Hashable, Sendable {
     let data: Data
 }
 
+/// Identity providers we can hand off to. Their raw values match what
+/// Supabase's auth endpoints expect (lowercased provider id).
+enum OAuthProvider: String, Sendable {
+    case google
+    case apple
+}
+
 protocol AuthRepository: Sendable {
     func signIn(email: String, password: String) async throws
     func signUp(email: String, password: String) async throws
+    /// Web-based OAuth — opens Supabase's /authorize endpoint in a browser
+    /// session (ASWebAuthenticationSession on iOS) and returns once the user
+    /// finishes the provider's flow. Supabase redirects back with tokens we
+    /// persist into the same session storage as password auth.
+    func signInWithOAuth(provider: OAuthProvider) async throws
+    /// Native sign-in flow: the caller already has an identity token from the
+    /// platform (Apple Sign-In) and we exchange it with Supabase directly,
+    /// no web view. `nonce` must match the raw nonce we put in the request to
+    /// Apple — Supabase verifies it server-side.
+    func signInWithIdToken(provider: OAuthProvider, idToken: String, nonce: String?) async throws
     func signOut() async throws
     /// True if a persisted session exists that the app can resume on launch
     /// without prompting for credentials. Implementations that refresh tokens

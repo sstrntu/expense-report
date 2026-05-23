@@ -89,6 +89,7 @@ struct RootShell: View {
                 onSignIn: { hasSeenWelcome = true }
             )
                 .environmentObject(app)
+                .environmentObject(repositoryApp)
                 .appBackground()
         } else if !app.isAuthenticated {
             AuthView()
@@ -653,6 +654,29 @@ struct AuthView: View {
                 showVerification = false
             }
 
+            SocialAuthButtons(
+                onGoogle: {
+                    Task {
+                        let ok = await repositoryApp.signInWithGoogle()
+                        if ok { finishSocialSignIn() }
+                    }
+                },
+                onApple: {
+                    Task {
+                        let ok = await repositoryApp.signInWithApple()
+                        if ok { finishSocialSignIn() }
+                    }
+                }
+            )
+
+            HStack {
+                Rectangle().fill(Color.primary.opacity(0.12)).frame(height: 0.5)
+                Text(tr("auth.or"))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                Rectangle().fill(Color.primary.opacity(0.12)).frame(height: 0.5)
+            }
+
             GlassCard(padding: Tokens.padCard) {
                 VStack(spacing: 0) {
                     authField(tr("auth.email"), text: $email, keyboard: .emailAddress)
@@ -729,6 +753,20 @@ struct AuthView: View {
             Spacer()
         }
         .padding(.horizontal, 22)
+    }
+
+    /// Shared post-auth handoff used by both Google + Apple flows. The
+    /// repository already loaded the session and workspaces by this point;
+    /// we just need to set the per-session AppState flags so the router
+    /// advances out of AuthView.
+    private func finishSocialSignIn() {
+        guard repositoryApp.lastError == nil else { return }
+        let signedInEmail = repositoryApp.currentUserProfile?.email ?? ""
+        app.signIn(email: signedInEmail, needsSetup: repositoryApp.workspaces.isEmpty)
+        if let workspace = repositoryApp.selectedWorkspace {
+            app.company = workspace.legacyCompany
+            app.role = workspace.currentUserRole.appRole
+        }
     }
 
     private func authField(_ label: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {

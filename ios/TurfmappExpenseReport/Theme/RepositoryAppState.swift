@@ -371,6 +371,47 @@ final class RepositoryAppState: ObservableObject {
         }
     }
 
+    /// Returns true if the user actually signed in; false on error or cancel.
+    /// We swallow the SocialAuthError.userCancelled case silently (cancel
+    /// isn't a "real" failure to show as a banner).
+    @discardableResult
+    func signInWithGoogle() async -> Bool {
+        do {
+            lastError = nil
+            try await authRepository.signInWithOAuth(provider: .google)
+            await loadCurrentUserProfile()
+            await loadWorkspaces(selecting: selectedWorkspace?.id)
+            return true
+        } catch SocialAuthError.userCancelled {
+            return false
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func signInWithApple() async -> Bool {
+        do {
+            lastError = nil
+            let (idToken, rawNonce) = try await MainActor.run { AppleAuthCoordinator.shared }
+                .requestSignIn()
+            try await authRepository.signInWithIdToken(
+                provider: .apple,
+                idToken: idToken,
+                nonce: rawNonce
+            )
+            await loadCurrentUserProfile()
+            await loadWorkspaces(selecting: selectedWorkspace?.id)
+            return true
+        } catch SocialAuthError.userCancelled {
+            return false
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
     func selectWorkspace(id: String) async {
         lastError = nil
         UserDefaults.standard.set(id, forKey: selectedWorkspaceDefaultsKey)

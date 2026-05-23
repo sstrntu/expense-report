@@ -624,6 +624,17 @@ struct MockAuthRepository: AuthRepository {
         try await store.signIn(email: email, password: password)
     }
 
+    func signInWithOAuth(provider: OAuthProvider) async throws {
+        // The mock backend has no notion of identity providers; pretend the
+        // flow succeeded by signing in a synthetic user. Real flows live on
+        // the Supabase repository.
+        try await store.signIn(email: "\(provider.rawValue)@mock.local", password: "mock-oauth")
+    }
+
+    func signInWithIdToken(provider: OAuthProvider, idToken: String, nonce: String?) async throws {
+        try await store.signIn(email: "\(provider.rawValue)@mock.local", password: "mock-oauth")
+    }
+
     func signOut() async throws {
         try await store.signOut()
     }

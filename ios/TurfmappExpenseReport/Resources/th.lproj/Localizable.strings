@@ -38,6 +38,9 @@
 
 /* === Auth === */
 "auth.signin.title" = "เข้าสู่ระบบ";
+"auth.continue_with_google" = "ดำเนินการต่อด้วย Google";
+"auth.continue_with_apple" = "ดำเนินการต่อด้วย Apple";
+"auth.or" = "หรือ";
 "auth.signup.title" = "สร้างบัญชี";
 "auth.email" = "อีเมล";
 "auth.password" = "รหัสผ่าน";

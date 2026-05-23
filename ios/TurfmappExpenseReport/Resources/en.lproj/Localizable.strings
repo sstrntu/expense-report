@@ -42,6 +42,9 @@
 "auth.email" = "Email";
 "auth.password" = "Password";
 "auth.signin.action" = "Sign in";
+"auth.continue_with_google" = "Continue with Google";
+"auth.continue_with_apple" = "Continue with Apple";
+"auth.or" = "OR";
 "auth.signup.action" = "Create account";
 "auth.forgot" = "Forgot password?";
 "auth.back_to_signin" = "Back to sign in";
