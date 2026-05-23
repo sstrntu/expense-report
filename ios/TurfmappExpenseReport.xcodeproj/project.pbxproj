@@ -34,6 +34,7 @@
 		6AB7179CAE8A2F529FDB3B08 /* StatusPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DCA382B613E7898446D5C53 /* StatusPresentationTests.swift */; };
 		73A10FB553C3D1261061CB5D /* BottomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8941FC76E8EADAC392D24D4C /* BottomTabBar.swift */; };
 		7448C44EE0C996244E94403C /* RepositoryAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C1348EECDE16A1827E2010 /* RepositoryAppState.swift */; };
+		7B5B624A8A5048AEBDC306D7 /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F5EE3FE32C4F519E6DA9F5F /* OnboardingFlow.swift */; };
 		7E9A53D69CC02AA267DE44B4 /* RepositoryContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D246FB0AA3C57CF36D9B46F7 /* RepositoryContracts.swift */; };
 		880939B2325C01B52314CBAD /* ExpensePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DFD149BB0104E1ED7E06542 /* ExpensePresentationTests.swift */; };
 		8858609ADB8E2DD0999CB960 /* WorkflowEdgeCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE31180D60EFA1E623F42E8 /* WorkflowEdgeCaseTests.swift */; };
@@ -77,6 +78,7 @@
 		2360D5D3F26299AE4D322585 /* TurfmappExpenseReport.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TurfmappExpenseReport.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		29437C36AF260B6783FA3947 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		2C580869F5B6FF78D1128C4E /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
+		2F5EE3FE32C4F519E6DA9F5F /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
 		3593F38A94DB7C0CEF3BDD1F /* CurrencyConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyConverterTests.swift; sourceTree = "<group>"; };
 		38494852C1A233217A4B4CAF /* SubmitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmitView.swift; sourceTree = "<group>"; };
 		38CFAE9C5DE3B638DCBBB2C0 /* ManageProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageProjectsView.swift; sourceTree = "<group>"; };
@@ -254,6 +256,7 @@
 			children = (
 				022A372760DA74B70F88A83C /* AppDelegate.swift */,
 				8941FC76E8EADAC392D24D4C /* BottomTabBar.swift */,
+				2F5EE3FE32C4F519E6DA9F5F /* OnboardingFlow.swift */,
 				536DAABDF76A6F8DFD29DEEF /* RootShell.swift */,
 			);
 			path = Shell;
@@ -396,6 +399,7 @@
 				CC9FDDC6A08A8B2C2D9A3B8A /* MockData.swift in Sources */,
 				88A127235B82BCB09DDEAC7C /* MockRepositories.swift in Sources */,
 				F2A21797BBFB2DFBB4576CA6 /* Models.swift in Sources */,
+				7B5B624A8A5048AEBDC306D7 /* OnboardingFlow.swift in Sources */,
 				5FB4E6907640C710222DF67F /* PermissionsView.swift in Sources */,
 				0581D62D224E38D8E3201A9D /* ProfileView.swift in Sources */,
 				0BB124B943DB99FE4645B745 /* ReportPDFRenderer.swift in Sources */,

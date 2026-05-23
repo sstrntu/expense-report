@@ -59,7 +59,31 @@
 "setup.profile.title" = "ตั้งค่าโปรไฟล์";
 "setup.profile.subtitle" = "สร้างข้อมูลที่เพื่อนร่วมงานจะเห็นในคำขอ การอนุมัติ และบันทึกการเบิกจ่าย";
 "setup.profile.fullname" = "ชื่อ-นามสกุล";
+"setup.profile.fullname.placeholder" = "เช่น สิระ สาสิทร";
 "setup.profile.nickname" = "ชื่อเล่น";
+"setup.profile.nickname.placeholder" = "ไม่บังคับ";
+"setup.profile.avatar.title" = "รูปโปรไฟล์";
+"setup.profile.avatar.subtitle" = "ไม่บังคับ — แตะวงกลมเพื่ออัปโหลด";
+"setup.profile.save_failed" = "บันทึกโปรไฟล์ไม่สำเร็จ";
+"onboarding.step.label" = "ขั้นที่ %d จาก %d";
+"onboarding.welcome.title" = "ยินดีต้อนรับสู่ Expenses";
+"onboarding.welcome.subtitle" = "บันทึกค่าใช้จ่าย ขออนุมัติ และเบิกจ่ายให้ทีม — รวดเร็ว";
+"onboarding.welcome.feature.scan.title" = "สแกนใบเสร็จด้วย AI";
+"onboarding.welcome.feature.scan.subtitle" = "ถ่ายภาพใบเสร็จ แล้วเราจะกรอกข้อมูลให้";
+"onboarding.welcome.feature.approve.title" = "อนุมัติแบบเรียลไทม์";
+"onboarding.welcome.feature.approve.subtitle" = "ผู้จัดการและฝ่ายการเงินเห็นค่าใช้จ่ายใหม่ทันที";
+"onboarding.welcome.feature.workspace.title" = "หลายเวิร์กสเปซ";
+"onboarding.welcome.feature.workspace.subtitle" = "แอปเดียวสำหรับทุกทีมที่คุณอยู่";
+"onboarding.welcome.get_started" = "เริ่มต้นใช้งาน";
+"onboarding.welcome.have_account" = "ฉันมีบัญชีอยู่แล้ว";
+"onboarding.done.title" = "พร้อมใช้งานแล้ว!";
+"onboarding.done.action.submit" = "ส่งค่าใช้จ่ายแรกของคุณ";
+"onboarding.done.action.submit.subtitle" = "ถ่ายใบเสร็จ — ให้เราจัดการที่เหลือ";
+"onboarding.done.action.invite" = "เชิญเพื่อนร่วมทีม";
+"onboarding.done.action.invite.subtitle" = "แชร์ลิงก์เชิญเข้าเวิร์กสเปซ";
+"onboarding.done.action.settings" = "ดูการตั้งค่า";
+"onboarding.done.action.settings.subtitle" = "ตั้งหมวดหมู่ โครงการ และการอนุมัติ";
+"onboarding.done.go_home" = "ไปหน้าหลัก";
 
 /* === Workspace setup === */
 "setup.workspace.title" = "เวิร์กสเปซ";

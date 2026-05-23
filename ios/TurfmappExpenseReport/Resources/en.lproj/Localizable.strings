@@ -59,7 +59,31 @@
 "setup.profile.title" = "Set up profile";
 "setup.profile.subtitle" = "Create the identity teammates will see on requests, approvals, and reimbursement records.";
 "setup.profile.fullname" = "Full name";
+"setup.profile.fullname.placeholder" = "e.g. Sira Sasitorn";
 "setup.profile.nickname" = "Nickname";
+"setup.profile.nickname.placeholder" = "Optional";
+"setup.profile.avatar.title" = "Profile photo";
+"setup.profile.avatar.subtitle" = "Optional — tap the circle to upload";
+"setup.profile.save_failed" = "Couldn't save profile";
+"onboarding.step.label" = "Step %d of %d";
+"onboarding.welcome.title" = "Welcome to Expenses";
+"onboarding.welcome.subtitle" = "Track expenses, get approvals, and reimburse the team — fast.";
+"onboarding.welcome.feature.scan.title" = "AI receipt scanning";
+"onboarding.welcome.feature.scan.subtitle" = "Snap a receipt and we fill in the rest.";
+"onboarding.welcome.feature.approve.title" = "Real-time approvals";
+"onboarding.welcome.feature.approve.subtitle" = "Managers and finance see new expenses instantly.";
+"onboarding.welcome.feature.workspace.title" = "Multi-workspace";
+"onboarding.welcome.feature.workspace.subtitle" = "One app, every team you're part of.";
+"onboarding.welcome.get_started" = "Get Started";
+"onboarding.welcome.have_account" = "I already have an account";
+"onboarding.done.title" = "You're all set!";
+"onboarding.done.action.submit" = "Submit your first expense";
+"onboarding.done.action.submit.subtitle" = "Snap a receipt — we'll do the rest.";
+"onboarding.done.action.invite" = "Invite a teammate";
+"onboarding.done.action.invite.subtitle" = "Share a workspace invite link.";
+"onboarding.done.action.settings" = "Browse settings";
+"onboarding.done.action.settings.subtitle" = "Set categories, projects, and approvals.";
+"onboarding.done.go_home" = "Go to Home";
 
 /* === Workspace setup === */
 "setup.workspace.title" = "Workspace";

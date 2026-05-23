@@ -14,6 +14,13 @@ struct RootShell: View {
     /// SubmitView consumes it, so re-entering the Add tab without picking
     /// again shows the normal blank form.
     @State private var pendingDraftId: String?
+    /// Drives the Welcome step. Persisted to UserDefaults so a user who
+    /// completes onboarding (or signs out and back in) doesn't see it twice.
+    @AppStorage("onboarding.hasSeenWelcome") private var hasSeenWelcome: Bool = false
+    /// Transient: gates the post-workspace celebration screen. We flip it
+    /// to true when WorkspaceSetupView finishes, then back to false when
+    /// the user taps "Go to Home" or one of the quick-action tiles.
+    @State private var showCompletion: Bool = false
 
     private enum LaunchState { case restoring, ready }
 
@@ -44,6 +51,19 @@ struct RootShell: View {
         .task {
             await restoreSession()
         }
+        // Fire the completion screen exactly once: when the user transitions
+        // from "still in setup" → "workspace ready". Returning users (who
+        // skipped setup entirely on launch) won't trip this because their
+        // workspaceReady flag is set during session restore before the body
+        // observers attach.
+        .onChange(of: app.workspaceReady) { wasReady, isReady in
+            if !wasReady && isReady && app.needsSetup {
+                showCompletion = true
+                // Setup is done — drop the needsSetup flag so the router doesn't
+                // bounce back into the workspace screen.
+                app.needsSetup = false
+            }
+        }
     }
 
     private var launchSplash: some View {
@@ -57,7 +77,14 @@ struct RootShell: View {
 
     @ViewBuilder
     private var routedBody: some View {
-        if !app.isAuthenticated {
+        if !app.isAuthenticated && !hasSeenWelcome {
+            WelcomeView(
+                onGetStarted: { hasSeenWelcome = true },
+                onSignIn: { hasSeenWelcome = true }
+            )
+                .environmentObject(app)
+                .appBackground()
+        } else if !app.isAuthenticated {
             AuthView()
                 .environmentObject(app)
                 .environmentObject(repositoryApp)
@@ -65,9 +92,20 @@ struct RootShell: View {
         } else if app.needsSetup && !app.profileComplete {
             ProfileSetupView()
                 .environmentObject(app)
+                .environmentObject(repositoryApp)
                 .appBackground()
         } else if app.needsSetup && !app.workspaceReady {
             WorkspaceSetupView()
+                .environmentObject(app)
+                .environmentObject(repositoryApp)
+                .appBackground()
+        } else if showCompletion {
+            OnboardingCompletionView(
+                onSubmitExpense: { dismissCompletion(switchingTo: .add) },
+                onInviteTeammate: { dismissCompletion(switchingTo: .profile) },
+                onBrowseSettings: { dismissCompletion(switchingTo: .profile) },
+                onGoHome: { dismissCompletion(switchingTo: .home) }
+            )
                 .environmentObject(app)
                 .environmentObject(repositoryApp)
                 .appBackground()
@@ -75,6 +113,11 @@ struct RootShell: View {
             appShell
                 .environmentObject(repositoryApp)
         }
+    }
+
+    private func dismissCompletion(switchingTo tab: TabID) {
+        showCompletion = false
+        selectedTab = tab
     }
 
     /// Resume the previous session if one is persisted, then hand off to
@@ -686,52 +729,6 @@ enum AuthMode: CaseIterable {
     }
 }
 
-struct ProfileSetupView: View {
-    @EnvironmentObject var app: AppState
-    @State private var name = ""
-    @State private var nickname = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Spacer(minLength: 32)
-
-            Text(tr("setup.profile.title")).font(.system(size: 32, weight: .bold))
-            Text(tr("setup.profile.subtitle"))
-                .font(.system(size: 14)).foregroundStyle(.secondary)
-
-            GlassCard(padding: Tokens.padCard) {
-                VStack(spacing: 0) {
-                    setupField(tr("setup.profile.fullname"), text: $name)
-                    Divider().opacity(0.4)
-                    setupField(tr("setup.profile.nickname"), text: $nickname)
-                }
-            }
-
-            Button {
-                app.completeProfile(name: name, nickname: nickname)
-            } label: {
-                Text(tr("common.continue")).primaryActionLabel()
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-        }
-        .padding(.horizontal, 22)
-    }
-
-    private func setupField(_ label: String, text: Binding<String>) -> some View {
-        HStack {
-            Text(label).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-            Spacer()
-            TextField(label, text: text)
-                .font(.system(size: 14, weight: .medium))
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 220)
-        }
-        .padding(.vertical, 12)
-    }
-}
-
 struct WorkspaceSetupView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
@@ -743,10 +740,17 @@ struct WorkspaceSetupView: View {
     private static let currencyOptions = ["USD", "EUR", "GBP", "THB", "JPY", "SGD", "AUD", "CAD"]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Spacer(minLength: 32)
+        VStack(alignment: .leading, spacing: 0) {
+            OnboardingProgress(current: 2, total: 2)
+            stepContent
+        }
+    }
 
-            Text(tr("setup.workspace.title")).font(.system(size: 32, weight: .bold))
+    private var stepContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Spacer(minLength: 24)
+
+            Text(tr("setup.workspace.title")).font(.system(size: 30, weight: .bold))
             Text(tr("setup.workspace.subtitle"))
                 .font(.system(size: 14)).foregroundStyle(.secondary)
 
