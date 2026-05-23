@@ -4,6 +4,9 @@ import UserNotifications
 extension Notification.Name {
     static let deviceTokenReceived   = Notification.Name("com.turfmapp.deviceTokenReceived")
     static let pushNotificationOpened = Notification.Name("com.turfmapp.pushNotificationOpened")
+    /// Posted from Profile → Replay app tour to trigger the FeatureTour overlay.
+    /// RootShell listens on this notification and flips `showTour = true`.
+    static let replayFeatureTour     = Notification.Name("com.turfmapp.replayFeatureTour")
 }
 
 @MainActor

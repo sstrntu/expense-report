@@ -17,10 +17,16 @@ struct RootShell: View {
     /// Drives the Welcome step. Persisted to UserDefaults so a user who
     /// completes onboarding (or signs out and back in) doesn't see it twice.
     @AppStorage("onboarding.hasSeenWelcome") private var hasSeenWelcome: Bool = false
+    /// Same idea for the coach-marks tour: once you finish or skip it, we
+    /// don't auto-show again. Profile → Replay app tour resets this manually.
+    @AppStorage("tour.completed") private var tourCompleted: Bool = false
     /// Transient: gates the post-workspace celebration screen. We flip it
     /// to true when WorkspaceSetupView finishes, then back to false when
     /// the user taps "Go to Home" or one of the quick-action tiles.
     @State private var showCompletion: Bool = false
+    /// Drives the FeatureTour overlay. True both for the auto-trigger after
+    /// completion and for manual replays from Profile.
+    @State private var showTour: Bool = false
 
     private enum LaunchState { case restoring, ready }
 
@@ -101,23 +107,45 @@ struct RootShell: View {
                 .appBackground()
         } else if showCompletion {
             OnboardingCompletionView(
-                onSubmitExpense: { dismissCompletion(switchingTo: .add) },
-                onInviteTeammate: { dismissCompletion(switchingTo: .profile) },
-                onBrowseSettings: { dismissCompletion(switchingTo: .profile) },
-                onGoHome: { dismissCompletion(switchingTo: .home) }
+                onSubmitExpense: { dismissCompletion(switchingTo: .add, startTour: false) },
+                onInviteTeammate: { dismissCompletion(switchingTo: .profile, startTour: false) },
+                onBrowseSettings: { dismissCompletion(switchingTo: .profile, startTour: false) },
+                onGoHome: { dismissCompletion(switchingTo: .home, startTour: !tourCompleted) }
             )
                 .environmentObject(app)
                 .environmentObject(repositoryApp)
                 .appBackground()
         } else {
-            appShell
-                .environmentObject(repositoryApp)
+            ZStack {
+                appShell
+                    .environmentObject(repositoryApp)
+                if showTour {
+                    FeatureTour(role: app.role) {
+                        tourCompleted = true
+                        showTour = false
+                    }
+                    .environmentObject(app)
+                    .zIndex(100)
+                    .transition(.opacity)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .replayFeatureTour)) { _ in
+                showTour = true
+            }
         }
     }
 
-    private func dismissCompletion(switchingTo tab: TabID) {
+    private func dismissCompletion(switchingTo tab: TabID, startTour: Bool) {
         showCompletion = false
         selectedTab = tab
+        if startTour {
+            // Defer one tick so the appShell renders first; otherwise the
+            // overlay's tab-center calculation runs before the tab bar has
+            // settled into its final on-screen position.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                showTour = true
+            }
+        }
     }
 
     /// Resume the previous session if one is persisted, then hand off to

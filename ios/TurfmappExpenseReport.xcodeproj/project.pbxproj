@@ -27,6 +27,7 @@
 		4D237D0C9EBF4614E552C27D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DFC9332727178E8AD0815326 /* PrivacyInfo.xcprivacy */; };
 		4DDED493FFFA0D6DAAFE572B /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB435F138568CD4F6440FBDF /* DashboardView.swift */; };
 		555469A5FCC5089B0EE32506 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3934E66267FB647ABA10BE72 /* Localizable.strings */; };
+		569C68CB4BF98A9C5E3B84D5 /* FeatureTour.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D17D771B2C971AB6E5D3983 /* FeatureTour.swift */; };
 		5A6E411E3F13C60CE06D5433 /* Avatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4CB3A46FA47E4715A510B1 /* Avatar.swift */; };
 		5D5D8C1FC9CA7F24D41815A7 /* RootShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 536DAABDF76A6F8DFD29DEEF /* RootShell.swift */; };
 		5FB4E6907640C710222DF67F /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649767E02DA13AB1CCBFD0E9 /* PermissionsView.swift */; };
@@ -98,6 +99,7 @@
 		67A7AB0D0FD25CE844CAF051 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		67EC6D7BD90D039BB416ED74 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		6ABE7DE6913E857B352AF659 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		6D17D771B2C971AB6E5D3983 /* FeatureTour.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureTour.swift; sourceTree = "<group>"; };
 		6F096F243857EBABB4129FEC /* TurfmappExpenseReportApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurfmappExpenseReportApp.swift; sourceTree = "<group>"; };
 		7308954FD71CE684A0764452 /* DraftsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsCard.swift; sourceTree = "<group>"; };
 		7DCA382B613E7898446D5C53 /* StatusPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresentationTests.swift; sourceTree = "<group>"; };
@@ -256,6 +258,7 @@
 			children = (
 				022A372760DA74B70F88A83C /* AppDelegate.swift */,
 				8941FC76E8EADAC392D24D4C /* BottomTabBar.swift */,
+				6D17D771B2C971AB6E5D3983 /* FeatureTour.swift */,
 				2F5EE3FE32C4F519E6DA9F5F /* OnboardingFlow.swift */,
 				536DAABDF76A6F8DFD29DEEF /* RootShell.swift */,
 			);
@@ -391,6 +394,7 @@
 				033FAA81CA463676F32438FF /* DraftsCard.swift in Sources */,
 				FB7E8551063B68B57E87D042 /* ExpenseDetailSheets.swift in Sources */,
 				2F34697B2E31FBBCFBE5DAA8 /* ExpenseWorkflow.swift in Sources */,
+				569C68CB4BF98A9C5E3B84D5 /* FeatureTour.swift in Sources */,
 				40834B5A7CB85792D6B041B7 /* GlassCard.swift in Sources */,
 				2493E01868B610DD3193D13D /* HomeView.swift in Sources */,
 				916271724F6586B58CC7D66C /* LocalizationManager.swift in Sources */,

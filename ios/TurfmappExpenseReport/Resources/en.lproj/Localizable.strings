@@ -84,6 +84,27 @@
 "onboarding.done.action.settings" = "Browse settings";
 "onboarding.done.action.settings.subtitle" = "Set categories, projects, and approvals.";
 "onboarding.done.go_home" = "Go to Home";
+"profile.nav.tour" = "Replay app tour";
+"profile.nav.tour.sub" = "Walk through the tabs and key features again";
+"tour.step_label" = "STEP %d / %d";
+"tour.skip" = "Skip";
+"tour.back" = "Back";
+"tour.next" = "Next";
+"tour.finish" = "Got it";
+"tour.intro.title" = "Quick tour";
+"tour.intro.body" = "Let's walk through the five tabs at the bottom so you know where everything lives. Takes about 30 seconds.";
+"tour.home.title" = "Home";
+"tour.home.body" = "Your starting point — recent expenses, drafts in progress, and quick stats for the team.";
+"tour.add.title" = "Submit an expense";
+"tour.add.body" = "Tap the + to snap a receipt or pick from your library. AI fills in the merchant, amount, and date for you.";
+"tour.activity.title" = "Activity";
+"tour.activity.body" = "Every expense you've submitted, with status, filters, and search. Tap a row to see the full timeline.";
+"tour.review.title" = "Review";
+"tour.review.body" = "Approve manager queues and mark items reimbursed. The badge counts what's waiting on you.";
+"tour.profile.title" = "You";
+"tour.profile.body" = "Settings, workspace, notifications, exports, and this tour are all in here. Tap your avatar at the top to update your profile.";
+"tour.done.title" = "You're ready!";
+"tour.done.body" = "You can replay this tour anytime from You → Replay app tour.";
 
 /* === Workspace setup === */
 "setup.workspace.title" = "Workspace";

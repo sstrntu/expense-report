@@ -90,6 +90,12 @@ struct ProfileView: View {
                     Divider().opacity(0.4)
                     navRow(icon: "questionmark.circle.fill", label: tr("profile.nav.help")) { onNav("help") }
                     Divider().opacity(0.4)
+                    navRow(icon: "wand.and.stars",
+                           label: tr("profile.nav.tour"),
+                           sub: tr("profile.nav.tour.sub")) {
+                        NotificationCenter.default.post(name: .replayFeatureTour, object: nil)
+                    }
+                    Divider().opacity(0.4)
                     navRow(icon: "info.circle.fill", label: tr("profile.nav.legal")) { onNav("legal") }
                 }
             }
