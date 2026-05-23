@@ -46,7 +46,8 @@ actor MockRepositoryStore {
                 email: "finance@turfmapp.io",
                 role: .finance,
                 status: .pending,
-                expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+                expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
+                code: "123456"
             )
         ]
 
@@ -152,7 +153,8 @@ actor MockRepositoryStore {
             email: invite.email,
             role: invite.role,
             status: .accepted,
-            expiresAt: invite.expiresAt
+            expiresAt: invite.expiresAt,
+            code: invite.code
         )
         if !members.contains(where: { $0.workspaceId == invite.workspaceId && $0.userId == currentUserId && $0.status == "active" }) {
             members.insert(
@@ -179,7 +181,8 @@ actor MockRepositoryStore {
             email: email,
             role: role,
             status: .pending,
-            expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+            expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
+            code: String(Int.random(in: 100000...999999))
         )
         invites.insert(invite, at: 0)
         return invite
@@ -194,7 +197,8 @@ actor MockRepositoryStore {
             email: invite.email,
             role: invite.role,
             status: .cancelled,
-            expiresAt: invite.expiresAt
+            expiresAt: invite.expiresAt,
+            code: invite.code
         )
     }
 
@@ -249,7 +253,8 @@ actor MockRepositoryStore {
                 email: invite.email,
                 role: invite.role,
                 status: .expired,
-                expiresAt: invite.expiresAt
+                expiresAt: invite.expiresAt,
+                code: invite.code
             )
         }
     }
@@ -707,6 +712,12 @@ struct MockWorkspaceRepository: WorkspaceRepository {
 
     func createWorkspace(name: String, defaultCurrency: String) async throws -> DomainWorkspace {
         await store.createWorkspace(name: name, defaultCurrency: defaultCurrency)
+    }
+
+    func acceptInviteCode(_ code: String) async throws -> DomainWorkspace {
+        // Mock backend doesn't model 6-digit codes; just delegate to the
+        // existing acceptInvite() path so tests using the mock still work.
+        try await store.acceptInvite(id: code)
     }
 
     func acceptInvite(id: String) async throws -> DomainWorkspace {

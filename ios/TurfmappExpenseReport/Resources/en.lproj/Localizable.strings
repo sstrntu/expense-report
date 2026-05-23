@@ -124,7 +124,9 @@
 "setup.workspace.mode.join" = "Join";
 "setup.workspace.org_name" = "Organization";
 "setup.workspace.default_currency" = "Default currency";
-"setup.workspace.invite_code" = "Invite code";
+"setup.workspace.invite_code" = "6-DIGIT INVITE CODE";
+"setup.workspace.invite_code.hint" = "Ask the workspace admin for a 6-digit code.";
+"permissions.invite.copy" = "Copy";
 "setup.workspace.status" = "Status";
 "setup.workspace.waiting_invite" = "Waiting for invite";
 "setup.workspace.ready_join" = "Ready to join";

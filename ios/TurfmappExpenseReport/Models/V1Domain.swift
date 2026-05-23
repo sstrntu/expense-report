@@ -340,7 +340,11 @@ struct WorkspaceInvite: Identifiable, Codable, Hashable, Sendable {
     let role: WorkspaceRole
     let status: Status
     let expiresAt: Date
+    /// 6-digit human-friendly redeem code. Server-generated at insert time
+    /// (see migration 20260523040529). Always present for pending invites.
+    let code: String
 }
+
 
 enum NotificationEventType: String, Codable, CaseIterable, Hashable, Sendable {
     case expenseSubmitted = "expense_submitted"

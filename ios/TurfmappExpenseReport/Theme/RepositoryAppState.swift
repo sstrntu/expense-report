@@ -440,6 +440,22 @@ final class RepositoryAppState: ObservableObject {
         }
     }
 
+    /// Returns true on success so the caller can drive AppState forward.
+    /// The 6-digit code flow is the recommended join path for new users.
+    @discardableResult
+    func acceptInviteCode(_ code: String) async -> Bool {
+        do {
+            lastError = nil
+            let workspace = try await workspaceRepository.acceptInviteCode(code)
+            UserDefaults.standard.set(workspace.id, forKey: selectedWorkspaceDefaultsKey)
+            await loadWorkspaces(selecting: workspace.id)
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
     @discardableResult
     func createAndSubmitExpense(_ input: ExpenseDraftInput, receipt: PendingReceiptUpload? = nil) async -> Bool {
         do {

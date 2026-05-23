@@ -96,6 +96,10 @@ protocol WorkspaceRepository: Sendable {
     func listCategories(workspaceId: String) async throws -> [DomainCategory]
     func createWorkspace(name: String, defaultCurrency: String) async throws -> DomainWorkspace
     func acceptInvite(id: String) async throws -> DomainWorkspace
+    /// Accepts an invite by the human-friendly 6-digit code printed in the
+    /// admin's invite UI. Server-side RPC validates pending status + expiry
+    /// and atomically inserts/reactivates the membership row.
+    func acceptInviteCode(_ code: String) async throws -> DomainWorkspace
     func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) async throws -> WorkspaceInvite
     func cancelInvite(id: String) async throws
     func updateMemberRole(id: String, role: WorkspaceRole) async throws -> DomainWorkspaceMember

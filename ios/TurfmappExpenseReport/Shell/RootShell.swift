@@ -866,11 +866,35 @@ struct WorkspaceSetupView: View {
                         .padding(.vertical, 10)
                     }
                 } else {
-                    VStack(spacing: 0) {
-                        setupField(tr("setup.workspace.invite_code"), text: $inviteCode)
-                        Divider().opacity(0.4)
-                        FormFieldRow(label: tr("setup.workspace.status"), value: inviteCode.isEmpty ? tr("setup.workspace.waiting_invite") : tr("setup.workspace.ready_join"), showChevron: false)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(tr("setup.workspace.invite_code"))
+                            .font(.system(size: 11, weight: .semibold)).tracking(0.4)
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 4)
+
+                        TextField("000000", text: $inviteCode)
+                            .font(.system(size: 28, weight: .bold, design: .monospaced))
+                            .multilineTextAlignment(.center)
+                            .keyboardType(.numberPad)
+                            .textContentType(.oneTimeCode)
+                            .tracking(8)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                            .onChange(of: inviteCode) { _, newValue in
+                                // Strip anything that isn't a digit and cap at 6.
+                                // Mirrors the server's regexp normalisation so
+                                // what the user sees is what gets sent.
+                                let digits = newValue.filter(\.isNumber)
+                                let trimmed = String(digits.prefix(6))
+                                if trimmed != newValue { inviteCode = trimmed }
+                            }
+
+                        Text(tr("setup.workspace.invite_code.hint"))
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                            .padding(.horizontal, 4)
                     }
+                    .padding(.vertical, 4)
                 }
             }
 
@@ -880,9 +904,11 @@ struct WorkspaceSetupView: View {
                            message: lastError)
             }
 
-            infoBanner(icon: "person.2.badge.gearshape.fill", tint: Tokens.slate500,
-                       title: tr("setup.workspace.invite_required.title"),
-                       message: tr("setup.workspace.invite_required.message"))
+            if mode == .create {
+                infoBanner(icon: "person.2.badge.gearshape.fill", tint: Tokens.slate500,
+                           title: tr("setup.workspace.invite_required.title"),
+                           message: tr("setup.workspace.invite_required.message"))
+            }
 
             Button {
                 Task {
@@ -890,7 +916,7 @@ struct WorkspaceSetupView: View {
                     case .create:
                         await repositoryApp.createWorkspace(name: workspaceName, defaultCurrency: defaultCurrency)
                     case .join:
-                        await repositoryApp.acceptInvite(id: inviteCode.trimmingCharacters(in: .whitespacesAndNewlines))
+                        await repositoryApp.acceptInviteCode(inviteCode)
                     }
                     if let workspace = repositoryApp.selectedWorkspace {
                         app.company = workspace.legacyCompany
@@ -904,7 +930,7 @@ struct WorkspaceSetupView: View {
             .buttonStyle(.plain)
             .disabled(
                 (mode == .create && workspaceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
-                (mode == .join && inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                (mode == .join && inviteCode.count != 6)
             )
 
             Spacer()

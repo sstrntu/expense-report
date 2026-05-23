@@ -124,7 +124,9 @@
 "setup.workspace.mode.join" = "เข้าร่วม";
 "setup.workspace.org_name" = "องค์กร";
 "setup.workspace.default_currency" = "สกุลเงินเริ่มต้น";
-"setup.workspace.invite_code" = "รหัสคำเชิญ";
+"setup.workspace.invite_code" = "รหัสเชิญ 6 หลัก";
+"setup.workspace.invite_code.hint" = "ขอรหัส 6 หลักจากผู้ดูแลเวิร์กสเปซ";
+"permissions.invite.copy" = "คัดลอก";
 "setup.workspace.status" = "สถานะ";
 "setup.workspace.waiting_invite" = "รอคำเชิญ";
 "setup.workspace.ready_join" = "พร้อมเข้าร่วม";

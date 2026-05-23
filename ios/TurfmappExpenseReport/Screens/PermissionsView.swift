@@ -81,23 +81,7 @@ struct PermissionsView: View {
                     VStack(spacing: 0) {
                         ForEach(Array(repositoryApp.invites.enumerated()), id: \.element.id) { idx, invite in
                             if idx > 0 { Divider().opacity(0.4) }
-                            HStack(spacing: 12) {
-                                Image(systemName: "envelope.badge.fill")
-                                    .foregroundStyle(Tokens.pending)
-                                    .frame(width: 32, height: 32)
-                                    .background(Tokens.pending.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(invite.email).font(.system(size: 13.5, weight: .medium))
-                                    Text("\(tr("permissions.invites")) · \(tr("role.\(invite.role.rawValue)"))").font(.system(size: 11)).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Button(tr("common.cancel")) {
-                                    Task { await repositoryApp.cancelInvite(id: invite.id) }
-                                }
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(Tokens.rejected)
-                            }
-                            .padding(.horizontal, 14).padding(.vertical, 12)
+                            inviteRow(invite)
                         }
                     }
                 }
@@ -139,6 +123,56 @@ struct PermissionsView: View {
         } message: {
             Text(tr("permissions.confirm_remove.message"))
         }
+    }
+
+    /// Renders a single pending invite. The 6-digit code is the headline since
+    /// that's what the admin needs to read out to the invitee; email + role are
+    /// secondary metadata.
+    private func inviteRow(_ invite: WorkspaceInvite) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: "envelope.badge.fill")
+                    .foregroundStyle(Tokens.pending)
+                    .frame(width: 32, height: 32)
+                    .background(Tokens.pending.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(invite.email).font(.system(size: 13.5, weight: .medium)).lineLimit(1)
+                    Text(tr("role.\(invite.role.rawValue)"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button(tr("common.cancel")) {
+                    Task { await repositoryApp.cancelInvite(id: invite.id) }
+                }
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Tokens.rejected)
+            }
+
+            // Code + copy. Tapping the row copies; the chip on the right is
+            // a redundant affordance so users discover the tap target.
+            Button {
+                UIPasteboard.general.string = invite.code
+            } label: {
+                HStack(spacing: 12) {
+                    Text(invite.code)
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .tracking(6)
+                        .foregroundStyle(Color.primary)
+                    Spacer()
+                    HStack(spacing: 5) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(tr("permissions.invite.copy"))
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(Tokens.slate500)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
     }
 
     private func roleCapabilityRow(_ title: String, icon: String, tint: Color, description: String) -> some View {

@@ -84,6 +84,7 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
     func listCategories(workspaceId: String) async throws -> [DomainCategory] { throw error }
     func createWorkspace(name: String, defaultCurrency: String) async throws -> DomainWorkspace { throw error }
     func acceptInvite(id: String) async throws -> DomainWorkspace { throw error }
+    func acceptInviteCode(_ code: String) async throws -> DomainWorkspace { throw error }
     func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) async throws -> WorkspaceInvite { throw error }
     func cancelInvite(id: String) async throws { throw error }
     func updateMemberRole(id: String, role: WorkspaceRole) async throws -> DomainWorkspaceMember { throw error }
@@ -699,13 +700,13 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
         let rows: [WorkspaceInviteRow] = try await client.get(
             "workspace_invites",
             queryItems: [
-                URLQueryItem(name: "select", value: "id,workspace_id,email,role,status,expires_at"),
+                URLQueryItem(name: "select", value: "id,workspace_id,email,role,status,expires_at,code"),
                 URLQueryItem(name: "workspace_id", value: "eq.\(workspaceId)"),
                 URLQueryItem(name: "status", value: "eq.pending")
             ]
         )
         return rows.map {
-            WorkspaceInvite(id: $0.id, workspaceId: $0.workspaceId, email: $0.email, role: $0.role, status: $0.status, expiresAt: $0.expiresAt)
+            WorkspaceInvite(id: $0.id, workspaceId: $0.workspaceId, email: $0.email, role: $0.role, status: $0.status, expiresAt: $0.expiresAt, code: $0.code)
         }
     }
 
@@ -755,16 +756,43 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
     }
 
     func acceptInvite(id: String) async throws -> DomainWorkspace {
-        // Server-side RPC: the joiner isn't a workspace member yet, so they
-        // can't insert into workspace_memberships directly. The SECURITY DEFINER
-        // function verifies the invite is addressed to their auth email,
-        // marks it accepted, and creates the membership atomically.
+        // Legacy UUID-based path. Kept for backwards compatibility; new joins
+        // should go through acceptInviteCode() with the 6-digit code instead.
         struct Args: Encodable { let inviteId: String }
         let membership: WorkspaceMemberRow = try await client.rpc(
             "accept_workspace_invite",
             body: Args(inviteId: id)
         )
         // Load the workspace this membership belongs to.
+        let workspaceRows: [WorkspaceRow] = try await client.get(
+            "workspaces",
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "id", value: "eq.\(membership.workspaceId)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
+        guard let row = workspaceRows.first else { throw SupabaseRepositoryError.invalidResponse }
+        return DomainWorkspace(
+            id: row.id,
+            name: row.name,
+            abbr: row.abbr,
+            brandColorHex: row.brandColor,
+            defaultCurrency: row.defaultCurrency,
+            currentUserRole: membership.role,
+            logoUrl: row.logoUrl
+        )
+    }
+
+    func acceptInviteCode(_ code: String) async throws -> DomainWorkspace {
+        // 6-digit code redeem path. The RPC strips non-digits, looks up the
+        // active pending invite by code, then inserts/reactivates the
+        // membership. No email match required — the code itself is the secret.
+        struct Args: Encodable { let pCode: String }
+        let membership: WorkspaceMemberRow = try await client.rpc(
+            "accept_workspace_invite_by_code",
+            body: Args(pCode: code)
+        )
         let workspaceRows: [WorkspaceRow] = try await client.get(
             "workspaces",
             queryItems: [
@@ -793,7 +821,7 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
             body: WorkspaceInviteInsert(workspaceId: workspaceId, email: email.lowercased(), role: role, invitedByUserId: currentUserId, expiresAt: expiresAt)
         )
         guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
-        let invite = WorkspaceInvite(id: row.id, workspaceId: row.workspaceId, email: row.email, role: row.role, status: row.status, expiresAt: row.expiresAt)
+        let invite = WorkspaceInvite(id: row.id, workspaceId: row.workspaceId, email: row.email, role: row.role, status: row.status, expiresAt: row.expiresAt, code: row.code)
 
         // Fire-and-forget email send. Failure here is non-fatal — the invite
         // row exists, and the admin can re-trigger from the UI. Swallowing
@@ -1523,6 +1551,7 @@ private struct WorkspaceInviteRow: Codable {
     let role: WorkspaceRole
     let status: WorkspaceInvite.Status
     let expiresAt: Date
+    let code: String
 }
 
 private struct WorkspaceInviteInsert: Encodable {
