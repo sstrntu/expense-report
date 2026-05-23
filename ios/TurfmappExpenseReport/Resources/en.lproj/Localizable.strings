@@ -44,6 +44,8 @@
 "auth.signin.action" = "Sign in";
 "auth.continue_with_google" = "Continue with Google";
 "auth.continue_with_apple" = "Continue with Apple";
+"auth.signin_with_google" = "Sign in with Google";
+"auth.signup_with_google" = "Sign up with Google";
 "auth.or" = "OR";
 "auth.signup.action" = "Create account";
 "auth.forgot" = "Forgot password?";

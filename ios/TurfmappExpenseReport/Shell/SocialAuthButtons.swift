@@ -9,19 +9,59 @@ import AuthenticationServices
 /// them to async tasks on RepositoryAppState that do the real work and then
 /// drive AppState forward.
 struct SocialAuthButtons: View {
+    /// Drives the label on both buttons — "Sign in with X" vs "Sign up with X"
+    /// vs the generic "Continue with X". Welcome / fresh-auth contexts pass
+    /// `.continue` while AuthView passes the active mode so the verb matches
+    /// the segmented control above the buttons.
+    enum Mode {
+        case signIn, signUp, `continue`
+
+        /// Apple's official button supports the same three verbs via the
+        /// initializer parameter — we forward the user's choice here.
+        var appleLabel: SignInWithAppleButton.Label {
+            switch self {
+            case .signIn:    return .signIn
+            case .signUp:    return .signUp
+            case .continue:  return .continue
+            }
+        }
+
+        var googleTextKey: String {
+            switch self {
+            case .signIn:    return "auth.signin_with_google"
+            case .signUp:    return "auth.signup_with_google"
+            case .continue:  return "auth.continue_with_google"
+            }
+        }
+    }
+
+    let mode: Mode
     let onGoogle: () -> Void
     let onApple: () -> Void
+
+    init(mode: Mode = .continue, onGoogle: @escaping () -> Void, onApple: @escaping () -> Void) {
+        self.mode = mode
+        self.onGoogle = onGoogle
+        self.onApple = onApple
+    }
 
     var body: some View {
         VStack(spacing: 10) {
             Button(action: onGoogle) {
-                HStack(spacing: 12) {
-                    GoogleGlyph()
-                        .frame(width: 20, height: 20)
-                    Text(tr("auth.continue_with_google"))
-                        .font(.system(size: 15, weight: .semibold))
+                // ZStack so the icon and label can be positioned independently:
+                // the icon hugs the leading edge, the label is centered against
+                // the full button width — matching how SignInWithAppleButton
+                // lays out its mark + text.
+                ZStack {
+                    Text(tr(mode.googleTextKey))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(Color.primary)
-                    Spacer()
+                        .frame(maxWidth: .infinity)
+                    HStack {
+                        GoogleGlyph()
+                            .frame(width: 22, height: 22)
+                        Spacer()
+                    }
                 }
                 .padding(.horizontal, 18)
                 .frame(maxWidth: .infinity, minHeight: 50)
@@ -30,26 +70,15 @@ struct SocialAuthButtons: View {
             }
             .buttonStyle(.plain)
 
-            // Apple's official button: required style + minimum 44pt tap area.
-            // We don't put the asynchronous bridging here — the parent's onApple
-            // closure runs after the Apple flow completes (the closure itself
-            // invokes the coordinator).
-            SignInWithAppleButton(.continue) { _ in
-                // The system returns a request here but we use our own
-                // AppleAuthCoordinator (managed by the parent) to get the
-                // nonce + identityToken pair. The system's onCompletion is
-                // also intercepted by that coordinator. So this initiator
-                // just forwards.
-                onApple()
-            } onCompletion: { _ in
-                // No-op: AppleAuthCoordinator handles the real completion.
-                // SwiftUI's SignInWithAppleButton fires onRequest, then
-                // performs the request itself; we bypass that path entirely
-                // by calling our own controller in `onApple`.
-            }
-            .signInWithAppleButtonStyle(.black)
-            .frame(height: 50)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            // Apple's official button. Label verb tracks `mode` so the two
+            // buttons stay verb-aligned with each other and with the segmented
+            // control above. The asynchronous bridging happens in `onApple`:
+            // we ignore the system's request/completion callbacks and call our
+            // own AppleAuthCoordinator from the parent.
+            SignInWithAppleButton(mode.appleLabel) { _ in onApple() } onCompletion: { _ in }
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
         }
     }
 }

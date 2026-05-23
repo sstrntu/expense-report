@@ -655,6 +655,7 @@ struct AuthView: View {
             }
 
             SocialAuthButtons(
+                mode: mode == .signup ? .signUp : .signIn,
                 onGoogle: {
                     Task {
                         let ok = await repositoryApp.signInWithGoogle()
