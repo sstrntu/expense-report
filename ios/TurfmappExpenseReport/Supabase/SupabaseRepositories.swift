@@ -663,10 +663,17 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
     let client: SupabaseRESTClient
 
     func listWorkspacesForCurrentUser() async throws -> [DomainWorkspace] {
+        // The "members can read memberships" RLS policy lets any member of a
+        // workspace read ALL membership rows for that workspace — not just
+        // their own. Without a user_id filter we get one row per teammate,
+        // each pointing at the same workspace, which surfaces as duplicates
+        // in the workspace dropdown. Filter to just the caller's membership.
+        guard let userId = await client.currentUserId() else { return [] }
         let rows: [WorkspaceMembershipRow] = try await client.get(
             "workspace_memberships",
             queryItems: [
                 URLQueryItem(name: "select", value: "id,role,status,workspaces(id,name,abbr,brand_color,default_currency,logo_url)"),
+                URLQueryItem(name: "user_id", value: "eq.\(userId)"),
                 URLQueryItem(name: "status", value: "eq.active")
             ]
         )
