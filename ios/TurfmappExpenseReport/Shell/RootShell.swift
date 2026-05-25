@@ -255,6 +255,10 @@ struct RootShell: View {
             guard let expenseId = note.userInfo?["expenseId"] as? String else { return }
             openExpenseFromPush(id: expenseId)
         }
+        // Transient toast for any non-nil lastError. Auto-dismisses; tap to
+        // close early. Replaces the always-present infoBanner pattern for
+        // action errors (workspace setup keeps its inline banner for clarity).
+        .errorToast(repositoryApp: repositoryApp)
     }
 
     private func openExpenseFromPush(id: String) {

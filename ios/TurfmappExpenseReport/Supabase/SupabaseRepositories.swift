@@ -147,6 +147,13 @@ enum SupabaseRepositoryError: LocalizedError {
         case .unsupported(let feature):
             return "\(feature) is not connected to Supabase yet."
         case .requestFailed(let status, let message):
+            // 401/403 with a "permission denied" body almost always means the
+            // user's role changed mid-session (e.g. an admin demoted them
+            // between render and tap). Surface a friendlier explanation than
+            // "permission denied for table X" so the user knows what to do.
+            if status == 401 || status == 403 || message.localizedCaseInsensitiveContains("permission denied") {
+                return "Your access changed. Pull to refresh and try again."
+            }
             // Supabase error bodies are typically JSON like {"msg": "...", "error_code": "..."}.
             // Surface that human message when present; fall back to the raw body otherwise.
             if let data = message.data(using: .utf8),
