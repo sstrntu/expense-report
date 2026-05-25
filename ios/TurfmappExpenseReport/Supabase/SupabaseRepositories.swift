@@ -101,6 +101,10 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
     func createProject(_ project: DomainProject) async throws -> DomainProject { throw error }
     func updateProject(_ project: DomainProject) async throws -> DomainProject { throw error }
     func archiveProject(id: String) async throws { throw error }
+    func listProjectMembers(projectId: String) async throws -> [DomainProjectMember] { throw error }
+    func addProjectMember(projectId: String, workspaceMembershipId: String, role: ProjectRole) async throws -> DomainProjectMember { throw error }
+    func updateProjectMemberRole(id: String, role: ProjectRole) async throws -> DomainProjectMember { throw error }
+    func removeProjectMember(id: String) async throws { throw error }
 
     func listExpenses(filters: ExpenseFilters) async throws -> [DomainExpense] { throw error }
     func listEvents(expenseId: String) async throws -> [ExpenseWorkflowEvent] { throw error }
@@ -1069,6 +1073,91 @@ struct SupabaseProjectRepository: ProjectRepository {
         )
         guard let id = rows.first?.id else { throw SupabaseRepositoryError.missingSession }
         return id
+    }
+
+    // MARK: – Project-level membership
+
+    /// Joins project_memberships → workspace_memberships → users in a single
+    /// PostgREST select so the returned rows already carry the display name +
+    /// email needed by the project access UI. RLS gates visibility per the
+    /// existing "members can read project memberships" policy.
+    func listProjectMembers(projectId: String) async throws -> [DomainProjectMember] {
+        let rows: [ProjectMemberRow] = try await client.get(
+            "project_memberships",
+            queryItems: [
+                URLQueryItem(name: "select", value: "id,project_id,workspace_membership_id,role,workspace_memberships(users(display_name,email))"),
+                URLQueryItem(name: "project_id", value: "eq.\(projectId)"),
+                URLQueryItem(name: "order", value: "created_at.asc")
+            ]
+        )
+        return rows.map(\.domain)
+    }
+
+    func addProjectMember(projectId: String, workspaceMembershipId: String, role: ProjectRole) async throws -> DomainProjectMember {
+        struct Body: Encodable {
+            let projectId: String
+            let workspaceMembershipId: String
+            let role: ProjectRole
+            enum CodingKeys: String, CodingKey {
+                case projectId = "project_id"
+                case workspaceMembershipId = "workspace_membership_id"
+                case role
+            }
+        }
+        // Use Prefer: return=representation so PostgREST sends the new row
+        // back joined the same way listProjectMembers expects, then re-fetch
+        // with the join to get display name + email.
+        let inserted: [ProjectMemberRow] = try await client.post(
+            "project_memberships?select=id,project_id,workspace_membership_id,role,workspace_memberships(users(display_name,email))",
+            body: Body(projectId: projectId, workspaceMembershipId: workspaceMembershipId, role: role)
+        )
+        guard let row = inserted.first else { throw SupabaseRepositoryError.invalidResponse }
+        return row.domain
+    }
+
+    func updateProjectMemberRole(id: String, role: ProjectRole) async throws -> DomainProjectMember {
+        struct Body: Encodable { let role: ProjectRole }
+        let rows: [ProjectMemberRow] = try await client.patch(
+            "project_memberships?id=eq.\(id)&select=id,project_id,workspace_membership_id,role,workspace_memberships(users(display_name,email))",
+            body: Body(role: role)
+        )
+        guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
+        return row.domain
+    }
+
+    func removeProjectMember(id: String) async throws {
+        try await client.delete("project_memberships?id=eq.\(id)")
+    }
+}
+
+/// Decoder for the project_memberships → workspace_memberships → users join
+/// used by listProjectMembers / add / update. Kept fileprivate to the
+/// repository because nothing else needs to know about the nested shape.
+private struct ProjectMemberRow: Codable {
+    let id: String
+    let projectId: String
+    let workspaceMembershipId: String
+    let role: ProjectRole
+    let workspaceMemberships: NestedMember?
+
+    struct NestedMember: Codable {
+        let users: NestedUser?
+
+        struct NestedUser: Codable {
+            let displayName: String?
+            let email: String?
+        }
+    }
+
+    var domain: DomainProjectMember {
+        DomainProjectMember(
+            id: id,
+            projectId: projectId,
+            workspaceMembershipId: workspaceMembershipId,
+            role: role,
+            displayName: workspaceMemberships?.users?.displayName ?? "Member",
+            email: workspaceMemberships?.users?.email ?? ""
+        )
     }
 }
 

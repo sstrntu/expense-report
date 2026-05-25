@@ -120,6 +120,26 @@ protocol ProjectRepository: Sendable {
     func createProject(_ project: DomainProject) async throws -> DomainProject
     func updateProject(_ project: DomainProject) async throws -> DomainProject
     func archiveProject(id: String) async throws
+
+    // MARK: – Project-level membership (Option B two-tier access model)
+    //
+    // Workspace admins and project_admins can manage these; the server
+    // enforces via the "project admins can manage project memberships" RLS
+    // policy. The iOS layer just calls; failures bubble through the usual
+    // SupabaseRepositoryError pipeline (which now rewrites 403s to a
+    // friendlier "your access changed" message).
+
+    /// Every member of `projectId` with their project role + display info.
+    func listProjectMembers(projectId: String) async throws -> [DomainProjectMember]
+    /// Add a workspace member to a project at the given role. The
+    /// `workspaceMembershipId` must reference an existing workspace member.
+    func addProjectMember(projectId: String, workspaceMembershipId: String, role: ProjectRole) async throws -> DomainProjectMember
+    /// Change an existing project member's role. Identified by the
+    /// `project_memberships.id` returned from list/add.
+    func updateProjectMemberRole(id: String, role: ProjectRole) async throws -> DomainProjectMember
+    /// Remove a workspace member from a project. Their workspace membership
+    /// stays intact — only the project access is revoked.
+    func removeProjectMember(id: String) async throws
 }
 
 protocol ExpenseRepository: Sendable {

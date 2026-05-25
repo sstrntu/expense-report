@@ -140,6 +140,24 @@ struct DomainWorkspaceMember: Identifiable, Codable, Hashable, Sendable {
     let avatarColorHex: String
 }
 
+/// Per-project membership row. Joins workspace_memberships → project_role,
+/// scoped to a single project. Used by the project access UI in Manage
+/// Projects so admins can grant fine-grained roles to specific workspace
+/// members without touching their workspace role.
+struct DomainProjectMember: Identifiable, Codable, Hashable, Sendable {
+    /// project_memberships.id (not the workspace-membership id) — primary key
+    /// for the join row.
+    let id: String
+    let projectId: String
+    let workspaceMembershipId: String
+    let role: ProjectRole
+    /// Denormalised display fields pulled in by the same select via the
+    /// `workspace_memberships → users` relation. Saves a second lookup
+    /// when rendering the project's member list.
+    let displayName: String
+    let email: String
+}
+
 struct DomainProject: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let workspaceId: String

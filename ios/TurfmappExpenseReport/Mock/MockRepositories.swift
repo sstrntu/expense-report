@@ -759,6 +759,26 @@ struct MockProjectRepository: ProjectRepository {
     func archiveProject(id: String) async throws {
         try await store.archiveProject(id: id)
     }
+
+    // Project-level membership — the mock store keeps no project_memberships
+    // data, so list returns empty and write methods are best-effort no-ops.
+    // Tests and previews that exercise the project access UI run against the
+    // real Supabase backend.
+    func listProjectMembers(projectId: String) async throws -> [DomainProjectMember] { [] }
+    func addProjectMember(projectId: String, workspaceMembershipId: String, role: ProjectRole) async throws -> DomainProjectMember {
+        DomainProjectMember(
+            id: "pm_\(UUID().uuidString.prefix(8))",
+            projectId: projectId,
+            workspaceMembershipId: workspaceMembershipId,
+            role: role,
+            displayName: "Member",
+            email: ""
+        )
+    }
+    func updateProjectMemberRole(id: String, role: ProjectRole) async throws -> DomainProjectMember {
+        DomainProjectMember(id: id, projectId: "", workspaceMembershipId: "", role: role, displayName: "Member", email: "")
+    }
+    func removeProjectMember(id: String) async throws {}
 }
 
 struct MockExpenseRepository: ExpenseRepository {

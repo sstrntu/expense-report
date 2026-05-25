@@ -622,6 +622,59 @@ final class RepositoryAppState: ObservableObject {
         }
     }
 
+    // MARK: – Project-level membership wrappers
+
+    /// Best-effort list. Returns [] on failure (e.g. RLS denies the read)
+    /// instead of throwing — UI shows the empty state which is the right
+    /// outcome for "you can't see this project's members".
+    func listProjectMembers(projectId: String) async -> [DomainProjectMember] {
+        do {
+            lastError = nil
+            return try await projectRepository.listProjectMembers(projectId: projectId)
+        } catch {
+            setError(error)
+            return []
+        }
+    }
+
+    @discardableResult
+    func addProjectMember(projectId: String, workspaceMembershipId: String, role: ProjectRole) async -> DomainProjectMember? {
+        do {
+            lastError = nil
+            let row = try await projectRepository.addProjectMember(
+                projectId: projectId,
+                workspaceMembershipId: workspaceMembershipId,
+                role: role
+            )
+            return row
+        } catch {
+            setError(error)
+            return nil
+        }
+    }
+
+    @discardableResult
+    func updateProjectMemberRole(id: String, role: ProjectRole) async -> DomainProjectMember? {
+        do {
+            lastError = nil
+            return try await projectRepository.updateProjectMemberRole(id: id, role: role)
+        } catch {
+            setError(error)
+            return nil
+        }
+    }
+
+    func removeProjectMember(id: String) async -> Bool {
+        do {
+            lastError = nil
+            try await projectRepository.removeProjectMember(id: id)
+            return true
+        } catch {
+            setError(error)
+            return false
+        }
+    }
+
     func inviteMember(email: String, role: WorkspaceRole) async {
         guard let workspace = selectedWorkspace else { return }
         do {
