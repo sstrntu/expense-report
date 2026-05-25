@@ -70,12 +70,29 @@ final class RepositoryAppState: ObservableObject {
         selectedWorkspace?.defaultCurrency ?? "USD"
     }
 
-    /// Membership id for the current user in the selected workspace, if any.
-    /// Used to filter "Mine" views on the dashboard and Review screens.
-    var currentMembershipId: String? {
+    /// Membership id for the current user in the selected workspace.
+    ///
+    /// Backed by a stored @Published value rather than a live computed lookup
+    /// so views that depend on it (Dashboard "Mine" scope, submitter checks
+    /// on "I made the purchase") don't go blank for the few frames where
+    /// `members` is empty during a workspace switch or refresh — the old id
+    /// stays in place until the new data set explicitly replaces it. Cleared
+    /// only on sign-out or when we confirm the user has no active membership
+    /// in the selected workspace.
+    @Published private(set) var currentMembershipId: String?
+
+    /// Re-derive `currentMembershipId` from current `members` + profile.
+    /// Called whenever either changes. Doesn't clear on a transient empty
+    /// state — only on an explicit signOut or when we have all the data and
+    /// the user genuinely isn't a member.
+    private func refreshCurrentMembershipId() {
         guard let userId = currentUserProfile?.id,
-              let workspaceId = selectedWorkspace?.id else { return nil }
-        return members.first(where: { $0.userId == userId && $0.workspaceId == workspaceId })?.id
+              let workspaceId = selectedWorkspace?.id else { return }
+        // If members is empty we're mid-refresh; hold the previous value.
+        guard !members.isEmpty else { return }
+        currentMembershipId = members.first(where: {
+            $0.userId == userId && $0.workspaceId == workspaceId
+        })?.id
     }
 
     /// Expenses re-projected into the workspace default currency. Three paths,
@@ -308,6 +325,7 @@ final class RepositoryAppState: ObservableObject {
         projects = []; expenses = []; eventsByExpenseId = [:]
         members = []; invites = []; categories = []; notifications = []
         currentUserProfile = nil; lastError = nil
+        currentMembershipId = nil
         UserDefaults.standard.removeObject(forKey: selectedWorkspaceDefaultsKey)
     }
 
@@ -879,6 +897,7 @@ final class RepositoryAppState: ObservableObject {
         do {
             projects = try await projectRepository.listProjects(workspaceId: workspace.id)
             members = try await workspaceRepository.listMembers(workspaceId: workspace.id)
+            refreshCurrentMembershipId()
             invites = try await workspaceRepository.listInvites(workspaceId: workspace.id)
             categories = try await workspaceRepository.listCategories(workspaceId: workspace.id)
             notifications = try await workspaceRepository.listNotifications(workspaceId: workspace.id)

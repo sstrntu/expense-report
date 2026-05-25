@@ -526,9 +526,15 @@ struct RootShell: View {
                     Button {
                         Task {
                             await repositoryApp.selectWorkspace(id: workspace.id)
+                            // Read from the freshly-loaded workspace, not the
+                            // snapshot the ForEach iterated over — that may
+                            // have been stale (role changed by another admin
+                            // since the last list refresh).
                             await MainActor.run {
-                                app.company = workspace.legacyCompany
-                                app.role = workspace.currentUserRole.appRole
+                                if let fresh = repositoryApp.selectedWorkspace {
+                                    app.company = fresh.legacyCompany
+                                    app.role = fresh.currentUserRole.appRole
+                                }
                                 selectedTab = .home
                                 navStack = []
                             }
