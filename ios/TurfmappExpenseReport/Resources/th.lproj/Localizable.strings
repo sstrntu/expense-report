@@ -231,11 +231,6 @@
 "projects.member.empty" = "ยังไม่มีสมาชิกประจำโครงการ สมาชิกเวิร์กสเปซยังคงเข้าถึงได้ตามค่าการมองเห็นของโครงการ";
 "projects.member.role" = "บทบาท";
 "projects.member.none_to_add" = "ทุกคนในเวิร์กสเปซมีสิทธิ์เข้าถึงแล้ว";
-"project_role.viewer" = "ผู้ดู";
-"project_role.submitter" = "ผู้ยื่น";
-"project_role.approver" = "ผู้อนุมัติ";
-"project_role.finance" = "การเงิน";
-"project_role.project_admin" = "ผู้ดูแลโครงการ";
 "projects.archive_project" = "เก็บถาวรโครงการ";
 "projects.save_policy" = "บันทึกนโยบาย";
 "projects.routing" = "การส่งต่อ";

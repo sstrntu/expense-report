@@ -140,18 +140,6 @@ extension ProjectRole {
         case .viewer, .submitter, .approver: return false
         }
     }
-
-    /// User-facing label. Resolved via the localization table so the picker
-    /// shows the same name across languages. Falls back to the raw enum
-    /// label if the user's UI language isn't in the table.
-    @MainActor
-    var label: String {
-        switch self {
-        case .viewer:       return tr("project_role.viewer")
-        case .submitter:    return tr("project_role.submitter")
-        case .approver:     return tr("project_role.approver")
-        case .finance:      return tr("project_role.finance")
-        case .projectAdmin: return tr("project_role.project_admin")
-        }
-    }
+    // .label is defined in ManageProjectsView.swift — keeping it co-located
+    // with the existing projects.role.* localisation keys it depends on.
 }

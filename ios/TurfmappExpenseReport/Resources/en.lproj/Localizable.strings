@@ -231,11 +231,6 @@
 "projects.member.empty" = "No project-specific members yet. Workspace members still have default access based on project visibility.";
 "projects.member.role" = "Role";
 "projects.member.none_to_add" = "Everyone in the workspace already has access.";
-"project_role.viewer" = "Viewer";
-"project_role.submitter" = "Submitter";
-"project_role.approver" = "Approver";
-"project_role.finance" = "Finance";
-"project_role.project_admin" = "Project admin";
 "projects.archive_project" = "Archive Project";
 "projects.save_policy" = "Save Policy";
 "projects.routing" = "Routing";

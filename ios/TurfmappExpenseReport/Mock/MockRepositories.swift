@@ -47,7 +47,9 @@ actor MockRepositoryStore {
                 role: .finance,
                 status: .pending,
                 expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
-                code: "123456"
+                code: "123456",
+                projectId: nil,
+                projectRole: nil
             )
         ]
 
