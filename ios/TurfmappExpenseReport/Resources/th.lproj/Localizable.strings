@@ -172,6 +172,10 @@
 /* === Home / Activity === */
 "home.title" = "หน้าหลัก";
 "home.recent" = "กิจกรรมล่าสุด";
+"home.recent.empty.title" = "ยังไม่มีค่าใช้จ่าย";
+"home.recent.empty.subtitle" = "แตะปุ่ม + ด้านล่างเพื่อเพิ่มรายการแรก";
+"home.projects.empty.title" = "ยังไม่มีโครงการ";
+"home.projects.empty.subtitle" = "ขอให้ผู้ดูแลเวิร์กสเปซสร้าง หรือสร้างเองได้จากโปรไฟล์ → จัดการโครงการ";
 "home.empty.title" = "ยังไม่มีค่าใช้จ่าย";
 "home.empty.subtitle" = "แตะ + เพื่อส่งคำขอแรกของคุณ";
 "home.greeting.welcome" = "ยินดีต้อนรับกลับ";

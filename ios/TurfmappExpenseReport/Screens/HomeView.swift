@@ -137,11 +137,19 @@ struct HomeView: View {
 
     private var recentList: some View {
         GlassCard(padding: 0) {
+            if repositoryApp.expenses.isEmpty {
+                emptyCardContent(
+                    icon: "tray",
+                    title: tr("home.recent.empty.title"),
+                    subtitle: tr("home.recent.empty.subtitle")
+                )
+            } else {
                 VStack(spacing: 0) {
-                ForEach(Array(repositoryApp.expenses.prefix(4).enumerated()), id: \.element.id) { idx, e in
-                    if idx > 0 { Divider().opacity(0.4) }
-                    Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects, categories: repositoryApp.categories) }
-                        .buttonStyle(.plain)
+                    ForEach(Array(repositoryApp.expenses.prefix(4).enumerated()), id: \.element.id) { idx, e in
+                        if idx > 0 { Divider().opacity(0.4) }
+                        Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects, categories: repositoryApp.categories) }
+                            .buttonStyle(.plain)
+                    }
                 }
             }
         }
@@ -149,12 +157,31 @@ struct HomeView: View {
 
     private var projectsCard: some View {
         GlassCard(padding: Tokens.padDense) {
-            VStack(spacing: 14) {
-                ForEach(repositoryApp.projects.prefix(3)) { p in
-                    DomainProjectRow(project: p, expenses: repositoryApp.expenses)
+            if repositoryApp.projects.isEmpty {
+                emptyCardContent(
+                    icon: "folder",
+                    title: tr("home.projects.empty.title"),
+                    subtitle: tr("home.projects.empty.subtitle")
+                )
+            } else {
+                VStack(spacing: 14) {
+                    ForEach(repositoryApp.projects.prefix(3)) { p in
+                        DomainProjectRow(project: p, expenses: repositoryApp.expenses)
+                    }
                 }
             }
         }
+    }
+
+    private func emptyCardContent(icon: String, title: String, subtitle: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 24, weight: .semibold)).foregroundStyle(.secondary)
+            Text(title).font(.system(size: 14, weight: .semibold))
+            Text(subtitle).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .padding(.horizontal, 18)
     }
 
     private func sectionHeader(title: String, action: String, onTap: @escaping () -> Void) -> some View {

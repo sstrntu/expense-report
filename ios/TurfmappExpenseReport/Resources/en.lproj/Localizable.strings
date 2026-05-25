@@ -172,6 +172,10 @@
 /* === Home / Activity === */
 "home.title" = "Home";
 "home.recent" = "Recent activity";
+"home.recent.empty.title" = "No expenses yet";
+"home.recent.empty.subtitle" = "Tap the + button below to add your first expense.";
+"home.projects.empty.title" = "No projects yet";
+"home.projects.empty.subtitle" = "Ask a workspace admin to create one, or create your own from Profile → Manage projects.";
 "home.empty.title" = "No expenses yet";
 "home.empty.subtitle" = "Tap + to submit your first request.";
 "home.greeting.welcome" = "Welcome back";
