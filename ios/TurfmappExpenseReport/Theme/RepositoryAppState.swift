@@ -42,23 +42,77 @@ final class RepositoryAppState: ObservableObject {
     }
 
     var managerQueue: [DomainExpense] {
-        expenses.filter { $0.status == .pendingManagerApproval }
+        expenses.filter { $0.status == .pendingManagerApproval && canCurrentUserApprove($0) }
     }
 
     var financeQueue: [DomainExpense] {
         expenses.filter {
-            ($0.status == .approved && $0.kind != .preApproval) ||
-            $0.status == .purchaseConfirmed ||
-            $0.status == .pendingFinanceReview ||
-            $0.status == .readyForReimbursement
+            let inFinanceStage =
+                ($0.status == .approved && $0.kind != .preApproval) ||
+                $0.status == .purchaseConfirmed ||
+                $0.status == .pendingFinanceReview ||
+                $0.status == .readyForReimbursement
+            return inFinanceStage && canCurrentUserReimburse($0)
         }
     }
 
-    /// Approved pre-approvals that are waiting for the employee to confirm the purchase.
-    /// Surfaced to managers/finance/admin so they can nudge submitters who haven't
-    /// confirmed their purchase yet.
+    /// Approved pre-approvals waiting for the employee to confirm the purchase.
+    /// Surfaced as "Watching" to anyone who can approve or reimburse the
+    /// project — they're the people who'd want to nudge the submitter.
     var awaitingPurchaseQueue: [DomainExpense] {
-        expenses.filter { $0.status == .approved && $0.kind == .preApproval }
+        expenses.filter {
+            guard $0.status == .approved && $0.kind == .preApproval else { return false }
+            return canCurrentUserApprove($0) || canCurrentUserReimburse($0)
+        }
+    }
+
+    // MARK: – Project-aware authorization helpers
+    //
+    // These mirror the server-side can_approve_project / can_finance_project /
+    // can_access_project SQL functions. The iOS UI uses them for queue
+    // filtering, project-picker filtering, and action-button gating. RLS still
+    // enforces server-side; these are just the client's matching predicate.
+
+    /// Workspace role for the currently-selected workspace, kept fresh by the
+    /// loadWorkspaces refresh path. Falls back to `app.role`-equivalent
+    /// employee when nothing is loaded so the helpers below are safe to call
+    /// during a transient signed-out state.
+    private var currentWorkspaceRole: WorkspaceRole {
+        selectedWorkspace?.currentUserRole ?? .employee
+    }
+
+    /// True if the current user can approve the given expense — either via
+    /// workspace role (manager/admin can approve any project) or via project
+    /// role (approver/project_admin on that specific project).
+    func canCurrentUserApprove(_ expense: DomainExpense) -> Bool {
+        if currentWorkspaceRole.canApproveExpenses { return true }
+        guard let project = projects.first(where: { $0.id == expense.projectId }),
+              let role = project.currentUserProjectRole else { return false }
+        return role.canApproveExpenses
+    }
+
+    /// True if the current user can mark the given expense reimbursed —
+    /// either via workspace finance/admin or via project finance/project_admin.
+    func canCurrentUserReimburse(_ expense: DomainExpense) -> Bool {
+        if currentWorkspaceRole.canReimburseExpenses { return true }
+        guard let project = projects.first(where: { $0.id == expense.projectId }),
+              let role = project.currentUserProjectRole else { return false }
+        return role.canReimburseExpenses
+    }
+
+    /// True if the current user can submit a new expense to `project`.
+    /// Workspace `admin` and anyone with a non-viewer project role can submit;
+    /// projects with no explicit role rely on visibility (handled server-side
+    /// by RLS, so anything in `repositoryApp.projects` is at least visible).
+    func canCurrentUserSubmit(to project: DomainProject) -> Bool {
+        if currentWorkspaceRole == .admin { return true }
+        if let role = project.currentUserProjectRole {
+            return role.canSubmitExpenses
+        }
+        // No explicit project role — workspace visibility decides. Anything
+        // visible (i.e. in `projects`) is submittable for workspace roles
+        // other than the future read-only roles we haven't added.
+        return true
     }
 
     var draftExpenses: [DomainExpense] {

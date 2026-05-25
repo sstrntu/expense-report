@@ -6,18 +6,17 @@ struct ReviewView: View {
     var onOpen: (DomainExpense) -> Void
     @State private var projectHistory: ProjectHistoryContext? = nil
 
-    private var pending: [DomainExpense] {
-        app.role.canApproveExpenses ? repositoryApp.managerQueue : []
-    }
+    // managerQueue / financeQueue / awaitingPurchaseQueue on RepositoryAppState
+    // are now project-aware — they only include expenses the current user can
+    // act on (workspace role OR project_membership role). We don't need the
+    // outer "if canApprove? else []" gate anymore; the empty case falls out
+    // of the project-aware filter automatically.
+    private var pending: [DomainExpense] { repositoryApp.managerQueue }
+    private var financeQueue: [DomainExpense] { repositoryApp.financeQueue }
 
-    private var financeQueue: [DomainExpense] {
-        app.role.canReimburseExpenses ? repositoryApp.financeQueue : []
-    }
-
-    /// Surfaced to anyone who can approve or reimburse — visibility only, not actionable from here.
-    private var awaitingPurchase: [DomainExpense] {
-        (app.role.canApproveExpenses || app.role.canReimburseExpenses) ? repositoryApp.awaitingPurchaseQueue : []
-    }
+    /// Visible to anyone who can approve OR reimburse the project — same gate
+    /// as the role-aware repository helper. Surfaced as "Watching", read-only.
+    private var awaitingPurchase: [DomainExpense] { repositoryApp.awaitingPurchaseQueue }
 
     /// Projects that have any past/archived expenses (reimbursed, cancelled, rejected, archived).
     /// Used to build the always-visible history browser at the bottom of Review.

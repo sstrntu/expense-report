@@ -342,9 +342,15 @@ struct DomainDetailView: View {
 
     @ViewBuilder
     private var actionArea: some View {
+        // Project-aware authorization: a workspace manager/admin can approve
+        // any project; a project_approver/project_admin can approve only
+        // their assigned projects. canCurrentUserApprove / Reimburse fold
+        // both rules into one check that matches the server's RLS.
+        let canApproveThis = repositoryApp.canCurrentUserApprove(expense)
+        let canReimburseThis = repositoryApp.canCurrentUserReimburse(expense)
         switch expense.status {
         case .pendingManagerApproval:
-            if role.canApproveExpenses {
+            if canApproveThis {
                 HStack(spacing: 10) {
                     Button { showRejectSheet = true } label: {
                         Label(tr("detail.action.reject"), systemImage: "xmark")
@@ -393,7 +399,7 @@ struct DomainDetailView: View {
                 }
                 .buttonStyle(.plain)
                 .background(Tokens.purchased, in: RoundedRectangle(cornerRadius: 14))
-            } else if role.canReimburseExpenses && expense.kind != .preApproval {
+            } else if canReimburseThis && expense.kind != .preApproval {
                 Button { showReimbursedSheet = true } label: {
                     Label(tr("detail.action.mark_reimbursed"), systemImage: "checkmark.circle.fill")
                         .font(.system(size: 15, weight: .semibold))
@@ -406,7 +412,7 @@ struct DomainDetailView: View {
                 statusInfoCard(icon: "clock", tint: Tokens.approved, title: tr("detail.info.approved.title"), message: tr("detail.info.approved.message"))
             }
         case .pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement:
-            if role.canReimburseExpenses {
+            if canReimburseThis {
                 Button { showReimbursedSheet = true } label: {
                     Label(tr("detail.action.mark_reimbursed"), systemImage: "checkmark.circle.fill")
                         .font(.system(size: 15, weight: .semibold))

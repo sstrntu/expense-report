@@ -46,7 +46,13 @@ struct SubmitView: View {
     }
 
     private var activeProjects: [DomainProject] {
-        repositoryApp.projects.filter { !$0.isArchived }
+        // Filter out archived projects and any project where the current user
+        // can't submit (project-level Viewer role, or a future read-only
+        // role). Workspace visibility already gated what shows up in
+        // repositoryApp.projects via RLS, so this is a finer cut on top.
+        repositoryApp.projects.filter {
+            !$0.isArchived && repositoryApp.canCurrentUserSubmit(to: $0)
+        }
     }
     private var workspaceCategories: [DomainCategory] {
         repositoryApp.categories
