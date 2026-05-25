@@ -402,6 +402,28 @@ struct DomainProjectDetailSheet: View {
     @State private var routingMode: ProjectRoutingMode = .managerThenFinance
     @State private var overBudgetBehavior: OverBudgetBehavior = .warn
     @State private var allowedCategoryIds: Set<String> = []
+    // Project-level membership editor state. Loaded lazily on appear because
+    // the project list query doesn't include the full member list (only the
+    // current user's project role).
+    @State private var projectMembers: [DomainProjectMember] = []
+    @State private var isLoadingMembers = false
+    @State private var showAddMemberSheet = false
+
+    /// True if the current user can manage this project's membership.
+    /// Mirrors the server-side "project admins can manage project memberships"
+    /// policy: workspace admin OR project_admin role.
+    private var canManageMembers: Bool {
+        if app.role == .admin { return true }
+        return project.currentUserProjectRole == .projectAdmin
+    }
+
+    /// Workspace members not yet in the project — the candidate pool for
+    /// the Add Member sheet. Filters out the current project's members so
+    /// the picker only shows newly-addable people.
+    private var addableMembers: [DomainWorkspaceMember] {
+        let assigned = Set(projectMembers.map(\.workspaceMembershipId))
+        return repositoryApp.members.filter { !assigned.contains($0.id) }
+    }
 
     private var categories: [(id: String, label: String)] {
         repositoryApp.categories.map { (id: $0.id, label: $0.name) }
@@ -446,25 +468,8 @@ struct DomainProjectDetailSheet: View {
                 policySummary
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text(tr("projects.assigned_members"))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                HStack(spacing: -8) {
-                    ForEach(repositoryApp.members.prefix(4)) { member in
-                        Avatar(color: member.avatarColor, size: 34, label: member.initials)
-                            .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 1))
-                    }
-                    Spacer()
-                    Text(tr("projects.member_total", repositoryApp.members.count))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-                Text(tr("projects.member_assignment_note"))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 20)
+            membersSection
+                .padding(.horizontal, 20)
 
             HStack(spacing: 10) {
                 Button {
@@ -501,6 +506,137 @@ struct DomainProjectDetailSheet: View {
             Spacer()
         }
         .onAppear(perform: seedEditor)
+        .task { await loadProjectMembers() }
+        .sheet(isPresented: $showAddMemberSheet) {
+            AddProjectMemberSheet(
+                addableMembers: addableMembers,
+                onAdd: { membershipId, role in
+                    Task { await addMember(workspaceMembershipId: membershipId, role: role) }
+                }
+            )
+            .environmentObject(repositoryApp)
+            .presentationDetents([.medium])
+        }
+    }
+
+    // MARK: – Members section
+
+    @ViewBuilder
+    private var membersSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(tr("projects.assigned_members"))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if canManageMembers && !addableMembers.isEmpty {
+                    Button {
+                        showAddMemberSheet = true
+                    } label: {
+                        Label(tr("projects.member.add"), systemImage: "person.crop.circle.badge.plus")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Tokens.slate500)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if isLoadingMembers && projectMembers.isEmpty {
+                ProgressView().frame(maxWidth: .infinity).padding(.vertical, 12)
+            } else if projectMembers.isEmpty {
+                // Empty state — workspace visibility implies the project is
+                // open to everyone, so the lack of explicit members is fine.
+                // For restricted visibility this empty state would mean
+                // "nobody can access this project yet".
+                Text(tr("projects.member.empty"))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 4)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(projectMembers.enumerated()), id: \.element.id) { idx, member in
+                        if idx > 0 { Divider().opacity(0.4) }
+                        memberRow(member)
+                    }
+                }
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
+            }
+        }
+    }
+
+    private func memberRow(_ member: DomainProjectMember) -> some View {
+        HStack(spacing: 10) {
+            Avatar(color: Tokens.slate500, size: 30, label: initials(member.displayName))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(member.displayName).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Text(member.email).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            if canManageMembers {
+                Menu {
+                    ForEach(ProjectRole.allCases, id: \.self) { role in
+                        Button {
+                            Task { await updateMember(member, to: role) }
+                        } label: {
+                            Label(role.label, systemImage: member.role == role ? "checkmark" : "")
+                        }
+                    }
+                    Divider()
+                    Button(role: .destructive) {
+                        Task { await removeMember(member) }
+                    } label: {
+                        Label(tr("projects.member.remove"), systemImage: "minus.circle")
+                    }
+                } label: {
+                    rolePill(member.role)
+                }
+            } else {
+                rolePill(member.role)
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+    }
+
+    private func rolePill(_ role: ProjectRole) -> some View {
+        Text(role.label)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Tokens.slate500)
+            .padding(.horizontal, 9).padding(.vertical, 4)
+            .background(Tokens.slate500.opacity(0.12), in: Capsule())
+    }
+
+    private func initials(_ name: String) -> String {
+        let parts = name.split(separator: " ")
+        let chars = parts.prefix(2).compactMap(\.first).map(String.init).joined()
+        return chars.isEmpty ? "M" : chars
+    }
+
+    // MARK: – Actions
+
+    private func loadProjectMembers() async {
+        isLoadingMembers = true
+        projectMembers = await repositoryApp.listProjectMembers(projectId: project.id)
+        isLoadingMembers = false
+    }
+
+    private func addMember(workspaceMembershipId: String, role: ProjectRole) async {
+        if await repositoryApp.addProjectMember(projectId: project.id, workspaceMembershipId: workspaceMembershipId, role: role) != nil {
+            await loadProjectMembers()
+        }
+    }
+
+    private func updateMember(_ member: DomainProjectMember, to role: ProjectRole) async {
+        guard role != member.role else { return }
+        if await repositoryApp.updateProjectMemberRole(id: member.id, role: role) != nil {
+            await loadProjectMembers()
+        }
+    }
+
+    private func removeMember(_ member: DomainProjectMember) async {
+        if await repositoryApp.removeProjectMember(id: member.id) {
+            await loadProjectMembers()
+        }
     }
 
     private var policySummary: some View {
@@ -738,5 +874,99 @@ extension ProjectRoutingMode {
     case .warn:     return tr("projects.over_budget.warn")
     case .escalate: return tr("projects.over_budget.escalate")
     case .block:    return tr("projects.over_budget.block")
+    }
+}
+
+/// Sheet for adding a workspace member to a project. Used from
+/// DomainProjectDetailSheet by workspace admins and project_admins. Closes
+/// itself after the parent's `onAdd` closure fires — the parent re-fetches
+/// the project's member list to reflect the new row.
+struct AddProjectMemberSheet: View {
+    let addableMembers: [DomainWorkspaceMember]
+    var onAdd: (_ workspaceMembershipId: String, _ role: ProjectRole) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var pickedMembershipId: String? = nil
+    @State private var pickedRole: ProjectRole = .submitter
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(tr("projects.member.add"))
+                .font(.system(size: 20, weight: .bold))
+                .padding(.horizontal, 20).padding(.top, 24)
+
+            // Role picker first — most users already know who they're adding;
+            // they're really choosing what permission to grant.
+            VStack(alignment: .leading, spacing: 8) {
+                Text(tr("projects.member.role"))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 4)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(ProjectRole.allCases, id: \.self) { role in
+                            Button { pickedRole = role } label: {
+                                Text(role.label)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(pickedRole == role ? .white : Color.primary)
+                                    .padding(.horizontal, 10).padding(.vertical, 6)
+                                    .background(
+                                        pickedRole == role ? Tokens.slate500 : Color.primary.opacity(0.06),
+                                        in: Capsule()
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+
+            // Member list — tap to select. Single-select with a checkmark.
+            VStack(alignment: .leading, spacing: 0) {
+                if addableMembers.isEmpty {
+                    Text(tr("projects.member.none_to_add"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16).padding(.vertical, 20)
+                } else {
+                    ForEach(Array(addableMembers.enumerated()), id: \.element.id) { idx, member in
+                        if idx > 0 { Divider().opacity(0.4) }
+                        Button { pickedMembershipId = member.id } label: {
+                            HStack(spacing: 10) {
+                                Avatar(color: member.avatarColor, size: 30, label: member.initials)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(member.displayName).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.primary)
+                                    Text(member.email).font(.system(size: 11)).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if pickedMembershipId == member.id {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Tokens.approved)
+                                }
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 20)
+
+            Spacer()
+
+            Button {
+                guard let id = pickedMembershipId else { return }
+                onAdd(id, pickedRole)
+                dismiss()
+            } label: {
+                Text(tr("projects.member.add_action")).primaryActionLabel()
+            }
+            .buttonStyle(.plain)
+            .disabled(pickedMembershipId == nil)
+            .opacity(pickedMembershipId == nil ? 0.5 : 1)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
     }
 }
