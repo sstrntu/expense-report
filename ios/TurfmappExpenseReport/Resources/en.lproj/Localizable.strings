@@ -587,6 +587,8 @@
 "permissions.invite_member" = "Invite member";
 "permissions.invite.email" = "Email";
 "permissions.invite.role" = "Role";
+"permissions.invite.project" = "Project";
+"permissions.invite.no_project" = "Workspace only";
 "permissions.invite.send" = "Send invite";
 "permissions.invite.sent" = "Invite sent to %@.";
 "permissions.role_capabilities" = "Role capabilities";

@@ -174,7 +174,7 @@ actor MockRepositoryStore {
         return workspace
     }
 
-    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) -> WorkspaceInvite {
+    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole, projectId: String? = nil, projectRole: ProjectRole? = nil) -> WorkspaceInvite {
         let invite = WorkspaceInvite(
             id: "invite_\(UUID().uuidString.prefix(8))",
             workspaceId: workspaceId,
@@ -182,7 +182,9 @@ actor MockRepositoryStore {
             role: role,
             status: .pending,
             expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
-            code: String(Int.random(in: 100000...999999))
+            code: String(Int.random(in: 100000...999999)),
+            projectId: projectId,
+            projectRole: projectRole
         )
         invites.insert(invite, at: 0)
         return invite
@@ -724,8 +726,8 @@ struct MockWorkspaceRepository: WorkspaceRepository {
         try await store.acceptInvite(id: id)
     }
 
-    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) async throws -> WorkspaceInvite {
-        await store.inviteMember(workspaceId: workspaceId, email: email, role: role)
+    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole, projectId: String?, projectRole: ProjectRole?) async throws -> WorkspaceInvite {
+        await store.inviteMember(workspaceId: workspaceId, email: email, role: role, projectId: projectId, projectRole: projectRole)
     }
 
     func cancelInvite(id: String) async throws {

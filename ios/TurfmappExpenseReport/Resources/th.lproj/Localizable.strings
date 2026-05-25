@@ -587,6 +587,8 @@
 "permissions.invite_member" = "เชิญสมาชิก";
 "permissions.invite.email" = "อีเมล";
 "permissions.invite.role" = "บทบาท";
+"permissions.invite.project" = "โครงการ";
+"permissions.invite.no_project" = "เฉพาะเวิร์กสเปซ";
 "permissions.invite.send" = "ส่งคำเชิญ";
 "permissions.invite.sent" = "ส่งคำเชิญไปยัง %@ แล้ว";
 "permissions.role_capabilities" = "ความสามารถของบทบาท";

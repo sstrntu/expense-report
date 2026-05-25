@@ -361,6 +361,13 @@ struct WorkspaceInvite: Identifiable, Codable, Hashable, Sendable {
     /// 6-digit human-friendly redeem code. Server-generated at insert time
     /// (see migration 20260523040529). Always present for pending invites.
     let code: String
+    /// If non-nil, accepting this invite also grants the invitee `projectRole`
+    /// on this project — built in migration 20260525100757 to let admins
+    /// invite somebody directly to a single project without a follow-up
+    /// "add to project" step. Both fields are present together or both nil
+    /// (enforced by workspace_invites_project_pair on the table).
+    let projectId: String?
+    let projectRole: ProjectRole?
 }
 
 

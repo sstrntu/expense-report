@@ -729,11 +729,18 @@ final class RepositoryAppState: ObservableObject {
         }
     }
 
-    func inviteMember(email: String, role: WorkspaceRole) async {
+    /// `projectId` + `projectRole`, when both set, attach a project-membership
+    /// to the workspace invite — accepting it adds the user to both the
+    /// workspace AND that project in one shot. Either both must be set or
+    /// both nil (server constraint workspace_invites_project_pair).
+    func inviteMember(email: String, role: WorkspaceRole, projectId: String? = nil, projectRole: ProjectRole? = nil) async {
         guard let workspace = selectedWorkspace else { return }
         do {
             lastError = nil
-            _ = try await workspaceRepository.inviteMember(workspaceId: workspace.id, email: email, role: role)
+            _ = try await workspaceRepository.inviteMember(
+                workspaceId: workspace.id, email: email, role: role,
+                projectId: projectId, projectRole: projectRole
+            )
             await reloadSelectedWorkspaceData()
         } catch {
             setError(error)

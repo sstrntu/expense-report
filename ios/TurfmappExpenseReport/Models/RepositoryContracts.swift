@@ -100,7 +100,10 @@ protocol WorkspaceRepository: Sendable {
     /// admin's invite UI. Server-side RPC validates pending status + expiry
     /// and atomically inserts/reactivates the membership row.
     func acceptInviteCode(_ code: String) async throws -> DomainWorkspace
-    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) async throws -> WorkspaceInvite
+    /// Creates a workspace_invites row. When `projectId` + `projectRole` are
+    /// non-nil, accepting the invite also grants the invitee the project
+    /// role on that project (atomic via accept_workspace_invite_by_code).
+    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole, projectId: String?, projectRole: ProjectRole?) async throws -> WorkspaceInvite
     func cancelInvite(id: String) async throws
     func updateMemberRole(id: String, role: WorkspaceRole) async throws -> DomainWorkspaceMember
     func removeMember(id: String) async throws

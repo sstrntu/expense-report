@@ -108,10 +108,18 @@ struct PermissionsView: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
         .sheet(isPresented: $showInvite) {
-            InviteMemberSheet(availableRoles: editableRoles) { email, role in
-                Task { await repositoryApp.inviteMember(email: email, role: role) }
+            InviteMemberSheet(
+                availableRoles: editableRoles,
+                projects: repositoryApp.projects.filter { !$0.isArchived }
+            ) { email, role, projectId, projectRole in
+                Task {
+                    await repositoryApp.inviteMember(
+                        email: email, role: role,
+                        projectId: projectId, projectRole: projectRole
+                    )
+                }
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.large])
         }
         .confirmationDialog(tr("permissions.confirm_remove.title", memberToRemove?.displayName ?? tr("role.member")), isPresented: $showRemoveConfirm, titleVisibility: .visible) {
             Button(tr("permissions.remove"), role: .destructive) {
@@ -266,10 +274,18 @@ struct PermissionsView: View {
 
 struct InviteMemberSheet: View {
     let availableRoles: [WorkspaceRole]
-    var onInvite: (String, WorkspaceRole) -> Void
+    /// Active projects the admin can scope this invite to. Empty → the
+    /// project-scope picker is hidden entirely and the invite stays
+    /// workspace-only.
+    let projects: [DomainProject]
+    /// (email, workspaceRole, projectId?, projectRole?) — project args are
+    /// nil for workspace-only invites and both non-nil for project-scoped.
+    var onInvite: (String, WorkspaceRole, String?, ProjectRole?) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
     @State private var role: WorkspaceRole = .employee
+    @State private var scopedProjectId: String? = nil
+    @State private var scopedProjectRole: ProjectRole = .submitter
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -306,6 +322,51 @@ struct InviteMemberSheet: View {
             }
             .padding(.horizontal, 20)
 
+            // Optional project scoping. When a project is picked, the
+            // invitee will also become a member of that project at the
+            // chosen project role when they accept the code. Defaults to
+            // workspace-only ("No specific project").
+            if !projects.isEmpty {
+                GlassCard(padding: Tokens.padCard) {
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text(tr("permissions.invite.project")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                            Spacer()
+                            Menu {
+                                Button(tr("permissions.invite.no_project")) { scopedProjectId = nil }
+                                Divider()
+                                ForEach(projects, id: \.id) { p in
+                                    Button(p.name) { scopedProjectId = p.id }
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(scopedProjectName).font(.system(size: 13.5, weight: .medium))
+                                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold))
+                                }
+                                .foregroundStyle(Color.primary)
+                            }
+                        }
+                        .padding(.vertical, 11)
+                        if scopedProjectId != nil {
+                            Divider().opacity(0.4)
+                            HStack {
+                                Text(tr("projects.member.role")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                                Spacer()
+                                Picker(tr("projects.member.role"), selection: $scopedProjectRole) {
+                                    ForEach(ProjectRole.allCases, id: \.self) { r in
+                                        Text(r.label).tag(r)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .font(.system(size: 13.5, weight: .medium))
+                            }
+                            .padding(.vertical, 11)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+
             infoBanner(icon: "clock.badge.fill", tint: Tokens.pending,
                        title: tr("permissions.invites"),
                        message: tr("setup.workspace.invite_required.message"))
@@ -314,7 +375,7 @@ struct InviteMemberSheet: View {
             Spacer()
 
             Button {
-                onInvite(email, role)
+                onInvite(email, role, scopedProjectId, scopedProjectId != nil ? scopedProjectRole : nil)
                 dismiss()
             } label: {
                 Text(tr("permissions.invite.send")).primaryActionLabel()
@@ -325,6 +386,14 @@ struct InviteMemberSheet: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
         }
+    }
+
+    private var scopedProjectName: String {
+        guard let id = scopedProjectId,
+              let project = projects.first(where: { $0.id == id }) else {
+            return tr("permissions.invite.no_project")
+        }
+        return project.name
     }
 
     /// Treat anything without "name@domain" shape as not-yet-ready. Stops

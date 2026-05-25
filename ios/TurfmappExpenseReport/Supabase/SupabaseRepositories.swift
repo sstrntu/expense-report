@@ -85,7 +85,7 @@ struct NotConfiguredRepository: AuthRepository, WorkspaceRepository, ProjectRepo
     func createWorkspace(name: String, defaultCurrency: String) async throws -> DomainWorkspace { throw error }
     func acceptInvite(id: String) async throws -> DomainWorkspace { throw error }
     func acceptInviteCode(_ code: String) async throws -> DomainWorkspace { throw error }
-    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) async throws -> WorkspaceInvite { throw error }
+    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole, projectId: String?, projectRole: ProjectRole?) async throws -> WorkspaceInvite { throw error }
     func cancelInvite(id: String) async throws { throw error }
     func updateMemberRole(id: String, role: WorkspaceRole) async throws -> DomainWorkspaceMember { throw error }
     func removeMember(id: String) async throws { throw error }
@@ -711,14 +711,12 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
         let rows: [WorkspaceInviteRow] = try await client.get(
             "workspace_invites",
             queryItems: [
-                URLQueryItem(name: "select", value: "id,workspace_id,email,role,status,expires_at,code"),
+                URLQueryItem(name: "select", value: "id,workspace_id,email,role,status,expires_at,code,project_id,project_role"),
                 URLQueryItem(name: "workspace_id", value: "eq.\(workspaceId)"),
                 URLQueryItem(name: "status", value: "eq.pending")
             ]
         )
-        return rows.map {
-            WorkspaceInvite(id: $0.id, workspaceId: $0.workspaceId, email: $0.email, role: $0.role, status: $0.status, expiresAt: $0.expiresAt, code: $0.code)
-        }
+        return rows.map { $0.domain }
     }
 
     func listCategories(workspaceId: String) async throws -> [DomainCategory] {
@@ -824,15 +822,19 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
         )
     }
 
-    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole) async throws -> WorkspaceInvite {
+    func inviteMember(workspaceId: String, email: String, role: WorkspaceRole, projectId: String?, projectRole: ProjectRole?) async throws -> WorkspaceInvite {
         let expiresAt = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
         let currentUserId = await client.currentUserId() ?? ""
         let rows: [WorkspaceInviteRow] = try await client.post(
             "workspace_invites",
-            body: WorkspaceInviteInsert(workspaceId: workspaceId, email: email.lowercased(), role: role, invitedByUserId: currentUserId, expiresAt: expiresAt)
+            body: WorkspaceInviteInsert(
+                workspaceId: workspaceId, email: email.lowercased(), role: role,
+                invitedByUserId: currentUserId, expiresAt: expiresAt,
+                projectId: projectId, projectRole: projectRole
+            )
         )
         guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
-        let invite = WorkspaceInvite(id: row.id, workspaceId: row.workspaceId, email: row.email, role: row.role, status: row.status, expiresAt: row.expiresAt, code: row.code)
+        let invite = row.domain
 
         // Fire-and-forget email send. Failure here is non-fatal — the invite
         // row exists, and the admin can re-trigger from the UI. Swallowing
@@ -1648,6 +1650,16 @@ private struct WorkspaceInviteRow: Codable {
     let status: WorkspaceInvite.Status
     let expiresAt: Date
     let code: String
+    let projectId: String?
+    let projectRole: ProjectRole?
+
+    var domain: WorkspaceInvite {
+        WorkspaceInvite(
+            id: id, workspaceId: workspaceId, email: email, role: role,
+            status: status, expiresAt: expiresAt, code: code,
+            projectId: projectId, projectRole: projectRole
+        )
+    }
 }
 
 private struct WorkspaceInviteInsert: Encodable {
@@ -1656,6 +1668,8 @@ private struct WorkspaceInviteInsert: Encodable {
     let role: WorkspaceRole
     let invitedByUserId: String
     let expiresAt: Date
+    let projectId: String?
+    let projectRole: ProjectRole?
 }
 
 private struct CurrentMembershipRow: Codable {
