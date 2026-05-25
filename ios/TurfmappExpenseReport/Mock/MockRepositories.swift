@@ -156,7 +156,9 @@ actor MockRepositoryStore {
             role: invite.role,
             status: .accepted,
             expiresAt: invite.expiresAt,
-            code: invite.code
+            code: invite.code,
+            projectId: invite.projectId,
+            projectRole: invite.projectRole
         )
         if !members.contains(where: { $0.workspaceId == invite.workspaceId && $0.userId == currentUserId && $0.status == "active" }) {
             members.insert(
@@ -202,7 +204,9 @@ actor MockRepositoryStore {
             role: invite.role,
             status: .cancelled,
             expiresAt: invite.expiresAt,
-            code: invite.code
+            code: invite.code,
+            projectId: invite.projectId,
+            projectRole: invite.projectRole
         )
     }
 
@@ -258,7 +262,9 @@ actor MockRepositoryStore {
                 role: invite.role,
                 status: .expired,
                 expiresAt: invite.expiresAt,
-                code: invite.code
+                code: invite.code,
+                projectId: invite.projectId,
+                projectRole: invite.projectRole
             )
         }
     }
