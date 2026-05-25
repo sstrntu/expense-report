@@ -41,22 +41,16 @@ struct ProfileView: View {
             .buttonStyle(.plain)
             .tourTarget(.profileWorkspace)
 
+            // Workspace admin entry. Single nav row that opens
+            // WorkspaceSettingsView — projects + members + workspace name/
+            // currency/logo all live behind it. Visible to managers and
+            // admins; managers' WorkspaceSettings view hides the admin-only
+            // edit controls server-side via RLS.
             if role == .manager || role == .admin {
                 sectionHeader(tr("profile.section.workspace_admin"))
                 GlassCard(padding: 0) {
-                    VStack(spacing: 0) {
-                        if role == .admin {
-                            navRow(icon: "building.2.fill", label: tr("profile.nav.workspace"),
-                                   sub: tr("profile.nav.workspace.sub")) { onNav("workspace") }
-                            Divider().opacity(0.4)
-                        }
-                        let budget = money(repositoryApp.projects.filter { $0.budget.currency == repositoryApp.aggregationCurrency }.reduce(0) { $0 + $1.budget.decimalValue }, currency: repositoryApp.aggregationCurrency)
-                        navRow(icon: "folder.fill",  label: tr("profile.nav.manage_projects"),
-                               sub: tr("profile.nav.manage_projects.sub", repositoryApp.projects.count, budget)) { onNav("manageProjects") }
-                        Divider().opacity(0.4)
-                        navRow(icon: "shield.fill",  label: tr("profile.nav.permissions"),
-                               sub: tr("profile.nav.permissions.sub", repositoryApp.members.count)) { onNav("permissions") }
-                    }
+                    navRow(icon: "building.2.fill", label: tr("profile.nav.workspace"),
+                           sub: tr("profile.nav.workspace.sub")) { onNav("workspace") }
                 }
             }
 
@@ -1318,6 +1312,10 @@ struct WorkspaceSettingsView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onBack: () -> Void
+    /// Push hook for nested admin destinations — Manage projects and
+    /// Permissions both live behind this screen now so they read as
+    /// children of Workspace rather than peers.
+    var onNav: (String) -> Void = { _ in }
 
     @State private var logoPick: PhotosPickerItem?
     @State private var uploading = false
@@ -1448,6 +1446,39 @@ struct WorkspaceSettingsView: View {
                       (nameDraft == (workspace?.name ?? "") && currencyDraft == (workspace?.defaultCurrency ?? "USD")) ||
                       savingDetails)
 
+            // Workspace-scoped admin sub-screens. Both live as children of
+            // this Workspace settings page now (previously they were peers
+            // alongside Workspace in Profile root). Manage projects also
+            // exposes the per-project access section that was added with
+            // the Option B step-2 work.
+            GlassCard(padding: 0) {
+                VStack(spacing: 0) {
+                    let budget = money(
+                        repositoryApp.projects
+                            .filter { $0.budget.currency == repositoryApp.aggregationCurrency }
+                            .reduce(0) { $0 + $1.budget.decimalValue },
+                        currency: repositoryApp.aggregationCurrency
+                    )
+                    Button { onNav("manageProjects") } label: {
+                        workspaceLinkRow(
+                            icon: "folder.fill",
+                            title: tr("profile.nav.manage_projects"),
+                            subtitle: tr("profile.nav.manage_projects.sub", repositoryApp.projects.count, budget)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    Divider().opacity(0.4)
+                    Button { onNav("permissions") } label: {
+                        workspaceLinkRow(
+                            icon: "shield.fill",
+                            title: tr("profile.nav.permissions"),
+                            subtitle: tr("profile.nav.permissions.sub", repositoryApp.members.count)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
             infoBanner(icon: "info.circle.fill", tint: Tokens.slate500,
                        title: tr("workspace.per_project_policy"),
                        message: tr("workspace.per_project_policy.message"))
@@ -1460,6 +1491,28 @@ struct WorkspaceSettingsView: View {
             nameDraft = repositoryApp.selectedWorkspace?.name ?? ""
             currencyDraft = repositoryApp.selectedWorkspace?.defaultCurrency ?? "USD"
         }
+    }
+
+    /// Same shape as Profile root's navRow but inlined here so we don't have
+    /// to thread the helper across files. Single-line title + secondary
+    /// subtitle + chevron, full-width tap target.
+    private func workspaceLinkRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Tokens.slate500)
+                .frame(width: 32, height: 32)
+                .background(Tokens.slate500.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Color.primary)
+                Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 }
 

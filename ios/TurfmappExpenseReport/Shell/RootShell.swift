@@ -507,7 +507,16 @@ struct RootShell: View {
             ManageProjectsView { popNav() }
                 .environmentObject(app)
         case .workspaceSettings:
-            WorkspaceSettingsView { popNav() }
+            WorkspaceSettingsView(
+                onBack: { popNav() },
+                onNav: { key in
+                    // Push from within the workspace settings page so the
+                    // sub-screens stack correctly (back goes to Workspace,
+                    // not to Profile root).
+                    if key == "manageProjects" { navStack.append(.manageProjects) }
+                    if key == "permissions"    { navStack.append(.permissions) }
+                }
+            )
                 .environmentObject(app)
         case .activity:
             ActivityView(
