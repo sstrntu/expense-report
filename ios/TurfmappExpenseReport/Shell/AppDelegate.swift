@@ -43,13 +43,31 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 
+    /// Forward whatever the push payload carried into a SwiftUI-friendly
+    /// notification so RootShell can route it. We pass through:
+    ///   - expense_id  → opens DomainDetailView for that expense (the
+    ///                   common case for approval/reimbursement notifications)
+    ///   - event_type  → lets the router decide where the action lives
+    ///                   when there's no expense (workspace invites,
+    ///                   project-budget warnings)
+    ///   - route       → opaque server-provided deep-link hint, used as a
+    ///                   fallback when event_type doesn't map to a known UI
     fileprivate func handlePayload(_ payload: [String: Any]) {
-        guard let expenseId = payload["expense_id"] as? String ?? payload["expenseId"] as? String,
-              !expenseId.isEmpty else { return }
+        var userInfo: [String: Any] = [:]
+        if let expenseId = (payload["expense_id"] ?? payload["expenseId"]) as? String, !expenseId.isEmpty {
+            userInfo["expenseId"] = expenseId
+        }
+        if let eventType = (payload["event_type"] ?? payload["eventType"]) as? String, !eventType.isEmpty {
+            userInfo["eventType"] = eventType
+        }
+        if let route = (payload["route"] ?? payload["deep_link_route"]) as? String, !route.isEmpty {
+            userInfo["route"] = route
+        }
+        guard !userInfo.isEmpty else { return }
         NotificationCenter.default.post(
             name: .pushNotificationOpened,
             object: nil,
-            userInfo: ["expenseId": expenseId]
+            userInfo: userInfo
         )
     }
 }

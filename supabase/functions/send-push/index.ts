@@ -83,6 +83,8 @@ async function sendApns(opts: {
   title: string;
   body: string;
   expenseId?: string;
+  eventType?: string;
+  route?: string;
   jwt: string;
 }): Promise<boolean> {
   const host = APNS_PRODUCTION
@@ -92,6 +94,12 @@ async function sendApns(opts: {
   const payload = {
     aps: { alert: { title: opts.title, body: opts.body }, sound: "default", badge: 1 },
     expense_id: opts.expenseId ?? null,
+    // event_type + route let the iOS notification handler dispatch to
+    // the right deep-link target. event_type is the semantic key
+    // (workspace_invite → Permissions, project_budget_warning →
+    // Manage projects, anything expense-related → expense detail).
+    event_type: opts.eventType ?? null,
+    route: opts.route ?? null,
   };
 
   const resp = await fetch(`${host}/3/device/${opts.deviceToken}`, {
@@ -129,6 +137,8 @@ Deno.serve(async (req) => {
     title: string;
     body: string;
     expense_id?: string;
+    event_type?: string;
+    deep_link_route?: string;
   };
 
   try {
@@ -171,6 +181,8 @@ Deno.serve(async (req) => {
         title: record.title,
         body: record.body,
         expenseId: record.expense_id,
+        eventType: record.event_type,
+        route: record.deep_link_route,
         jwt,
       })
     )

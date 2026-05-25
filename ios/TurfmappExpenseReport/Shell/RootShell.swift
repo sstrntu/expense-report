@@ -252,13 +252,41 @@ struct RootShell: View {
             Task { await repositoryApp.registerDeviceToken(token) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .pushNotificationOpened)) { note in
-            guard let expenseId = note.userInfo?["expenseId"] as? String else { return }
-            openExpenseFromPush(id: expenseId)
+            let info = note.userInfo as? [String: String] ?? [:]
+            handlePushOpen(eventType: info["eventType"], expenseId: info["expenseId"], route: info["route"])
         }
         // Transient toast for any non-nil lastError. Auto-dismisses; tap to
         // close early. Replaces the always-present infoBanner pattern for
         // action errors (workspace setup keeps its inline banner for clarity).
         .errorToast(repositoryApp: repositoryApp)
+    }
+
+    /// Routes a tapped notification to the right screen. The dispatch is
+    /// driven by `eventType` first (semantic), with `expenseId` as the
+    /// fallback for the common "open this expense" case. `route` is a
+    /// server-side hint we currently treat as advisory.
+    ///
+    /// Mappings:
+    ///   - expense_submitted / approved / rejected / purchase_confirmed /
+    ///     reimbursement_sent  → expense detail (covers most pushes)
+    ///   - workspace_invite                   → Profile → Permissions
+    ///   - project_budget_warning             → Profile → Manage projects
+    ///   - anything else with an expense_id   → expense detail
+    private func handlePushOpen(eventType: String?, expenseId: String?, route: String?) {
+        switch eventType {
+        case "workspace_invite":
+            selectedTab = .profile
+            navStack = [.permissions]
+            return
+        case "project_budget_warning":
+            selectedTab = .profile
+            navStack = [.manageProjects]
+            return
+        default:
+            break
+        }
+        guard let expenseId else { return }
+        openExpenseFromPush(id: expenseId)
     }
 
     private func openExpenseFromPush(id: String) {
