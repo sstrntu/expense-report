@@ -148,6 +148,11 @@ struct ManagerOverviewView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
+        // Catch new submissions arriving from team members without forcing
+        // the manager to pull-to-refresh. Throttled by refreshIfStale.
+        .task {
+            await repositoryApp.refreshIfStale()
+        }
     }
 
     private var draftsCard: some View {

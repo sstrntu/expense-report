@@ -799,6 +799,24 @@ final class RepositoryAppState: ObservableObject {
     func refresh() async {
         await loadWorkspaces(selecting: selectedWorkspace?.id)
         await reloadSelectedWorkspaceData()
+        lastRefreshAt = Date()
+    }
+
+    /// Timestamp of the last completed refresh. Used by `refreshIfStale()` to
+    /// throttle automatic refreshes triggered by tab switches or screen
+    /// re-appearances — avoids hammering the backend when the user is flicking
+    /// between tabs in quick succession.
+    @Published private(set) var lastRefreshAt: Date = .distantPast
+
+    /// Refreshes only if the cache is older than `maxAge` seconds. Designed for
+    /// implicit refresh hooks (.task on appear, tab change) where the user
+    /// didn't explicitly ask for new data but stale state would be misleading.
+    /// Defaults to 20s — long enough that fast tab switching is a no-op,
+    /// short enough that returning to a screen after taking a few actions
+    /// elsewhere pulls fresh state.
+    func refreshIfStale(maxAge: TimeInterval = 20) async {
+        guard Date().timeIntervalSince(lastRefreshAt) > maxAge else { return }
+        await refresh()
     }
 
     /// Once-per-launch backfill of FX snapshot fields on legacy expenses that

@@ -122,6 +122,12 @@ struct ProfileView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
+        // Refresh on entry so the avatar / name / role chip reflect server
+        // state (e.g. the user updated their name on web, or an admin
+        // changed their role). Throttled.
+        .task {
+            await repositoryApp.refreshIfStale()
+        }
     }
 
     private func roleScopeRow(_ title: String, _ subtitle: String, icon: String, active: Bool) -> some View {
@@ -308,6 +314,11 @@ struct NotificationsView: View {
         .sheet(item: $selectedNotification) { item in
             NotificationDetailSheet(notification: item)
                 .presentationDetents([.height(360)])
+        }
+        // Pull the latest notifications when the user explicitly navigates
+        // to the inbox. Throttled (20s) so it's a no-op for fast re-entries.
+        .task {
+            await repositoryApp.refreshIfStale()
         }
     }
 

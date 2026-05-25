@@ -66,6 +66,11 @@ struct ManageProjectsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
+        // Pick up project edits made by another admin since last bootstrap.
+        // Throttled by refreshIfStale so quick re-entries are a no-op.
+        .task {
+            await repositoryApp.refreshIfStale()
+        }
         .sheet(item: $editingThresholdFor) { project in
             DomainThresholdEditorSheet(project: project) { newValue in
                 Task {

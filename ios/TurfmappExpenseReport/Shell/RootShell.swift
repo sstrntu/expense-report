@@ -226,6 +226,22 @@ struct RootShell: View {
             selectedTab = .home
             navStack = []
         }
+        // Mirror live role changes from the server (e.g. another admin
+        // promoted/demoted this user) into app.role so the bottom tab bar +
+        // every role-gated piece of UI updates without requiring a sign-out.
+        // selectedWorkspace?.currentUserRole is the canonical source —
+        // app.role is a denormalised cache for the legacy Color/Company UI.
+        .onChange(of: repositoryApp.selectedWorkspace?.currentUserRole) { _, newRole in
+            if let newRole, app.role != newRole.appRole {
+                app.role = newRole.appRole
+            }
+        }
+        // Background refresh on tab change so screens don't show stale state
+        // when the user returns to a tab. Throttled by refreshIfStale's 20s
+        // cooldown so fast tab-switching is a no-op.
+        .onChange(of: selectedTab) { _, _ in
+            Task { await repositoryApp.refreshIfStale() }
+        }
         .onChange(of: repositoryApp.currentUserProfile) { _, profile in
             guard let profile else { return }
             if app.userName.isEmpty { app.userName = profile.displayName }

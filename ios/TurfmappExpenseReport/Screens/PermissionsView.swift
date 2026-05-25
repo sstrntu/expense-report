@@ -124,12 +124,9 @@ struct PermissionsView: View {
             Text(tr("permissions.confirm_remove.message"))
         }
         // Fresh fetch on every entry so admins see the up-to-date member +
-        // invite list. Without this we'd render the cache from the last
-        // bootstrap — which meant accepted invites kept showing as pending
-        // for the admin (the invitee already joined, but our local state
-        // missed the status flip until the next pull-to-refresh).
+        // invite list. Throttled (20s) so re-entering quickly is a no-op.
         .task {
-            await repositoryApp.refresh()
+            await repositoryApp.refreshIfStale()
         }
     }
 
