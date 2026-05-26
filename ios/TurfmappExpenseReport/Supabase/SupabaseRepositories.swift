@@ -1021,11 +1021,35 @@ struct SupabaseWorkspaceRepository: WorkspaceRepository {
             let name: String
             let defaultCurrency: String
         }
+        let body = Body(name: name, defaultCurrency: defaultCurrency.uppercased())
         let rows: [WorkspaceRow] = try await client.patch(
             "workspaces?id=eq.\(workspaceId)",
-            body: Body(name: name, defaultCurrency: defaultCurrency.uppercased())
+            body: body
         )
-        guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
+        // Workspace UPDATE + SELECT both run under RLS. With
+        // return=representation the server returns the affected row in the
+        // same response — but on cellular cold-starts the JWT auth cache
+        // can lag behind the request and PostgREST returns [] (UPDATE
+        // succeeded, SELECT couldn't read back). Re-fetch directly from
+        // workspaces?id=eq.X to confirm; if THAT also fails we have a real
+        // permission problem.
+        let row: WorkspaceRow
+        if let firstRow = rows.first {
+            row = firstRow
+        } else {
+            let fetched: [WorkspaceRow] = try await client.get(
+                "workspaces",
+                queryItems: [
+                    URLQueryItem(name: "select", value: "*"),
+                    URLQueryItem(name: "id", value: "eq.\(workspaceId)"),
+                    URLQueryItem(name: "limit", value: "1")
+                ]
+            )
+            guard let refetched = fetched.first else {
+                throw SupabaseRepositoryError.invalidResponse
+            }
+            row = refetched
+        }
         let role = try await currentRole(workspaceId: workspaceId)
         return DomainWorkspace(
             id: row.id, name: row.name, abbr: row.abbr,

@@ -232,7 +232,14 @@ final class RepositoryAppState: ObservableObject {
 
     func bootstrap() async {
         await loadCurrentUserProfile()
-        await loadWorkspaces(selecting: selectedWorkspace?.id ?? UserDefaults.standard.string(forKey: selectedWorkspaceDefaultsKey))
+        // Cold-start load: don't toast errors here. Cellular cold-starts on
+        // a physical device frequently see one transient failure (radio
+        // ramp-up, DNS warmup, JWT not yet served by the cache) before the
+        // second attempt succeeds. The UI would flash a scary "database
+        // error" toast for a few seconds before the data appeared anyway.
+        // The user can pull-to-refresh if it really did fail.
+        await loadWorkspaces(selecting: selectedWorkspace?.id ?? UserDefaults.standard.string(forKey: selectedWorkspaceDefaultsKey),
+                             silentOnFailure: true)
         // Register any APNs token that arrived before appShell was rendered.
         if let token = UserDefaults.standard.string(forKey: "apns.device.token") {
             await registerDeviceToken(token)
@@ -910,7 +917,7 @@ final class RepositoryAppState: ObservableObject {
         pendingOfflineDraftCount = 0
     }
 
-    private func loadWorkspaces(selecting workspaceId: String?) async {
+    private func loadWorkspaces(selecting workspaceId: String?, silentOnFailure: Bool = false) async {
         loadState = .loading
         do {
             let loadedWorkspaces = try await workspaceRepository.listWorkspacesForCurrentUser()
@@ -922,7 +929,15 @@ final class RepositoryAppState: ObservableObject {
             await reloadSelectedWorkspaceData()
             loadState = .loaded
         } catch {
-            setError(error)
+            if silentOnFailure {
+                // Failure during a cold-start refresh — keep whatever data
+                // we had, drop the loadState back to idle so the UI doesn't
+                // get stuck on the spinner. The next user-triggered refresh
+                // will surface real errors normally.
+                loadState = .idle
+            } else {
+                setError(error)
+            }
         }
     }
 

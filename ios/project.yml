@@ -37,7 +37,7 @@ targets:
         # for every new TestFlight upload (Apple requires it to be strictly
         # increasing within a marketing version).
         MARKETING_VERSION: "1.6"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
 
   TurfmappExpenseReportTests:
     type: bundle.unit-test
