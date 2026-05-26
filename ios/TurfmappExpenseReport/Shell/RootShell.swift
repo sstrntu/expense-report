@@ -62,6 +62,15 @@ struct RootShell: View {
         // skipped setup entirely on launch) won't trip this because their
         // workspaceReady flag is set during session restore before the body
         // observers attach.
+        // When the user signs out we want them to land on the Welcome screen
+        // again (logo + value prop), not jumped straight into Auth. Clearing
+        // hasSeenWelcome on the false transition does that without affecting
+        // any currently-signed-in user.
+        .onChange(of: app.isAuthenticated) { wasIn, isIn in
+            if wasIn && !isIn {
+                hasSeenWelcome = false
+            }
+        }
         .onChange(of: app.workspaceReady) { wasReady, isReady in
             if !wasReady && isReady && app.needsSetup {
                 showCompletion = true
