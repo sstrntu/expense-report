@@ -14,13 +14,23 @@ enum SocialAuthError: LocalizedError {
     case unknown(String)
 
     var errorDescription: String? {
+        // End-user copy. Keeps "Apple" / "Google" out of generic strings so
+        // they read naturally regardless of which provider was attempted.
         switch self {
-        case .missingURL:            return "Couldn't build the sign-in URL."
-        case .userCancelled:         return "Sign-in was cancelled."
-        case .missingTokens:         return "The sign-in didn't return tokens."
-        case .identityTokenMissing:  return "Apple Sign-In didn't return an identity token."
-        case .nonceMissing:          return "Apple Sign-In nonce was missing."
-        case .unknown(let m):        return m
+        case .missingURL:
+            return "We couldn't start the sign-in. Please try again."
+        case .userCancelled:
+            // Cancel is silent in RepositoryAppState — this string is a
+            // fallback if something else surfaces the error.
+            return "Sign-in was cancelled."
+        case .missingTokens:
+            return "Sign-in didn't complete. Please try again."
+        case .identityTokenMissing:
+            return "Sign-in didn't complete. Please try again."
+        case .nonceMissing:
+            return "Sign-in didn't complete. Please try again."
+        case .unknown(let m):
+            return m
         }
     }
 }

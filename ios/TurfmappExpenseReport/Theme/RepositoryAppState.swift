@@ -1035,9 +1035,66 @@ final class RepositoryAppState: ObservableObject {
         }
     }
 
+    /// Funnel for every error that surfaces to the UI. Translates technical
+    /// errors (URLSession, raw Postgres, etc.) into end-user copy before
+    /// publishing into `lastError` for the toast / inline banners.
+    ///
+    /// Order:
+    ///   1. URLError — network connectivity issues get the nicest copy
+    ///      because they're the most common and the user can act on them.
+    ///   2. LocalizedError types (SupabaseRepositoryError / SocialAuthError)
+    ///      already provide user-facing strings via their errorDescription.
+    ///   3. Generic Error — fall back to localizedDescription, but scrub
+    ///      anything that looks like it came from a database/network layer.
     private func setError(_ error: Error) {
-        let message = error.localizedDescription
+        let message = Self.userFacingMessage(for: error)
         lastError = message
         loadState = .failed(message)
+    }
+
+    static func userFacingMessage(for error: Error) -> String {
+        if let urlError = error as? URLError {
+            return friendly(urlError)
+        }
+        // LocalizedError-conforming types (Supabase*, SocialAuth*) already
+        // have user-facing copy in their errorDescription — trust it.
+        if let localized = error as? LocalizedError,
+           let description = localized.errorDescription,
+           !description.isEmpty {
+            return description
+        }
+        // Plain Error — its localizedDescription often leaks framework
+        // jargon. Scrub the obvious offenders.
+        let raw = error.localizedDescription
+        if raw.localizedCaseInsensitiveContains("supabase")
+            || raw.localizedCaseInsensitiveContains("postgrest")
+            || raw.localizedCaseInsensitiveContains("rls")
+            || raw.localizedCaseInsensitiveContains("postgres") {
+            return "Something went wrong. Please try again."
+        }
+        return raw.isEmpty ? "Something went wrong. Please try again." : raw
+    }
+
+    private static func friendly(_ urlError: URLError) -> String {
+        switch urlError.code {
+        case .notConnectedToInternet:
+            return "You're offline. Please check your connection and try again."
+        case .timedOut:
+            return "The request took too long. Please try again."
+        case .networkConnectionLost:
+            return "Your connection dropped. Please try again."
+        case .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed:
+            return "We're having trouble reaching our servers. Please try again in a moment."
+        case .userCancelledAuthentication, .cancelled:
+            return ""  // user cancelled — don't toast
+        case .secureConnectionFailed, .clientCertificateRejected, .clientCertificateRequired,
+             .serverCertificateUntrusted, .serverCertificateHasBadDate,
+             .serverCertificateNotYetValid, .serverCertificateHasUnknownRoot:
+            return "We couldn't establish a secure connection. Please try again."
+        case .dataNotAllowed:
+            return "Mobile data is restricted for this app. Check Settings → Cellular."
+        default:
+            return "Network error. Please try again."
+        }
     }
 }

@@ -1140,7 +1140,9 @@ struct ReportsExportView: View {
             try pdfData.write(to: url, options: .atomic)
             pdfFile = url
         } catch {
-            exportError = error.localizedDescription
+            // File-write failures shouldn't expose the underlying NSError
+            // path/permissions stuff to the user — they can't fix it.
+            exportError = "We couldn't save the PDF. Please try again."
         }
     }
 

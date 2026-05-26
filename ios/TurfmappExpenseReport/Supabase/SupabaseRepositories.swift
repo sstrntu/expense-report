@@ -143,33 +143,112 @@ enum SupabaseRepositoryError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "Supabase is not configured."
+            // Hides the "Supabase" brand from end users — they didn't sign up
+            // for Supabase, they signed up for "Expenses".
+            return "We're having trouble connecting. Please try again in a moment."
         case .missingSession:
-            return "Sign in before using this workspace."
+            return "Please sign in to continue."
         case .confirmationRequired:
-            return "Check your email to confirm this account, then sign in."
+            return "Check your email for a confirmation link, then sign in."
         case .unsupported(let feature):
-            return "\(feature) is not connected to Supabase yet."
+            return "\(feature) isn't available yet."
         case .requestFailed(let status, let message):
-            // 401/403 with a "permission denied" body almost always means the
-            // user's role changed mid-session (e.g. an admin demoted them
-            // between render and tap). Surface a friendlier explanation than
-            // "permission denied for table X" so the user knows what to do.
-            if status == 401 || status == 403 || message.localizedCaseInsensitiveContains("permission denied") {
-                return "Your access changed. Pull to refresh and try again."
-            }
-            // Supabase error bodies are typically JSON like {"msg": "...", "error_code": "..."}.
-            // Surface that human message when present; fall back to the raw body otherwise.
-            if let data = message.data(using: .utf8),
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                if let msg = json["msg"] as? String ?? json["message"] as? String ?? json["error_description"] as? String {
-                    return msg
-                }
-            }
-            return "Request failed (\(status)). \(message)"
+            return Self.friendlyRequestMessage(status: status, body: message)
         case .invalidResponse:
-            return "Supabase returned an unexpected response."
+            return "Something went wrong. Please try again."
         }
+    }
+
+    /// Translate Postgres/PostgREST/HTTP error bodies into end-user copy.
+    /// We pattern-match on (a) HTTP status, (b) Postgres SQLSTATE codes, then
+    /// (c) the JSON `message`/`msg` field for fallthrough.
+    private static func friendlyRequestMessage(status: Int, body: String) -> String {
+        // Role/permission race: the iOS form rendered while the user had a
+        // role, server rejected after a concurrent demotion.
+        if status == 401 || status == 403
+            || body.localizedCaseInsensitiveContains("permission denied")
+            || body.localizedCaseInsensitiveContains("jwt") {
+            return "Your access changed. Pull to refresh and try again."
+        }
+        if status == 429 {
+            return "You're going a bit fast. Please wait a moment and try again."
+        }
+        if status >= 500 {
+            return "Our servers are having trouble. Please try again in a moment."
+        }
+        if status == 404 {
+            return "We couldn't find that item. It may have been removed."
+        }
+
+        // Parse the JSON body once so we can read both the SQLSTATE code
+        // (PostgREST returns these from RAISE EXCEPTION in our RPCs) and
+        // the message text the RPC author wrote.
+        var code: String? = nil
+        var message: String? = nil
+        var detail: String? = nil
+        if let data = body.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            code = (json["code"] as? String)?.uppercased()
+            message = json["msg"] as? String
+                   ?? json["message"] as? String
+                   ?? json["error_description"] as? String
+            detail = json["details"] as? String ?? json["detail"] as? String
+        }
+
+        // Postgres SQLSTATE codes commonly raised by our RPCs + table
+        // constraints. Strings here are user-facing.
+        switch code {
+        case "23505":
+            // Unique violation. Detail is "Key (email)=(x) already exists."
+            // — we keep it generic since the constraint name is implementation.
+            return "That value is already in use. Please pick a different one."
+        case "23503":
+            return "Related information is missing or was removed."
+        case "23502":
+            return "Please fill in all required fields."
+        case "23514":
+            return "One of the values doesn't pass validation. Please review and try again."
+        case "P0001":
+            // Custom RAISE EXCEPTION. The message text was written by us;
+            // pass it through directly.
+            return message ?? "Action couldn't be completed. Please try again."
+        case "P0002":
+            // no_data_found in our RPCs — usually "invite not found" or
+            // similar. Pass the message through.
+            return message ?? "We couldn't find what you were looking for."
+        case "22023":
+            // Invalid parameter — also raised by our RPCs for "invite
+            // expired" / "invite code must be 6 digits".
+            return message ?? "That doesn't look right. Please check the value and try again."
+        case "42501":
+            return "You don't have permission for that action."
+        default:
+            break
+        }
+
+        // Friendly pass-through for any user-facing message the server sent.
+        // Suppress purely technical strings (table/column names, SQL fragments)
+        // by only forwarding messages that look like sentences.
+        if let m = message, looksLikeUserMessage(m) {
+            return m
+        }
+        if let d = detail, looksLikeUserMessage(d) {
+            return d
+        }
+        return "Something didn't work. Please try again."
+    }
+
+    /// Heuristic: a message "looks user-facing" if it doesn't contain SQL
+    /// keywords or quoted identifiers and is reasonably short. Prevents
+    /// "relation \"workspace_invites\" violates check constraint ..." from
+    /// reaching the toast.
+    private static func looksLikeUserMessage(_ s: String) -> Bool {
+        let lower = s.lowercased()
+        let tells = ["select ", "insert ", "update ", "delete ", "from ", "where ",
+                     "relation ", "constraint", "duplicate key", "violates",
+                     "syntax error", "column \"", "schema \"", "function"]
+        if tells.contains(where: { lower.contains($0) }) { return false }
+        return s.count <= 200
     }
 }
 
