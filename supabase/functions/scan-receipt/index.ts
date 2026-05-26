@@ -73,48 +73,42 @@ function normalizeAmount(raw: string): string {
   return m ? m[0] : ascii;
 }
 
-/// Sanity check the extracted fields. Returns a string describing the
-/// problem if the fields don't look like they came from a real receipt,
-/// or null if everything looks reasonable. Catches cases where the model
-/// hallucinates plausible-but-bogus values on a non-receipt image.
-function validateExtractedFields(opts: {
+/// Per-field plausibility check. Each entry is true if the field passes
+/// sanity, false if it looks wrong. The caller uses this to drop the
+/// failing fields' normalized values so the iOS UI flags them as needing
+/// user input, while keeping good fields auto-filled. This is the soft
+/// validation layer — it does NOT reject the scan as a whole. Layer 1
+/// (is_receipt) handles the "this isn't a receipt at all" case.
+function fieldPlausibility(opts: {
   merchant: string;
   amount: string;
   date: string;
   currency: string;
-}): string | null {
+}): { merchant: boolean; amount: boolean; date: boolean; currency: boolean } {
+  // Merchant: not blank and not a placeholder the model emits when it
+  // gives up.
   const lowerMerchant = opts.merchant.trim().toLowerCase();
-  // Guard against the model giving up but still emitting something. These
-  // generic strings show up when there's no real text on the image.
   const placeholders = ["", "n/a", "na", "unknown", "receipt", "merchant", "store", "shop", "—", "-"];
-  if (placeholders.includes(lowerMerchant)) {
-    return "We couldn't read a business name from this image.";
-  }
-  // Amount must parse to a positive number, and not absurdly large
-  // (10M cap covers any real expense — anything higher is a parse glitch).
+  const merchantOK = !placeholders.includes(lowerMerchant);
+  // Amount: positive finite number, capped at 10M to catch parse glitches.
   const amountNum = Number(opts.amount);
-  if (!Number.isFinite(amountNum) || amountNum <= 0 || amountNum > 10_000_000) {
-    return "We couldn't read a valid total amount from this image.";
-  }
-  // Date should parse and fall within ±5 years of today — receipts older or
-  // newer than that are almost always a misread (e.g. picking up "Best by"
-  // dates, OS-generated timestamps, or hallucinated years).
+  const amountOK = Number.isFinite(amountNum) && amountNum > 0 && amountNum <= 10_000_000;
+  // Date: parses, and falls within ±5 years of today (catches misread
+  // "best by" dates, OCR'd OS timestamps, etc.). Empty date is OK — the
+  // user can supply one.
+  let dateOK = true;
   if (opts.date) {
     const parsed = Date.parse(opts.date);
     if (!Number.isFinite(parsed)) {
-      return "We couldn't read a valid date from this image.";
-    }
-    const now = Date.now();
-    const fiveYears = 5 * 365 * 24 * 60 * 60 * 1000;
-    if (Math.abs(now - parsed) > fiveYears) {
-      return "The date on this image looks wrong. Please try another photo.";
+      dateOK = false;
+    } else {
+      const fiveYears = 5 * 365 * 24 * 60 * 60 * 1000;
+      dateOK = Math.abs(Date.now() - parsed) <= fiveYears;
     }
   }
-  // Currency, if present, must be 3 letters A-Z (real ISO 4217 code).
-  if (opts.currency && !/^[A-Z]{3}$/.test(opts.currency)) {
-    return "We couldn't read a recognizable currency.";
-  }
-  return null;
+  // Currency, if present, must be a real 3-letter ISO 4217 code.
+  const currencyOK = !opts.currency || /^[A-Z]{3}$/.test(opts.currency);
+  return { merchant: merchantOK, amount: amountOK, date: dateOK, currency: currencyOK };
 }
 
 /// Per-user rate limit. Stops a misuse case where someone iterates dozens
@@ -301,32 +295,67 @@ Deno.serve(async (req) => {
   // If the model misses currency on a Thai receipt, default to THB.
   const currency = currencyRaw || (language === "th" ? "THB" : "USD");
 
-  // Layer 2 — sanity-check field shapes. The model can claim is_receipt=true
-  // and still return nonsense; this catches numbers like 0, dates from 1985,
-  // generic merchants like "Receipt", etc.
-  const validationReason = validateExtractedFields({
+  // Layer 2 — per-field plausibility. Real receipts often have one field
+  // we can't read cleanly (creased corner over the date, faded total, etc).
+  // Rather than reject the whole scan, scrub the bad fields: keep the
+  // extracted_value so the user sees what the model thought it read, but
+  // drop the normalized_value and mark confidence=low so the iOS form
+  // doesn't auto-fill that field and the user knows to type it in.
+  const plausibility = fieldPlausibility({
     merchant: rawValue("merchant"),
     amount: normalizedAmount,
     date: normalizedDate,
     currency,
   });
-  if (validationReason) {
-    return await fail(validationReason);
-  }
 
+  // When a field fails plausibility we clear BOTH extracted_value and
+  // normalized_value. The iOS form falls back to extracted_value when
+  // normalized is nil, so any value left in extracted_value would still
+  // auto-fill the form with the bogus guess. Empty strings on both sides
+  // surface as "the model couldn't read this" — the user types it in.
   const rows = [
-    { field_name: "merchant", extracted_value: rawValue("merchant"), normalized_value: rawValue("merchant") || null },
-    { field_name: "amount", extracted_value: rawValue("amount"), normalized_value: normalizedAmount || null },
-    { field_name: "currency", extracted_value: rawValue("currency"), normalized_value: currency },
-    { field_name: "date", extracted_value: rawValue("date"), normalized_value: normalizedDate || null },
-    { field_name: "category", extracted_value: rawValue("category"), normalized_value: rawValue("category") || null },
-    { field_name: "language", extracted_value: language, normalized_value: language || null },
+    {
+      field_name: "merchant",
+      extracted_value: plausibility.merchant ? rawValue("merchant") : "",
+      normalized_value: plausibility.merchant ? rawValue("merchant") || null : null,
+      ok: plausibility.merchant,
+    },
+    {
+      field_name: "amount",
+      extracted_value: plausibility.amount ? rawValue("amount") : "",
+      normalized_value: plausibility.amount ? (normalizedAmount || null) : null,
+      ok: plausibility.amount,
+    },
+    {
+      field_name: "currency",
+      extracted_value: plausibility.currency ? rawValue("currency") : "",
+      normalized_value: plausibility.currency ? currency : null,
+      ok: plausibility.currency,
+    },
+    {
+      field_name: "date",
+      extracted_value: plausibility.date ? rawValue("date") : "",
+      normalized_value: plausibility.date ? (normalizedDate || null) : null,
+      ok: plausibility.date,
+    },
+    {
+      field_name: "category",
+      extracted_value: rawValue("category"),
+      normalized_value: rawValue("category") || null,
+      ok: !!rawValue("category"),
+    },
+    {
+      field_name: "language",
+      extracted_value: language,
+      normalized_value: language || null,
+      ok: !!language,
+    },
   ].map((r) => ({
     receipt_scan_id: scanId,
     field_name: r.field_name,
     extracted_value: r.extracted_value,
     normalized_value: r.normalized_value,
-    confidence: r.extracted_value ? "high" : "low",
+    confidence: r.ok ? "high" : "low",
     confirmed_by_user: false,
   }));
 
