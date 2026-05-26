@@ -73,6 +73,72 @@ function normalizeAmount(raw: string): string {
   return m ? m[0] : ascii;
 }
 
+/// Sanity check the extracted fields. Returns a string describing the
+/// problem if the fields don't look like they came from a real receipt,
+/// or null if everything looks reasonable. Catches cases where the model
+/// hallucinates plausible-but-bogus values on a non-receipt image.
+function validateExtractedFields(opts: {
+  merchant: string;
+  amount: string;
+  date: string;
+  currency: string;
+}): string | null {
+  const lowerMerchant = opts.merchant.trim().toLowerCase();
+  // Guard against the model giving up but still emitting something. These
+  // generic strings show up when there's no real text on the image.
+  const placeholders = ["", "n/a", "na", "unknown", "receipt", "merchant", "store", "shop", "—", "-"];
+  if (placeholders.includes(lowerMerchant)) {
+    return "We couldn't read a business name from this image.";
+  }
+  // Amount must parse to a positive number, and not absurdly large
+  // (10M cap covers any real expense — anything higher is a parse glitch).
+  const amountNum = Number(opts.amount);
+  if (!Number.isFinite(amountNum) || amountNum <= 0 || amountNum > 10_000_000) {
+    return "We couldn't read a valid total amount from this image.";
+  }
+  // Date should parse and fall within ±5 years of today — receipts older or
+  // newer than that are almost always a misread (e.g. picking up "Best by"
+  // dates, OS-generated timestamps, or hallucinated years).
+  if (opts.date) {
+    const parsed = Date.parse(opts.date);
+    if (!Number.isFinite(parsed)) {
+      return "We couldn't read a valid date from this image.";
+    }
+    const now = Date.now();
+    const fiveYears = 5 * 365 * 24 * 60 * 60 * 1000;
+    if (Math.abs(now - parsed) > fiveYears) {
+      return "The date on this image looks wrong. Please try another photo.";
+    }
+  }
+  // Currency, if present, must be 3 letters A-Z (real ISO 4217 code).
+  if (opts.currency && !/^[A-Z]{3}$/.test(opts.currency)) {
+    return "We couldn't read a recognizable currency.";
+  }
+  return null;
+}
+
+/// Per-user rate limit. Stops a misuse case where someone iterates dozens
+/// of random images at our OpenAI expense. Counts the user's own
+/// receipt_scans rows in the last hour via the same RLS-aware client we
+/// already have for everything else.
+async function checkRateLimit(supabase: ReturnType<typeof createClient>): Promise<string | null> {
+  const sinceISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabase
+    .from("receipt_scans")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", sinceISO);
+  if (error) {
+    // Don't block scans on a rate-limit query failure — log and continue.
+    console.error("rate limit query failed:", error.message);
+    return null;
+  }
+  const HOURLY_LIMIT = 30;
+  if ((count ?? 0) >= HOURLY_LIMIT) {
+    return `You've scanned ${HOURLY_LIMIT} receipts in the last hour. Try again later.`;
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -93,6 +159,13 @@ Deno.serve(async (req) => {
     db: { schema: "turfmapp_expenses" },
     global: { headers: { Authorization: authHeader } },
   });
+
+  // Layer 3 — rate limit. Cheap query against receipt_scans the caller can
+  // already read via RLS, so no extra grants needed.
+  const rateLimited = await checkRateLimit(supabase);
+  if (rateLimited) {
+    return json({ error: rateLimited }, 429);
+  }
 
   const { data: attachment, error: attachmentError } = await supabase
     .from("attachments")
@@ -175,14 +248,19 @@ Deno.serve(async (req) => {
             role: "system",
             content: [
               "You extract structured data from receipts and tax invoices in any language.",
+              "FIRST: decide whether the image is actually a receipt, tax invoice, or proof of purchase.",
+              "Photos of meals, products, places, screenshots, memes, or random documents are NOT receipts even if they contain some text.",
               "Respond ONLY with a JSON object containing these keys:",
+              "  is_receipt        — true or false. True only if the image clearly shows an itemized receipt, invoice, or other proof-of-purchase document with at least a merchant and a total.",
+              "  rejection_reason  — Short user-facing reason when is_receipt is false (e.g. 'This looks like a photo of food, not a receipt.'). Empty string when is_receipt is true.",
+              "  confidence        — 'high', 'medium', or 'low' — how sure you are about the extracted fields. 'low' for blurry, partial, or hard-to-read receipts.",
               "  merchant   — Business/store name, copied verbatim in its original script (English OR Thai). Do NOT transliterate.",
               "  amount     — Final total paid, as a plain numeric string with optional decimal. Convert Thai digits (๐-๙) to ASCII. Strip currency symbols, commas, and the word บาท.",
               "  currency   — ISO 4217 code (e.g. USD, THB, EUR). For Thai receipts default to THB if บาท or ฿ appears.",
               "  date       — Purchase date in YYYY-MM-DD. If the receipt uses Buddhist Era (พ.ศ., a 4-digit year ≥ 2400), KEEP the Buddhist year as-is — server code will convert it.",
               "  category   — One of: Meals, Travel, Software, Office, Other. Choose based on the items/business type.",
               "  language   — Either 'en' or 'th' depending on the receipt's primary language.",
-              "Use an empty string for any field you cannot determine.",
+              "If is_receipt is false, leave all other fields as empty strings. If is_receipt is true, use an empty string only for fields you genuinely cannot determine.",
             ].join(" "),
           },
           {
@@ -206,6 +284,14 @@ Deno.serve(async (req) => {
     return await fail(`Scan failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 
+  // Layer 1 — honour the model's own is_receipt judgment. If it says the
+  // image isn't a receipt, stop here with the model's user-facing reason.
+  const isReceipt = extracted["is_receipt"] === true || extracted["is_receipt"] === "true";
+  if (!isReceipt) {
+    const reason = String(extracted["rejection_reason"] ?? "").trim();
+    return await fail(reason || "This doesn't look like a receipt. Please try another photo.");
+  }
+
   // Post-process Thai-specific fields before persisting.
   const language = String(extracted["language"] ?? "").trim().toLowerCase();
   const rawValue = (key: string) => String(extracted[key] ?? "").trim();
@@ -214,6 +300,19 @@ Deno.serve(async (req) => {
   const currencyRaw = rawValue("currency").toUpperCase();
   // If the model misses currency on a Thai receipt, default to THB.
   const currency = currencyRaw || (language === "th" ? "THB" : "USD");
+
+  // Layer 2 — sanity-check field shapes. The model can claim is_receipt=true
+  // and still return nonsense; this catches numbers like 0, dates from 1985,
+  // generic merchants like "Receipt", etc.
+  const validationReason = validateExtractedFields({
+    merchant: rawValue("merchant"),
+    amount: normalizedAmount,
+    date: normalizedDate,
+    currency,
+  });
+  if (validationReason) {
+    return await fail(validationReason);
+  }
 
   const rows = [
     { field_name: "merchant", extracted_value: rawValue("merchant"), normalized_value: rawValue("merchant") || null },
