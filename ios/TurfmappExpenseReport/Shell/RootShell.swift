@@ -1065,8 +1065,11 @@ func infoBanner(icon: String, tint: Color, title: String, message: String) -> so
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.system(size: 13.5, weight: .semibold))
             Text(message).font(.system(size: 12)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        Spacer(minLength: 0)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .padding(14)
     .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(tint.opacity(0.25), lineWidth: 0.5))

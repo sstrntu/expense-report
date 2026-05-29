@@ -456,6 +456,7 @@ struct DomainDetailView: View {
                 Text(message).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(nil)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(tint.opacity(0.25), lineWidth: 0.5))
