@@ -65,7 +65,7 @@ struct DomainDetailView: View {
         }
         .sheet(item: $previewReceipt) { receipt in
             ReceiptPreviewSheet(receipt: receipt)
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
         }
         .sheet(isPresented: $showReceiptSource) {
             ReceiptSourceSheet { data, fileName, contentType in

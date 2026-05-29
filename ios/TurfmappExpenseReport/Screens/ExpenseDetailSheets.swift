@@ -35,12 +35,13 @@ struct ReceiptPreviewSheet: View {
                             .overlay(ProgressView().tint(receipt.tint))
                             .frame(maxHeight: .infinity)
                     } else if let data = imageData, let uiImage = UIImage(data: data) {
-                        ScrollView([.vertical, .horizontal], showsIndicators: false) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
+                        // Scale the whole receipt to fit the available area so it
+                        // never gets clipped by the sheet, regardless of aspect.
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                     } else {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(receipt.tint.opacity(0.12))
