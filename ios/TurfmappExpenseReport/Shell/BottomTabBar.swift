@@ -14,12 +14,20 @@ struct TabItem {
 struct BottomTabBar: View {
     @Binding var selected: TabID
     let role: AppRole
+    /// True when the user can review via a *project* role even though their
+    /// workspace role is `employee`. Lets project-scoped approvers/finance get
+    /// the reviewer tab set (Overview + Review) instead of the employee set.
+    var canReview: Bool = false
     var badgeCounts: [TabID: Int] = [:]
     // Subscribe so labels re-render immediately when the user switches language.
     @ObservedObject private var localization = LocalizationManager.shared
 
+    private var showsReviewerTabs: Bool {
+        role != .employee || canReview
+    }
+
     private var tabs: [TabItem] {
-        if role != .employee {
+        if showsReviewerTabs {
             return [
                 TabItem(id: .home,      icon: "house.fill",     label: tr("tab.overview")),
                 TabItem(id: .dashboard, icon: "chart.bar.fill",  label: tr("tab.dashboard")),

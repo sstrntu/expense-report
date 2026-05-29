@@ -100,6 +100,22 @@ final class RepositoryAppState: ObservableObject {
         return role.canReimburseExpenses
     }
 
+    /// True if the user can review (approve and/or reimburse) anything at all —
+    /// via their workspace role *or* a role on any single project. Drives
+    /// whether the shell shows the reviewer layout (Overview + Review tab)
+    /// instead of the employee layout, so a project-scoped approver/finance
+    /// whose workspace role is `employee` can actually reach their queue
+    /// rather than holding server permission with no UI to use it.
+    var canReviewExpenses: Bool {
+        if currentWorkspaceRole.canApproveExpenses || currentWorkspaceRole.canReimburseExpenses {
+            return true
+        }
+        return projects.contains { project in
+            guard let role = project.currentUserProjectRole else { return false }
+            return role.canApproveExpenses || role.canReimburseExpenses
+        }
+    }
+
     /// True if the current user can submit a new expense to `project`.
     /// Workspace `admin` and anyone with a non-viewer project role can submit;
     /// projects with no explicit role rely on visibility (handled server-side

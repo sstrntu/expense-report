@@ -30,18 +30,25 @@ struct RootShell: View {
 
     private enum LaunchState { case restoring, ready }
 
+    /// Whether to show the reviewer layout (Overview home + Review tab) rather
+    /// than the employee layout (personal Home + Activity tab). Driven by the
+    /// project-aware capability flag so a workspace `employee` who holds a
+    /// project approver/finance role still gets the reviewer surfaces — the
+    /// workspace role alone is no longer the gate.
+    private var showsReviewerTabs: Bool {
+        app.role != .employee || repositoryApp.canReviewExpenses
+    }
+
     private var tabBadges: [TabID: Int] {
-        if app.role == .employee {
+        guard showsReviewerTabs else {
             let rejected = repositoryApp.expenses.filter { $0.status == .rejected }.count
             return rejected > 0 ? [.activity: rejected] : [:]
         }
-        let queueCount: Int = {
-            switch app.role {
-            case .finance: return repositoryApp.financeQueue.count
-            case .admin:   return repositoryApp.managerQueue.count + repositoryApp.financeQueue.count
-            default:       return repositoryApp.managerQueue.count
-            }
-        }()
+        // Both queues are already capability-gated (canCurrentUserApprove /
+        // canCurrentUserReimburse), so their combined size is exactly the set
+        // of items this user can act on — correct for workspace managers,
+        // finance, admins, and project-scoped reviewers alike.
+        let queueCount = repositoryApp.managerQueue.count + repositoryApp.financeQueue.count
         return queueCount > 0 ? [.review: queueCount] : [:]
     }
 
@@ -202,22 +209,36 @@ struct RootShell: View {
         launchState = .ready
     }
 
+    /// True only on a tab root (no pushed route, not the Add flow). The
+    /// workspace switcher + bottom tab bar belong here; pushed screens and the
+    /// Add flow each carry their own header (back/close), so showing the
+    /// workspace top bar on top of them creates two competing headers — and
+    /// switching workspace mid-stack would silently reset navigation.
+    private var isAtTabRoot: Bool {
+        navStack.isEmpty && selectedTab != .add
+    }
+
     private var appShell: some View {
         ZStack(alignment: .bottom) {
             // Background with decorative blobs
             appBg.ignoresSafeArea()
 
-            // Top company bar
-            VStack {
-                topBar
-                Spacer()
+            // Top company bar — only on a tab root.
+            if isAtTabRoot {
+                VStack {
+                    topBar
+                    Spacer()
+                }
+                .zIndex(10)
             }
-            .zIndex(10)
 
             // Content
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    Color.clear.frame(height: 90) // top bar clearance
+                    // Clearance for the floating top bar at tab roots; pushed
+                    // screens hide that bar and supply their own header, so they
+                    // only need a small gap below the safe area.
+                    Color.clear.frame(height: isAtTabRoot ? 90 : 8)
                     screenContent
                 }
             }
@@ -225,8 +246,8 @@ struct RootShell: View {
             .zIndex(5)
 
             // Bottom tab bar (hidden when on add/stack screens)
-            if navStack.isEmpty && selectedTab != .add {
-                BottomTabBar(selected: $selectedTab, role: app.role, badgeCounts: tabBadges)
+            if isAtTabRoot {
+                BottomTabBar(selected: $selectedTab, role: app.role, canReview: repositoryApp.canReviewExpenses, badgeCounts: tabBadges)
                     .padding(.bottom, 28)
                     .zIndex(20)
             }
@@ -328,7 +349,7 @@ struct RootShell: View {
     private var tabView: some View {
         switch selectedTab {
         case .home:
-            if app.role != .employee {
+            if showsReviewerTabs {
                 ManagerOverviewView(
                     onGoToReview: { selectedTab = .review },
                     onOpenDraft: { id in
@@ -650,13 +671,17 @@ struct RootShell: View {
         .background(.ultraThinMaterial.opacity(0))
     }
 
+    // Mirrors the adaptive `.appBackground()` extension so the main app shell
+    // flips to the dark gradient in dark mode. Previously this used a
+    // hardcoded light gradient, which left every `.primary`/`.secondary` text
+    // (now white in dark mode) sitting on a light base — i.e. invisible.
     private var appBg: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: 0xEEF1F8), Color(hex: 0xE4E8F2)],
+            LinearGradient(colors: [Color.appBackgroundTop, Color.appBackgroundBottom],
                            startPoint: .top, endPoint: .bottom)
-            Circle().fill(Tokens.slate500.opacity(0.45))
+            Circle().fill(Tokens.slate500.opacity(0.35))
                 .frame(width: 300).blur(radius: 70).offset(x: 150, y: -300)
-            Circle().fill(Tokens.aiPurple.opacity(0.35))
+            Circle().fill(Tokens.aiPurple.opacity(0.28))
                 .frame(width: 260).blur(radius: 70).offset(x: -140, y: 250)
         }
     }
