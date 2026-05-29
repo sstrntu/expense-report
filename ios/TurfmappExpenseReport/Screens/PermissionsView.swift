@@ -41,6 +41,14 @@ struct PermissionsView: View {
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
+            // Answers "what do these roles apply to?" up front: workspace-wide,
+            // as opposed to the per-project access set inside each project.
+            Text(tr("permissions.scope_note"))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
+
             if let lastError = repositoryApp.lastError {
                 infoBanner(
                     icon: "exclamationmark.shield.fill",
@@ -288,73 +296,29 @@ struct InviteMemberSheet: View {
     @State private var scopedProjectRole: ProjectRole = .submitter
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(tr("permissions.invite_member"))
-                .font(.system(size: 20, weight: .bold))
-                .padding(.horizontal, 20).padding(.top, 24)
-
-            GlassCard(padding: Tokens.padCard) {
-                VStack(spacing: 0) {
-                    HStack {
-                        Text(tr("permissions.invite.email")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                        Spacer()
-                        TextField("teammate@company.com", text: $email)
-                            .font(.system(size: 13.5, weight: .medium))
-                            .textInputAutocapitalization(.never)
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 210)
-                    }
-                    .padding(.vertical, 11)
-                    Divider().opacity(0.4)
-                    HStack {
-                        Text(tr("permissions.invite.role")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                        Spacer()
-                        Picker(tr("permissions.invite.role"), selection: $role) {
-                            ForEach(availableRoles, id: \.self) { r in
-                                Text(tr("role.\(r.rawValue)")).tag(r)
+        SheetScaffold(
+            header: { SheetHeader(title: tr("permissions.invite_member"), onClose: { dismiss() }) },
+            content: {
+                VStack(alignment: .leading, spacing: 16) {
+                    GlassCard(padding: Tokens.padCard) {
+                        VStack(spacing: 0) {
+                            HStack {
+                                Text(tr("permissions.invite.email")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                                Spacer()
+                                TextField("teammate@company.com", text: $email)
+                                    .font(.system(size: 13.5, weight: .medium))
+                                    .textInputAutocapitalization(.never)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(maxWidth: 210)
                             }
-                        }
-                        .pickerStyle(.menu)
-                        .font(.system(size: 13.5, weight: .medium))
-                    }
-                    .padding(.vertical, 11)
-                }
-            }
-            .padding(.horizontal, 20)
-
-            // Optional project scoping. When a project is picked, the
-            // invitee will also become a member of that project at the
-            // chosen project role when they accept the code. Defaults to
-            // workspace-only ("No specific project").
-            if !projects.isEmpty {
-                GlassCard(padding: Tokens.padCard) {
-                    VStack(spacing: 0) {
-                        HStack {
-                            Text(tr("permissions.invite.project")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                            Spacer()
-                            Menu {
-                                Button(tr("permissions.invite.no_project")) { scopedProjectId = nil }
-                                Divider()
-                                ForEach(projects, id: \.id) { p in
-                                    Button(p.name) { scopedProjectId = p.id }
-                                }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Text(scopedProjectName).font(.system(size: 13.5, weight: .medium))
-                                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold))
-                                }
-                                .foregroundStyle(Color.primary)
-                            }
-                        }
-                        .padding(.vertical, 11)
-                        if scopedProjectId != nil {
+                            .padding(.vertical, 11)
                             Divider().opacity(0.4)
                             HStack {
-                                Text(tr("projects.member.role")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                                Text(tr("permissions.invite.role")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
                                 Spacer()
-                                Picker(tr("projects.member.role"), selection: $scopedProjectRole) {
-                                    ForEach(ProjectRole.allCases, id: \.self) { r in
-                                        Text(r.label).tag(r)
+                                Picker(tr("permissions.invite.role"), selection: $role) {
+                                    ForEach(availableRoles, id: \.self) { r in
+                                        Text(tr("role.\(r.rawValue)")).tag(r)
                                     }
                                 }
                                 .pickerStyle(.menu)
@@ -363,29 +327,68 @@ struct InviteMemberSheet: View {
                             .padding(.vertical, 11)
                         }
                     }
+
+                    // Optional project scoping. When a project is picked, the
+                    // invitee will also become a member of that project at the
+                    // chosen project role when they accept the code. Defaults to
+                    // workspace-only ("No specific project").
+                    if !projects.isEmpty {
+                        GlassCard(padding: Tokens.padCard) {
+                            VStack(spacing: 0) {
+                                HStack {
+                                    Text(tr("permissions.invite.project")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                                    Spacer()
+                                    Menu {
+                                        Button(tr("permissions.invite.no_project")) { scopedProjectId = nil }
+                                        Divider()
+                                        ForEach(projects, id: \.id) { p in
+                                            Button(p.name) { scopedProjectId = p.id }
+                                        }
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Text(scopedProjectName).font(.system(size: 13.5, weight: .medium))
+                                            Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold))
+                                        }
+                                        .foregroundStyle(Color.primary)
+                                    }
+                                }
+                                .padding(.vertical, 11)
+                                if scopedProjectId != nil {
+                                    Divider().opacity(0.4)
+                                    HStack {
+                                        Text(tr("projects.member.role")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                                        Spacer()
+                                        Picker(tr("projects.member.role"), selection: $scopedProjectRole) {
+                                            ForEach(ProjectRole.allCases, id: \.self) { r in
+                                                Text(r.label).tag(r)
+                                            }
+                                        }
+                                        .pickerStyle(.menu)
+                                        .font(.system(size: 13.5, weight: .medium))
+                                    }
+                                    .padding(.vertical, 11)
+                                }
+                            }
+                        }
+                    }
+
+                    infoBanner(icon: "clock.badge.fill", tint: Tokens.pending,
+                               title: tr("permissions.invites"),
+                               message: tr("setup.workspace.invite_required.message"))
                 }
-                .padding(.horizontal, 20)
+            },
+            footer: {
+                Button {
+                    onInvite(email, role, scopedProjectId, scopedProjectId != nil ? scopedProjectRole : nil)
+                    dismiss()
+                } label: {
+                    Text(tr("permissions.invite.send")).primaryActionLabel()
+                }
+                .buttonStyle(.plain)
+                .opacity(canSend ? 1 : 0.5)
+                .disabled(!canSend)
             }
-
-            infoBanner(icon: "clock.badge.fill", tint: Tokens.pending,
-                       title: tr("permissions.invites"),
-                       message: tr("setup.workspace.invite_required.message"))
-                .padding(.horizontal, 20)
-
-            Spacer()
-
-            Button {
-                onInvite(email, role, scopedProjectId, scopedProjectId != nil ? scopedProjectRole : nil)
-                dismiss()
-            } label: {
-                Text(tr("permissions.invite.send")).primaryActionLabel()
-            }
-            .buttonStyle(.plain)
-            .opacity(canSend ? 1 : 0.5)
-            .disabled(!canSend)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 24)
-        }
+        )
     }
 
     private var scopedProjectName: String {

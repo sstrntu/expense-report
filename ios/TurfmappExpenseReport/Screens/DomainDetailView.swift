@@ -61,7 +61,7 @@ struct DomainDetailView: View {
         }
         .sheet(isPresented: $showRejectSheet) {
             RejectReasonSheet { reason in onReject(reason) }
-                .presentationDetents([.height(320)])
+                .presentationDetents([.medium])
         }
         .sheet(item: $previewReceipt) { receipt in
             ReceiptPreviewSheet(receipt: receipt)
@@ -72,7 +72,7 @@ struct DomainDetailView: View {
                 showReceiptSource = false
                 onAttachReceipt(data, fileName, contentType)
             }
-            .presentationDetents([.height(240)])
+            .presentationDetents([.height(300)])
         }
         .confirmationDialog(tr("detail.delete.title", expense.merchant), isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button(tr("common.delete"), role: .destructive) { onDelete() }

@@ -289,58 +289,51 @@ struct ProjectHistorySheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(projectName).font(.system(size: 20, weight: .bold))
-                    Text(tr("review.history.subtitle")).font(.system(size: 12)).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-                .background(Color.primary.opacity(0.06), in: Circle())
-            }
-            .padding(.top, 24).padding(.horizontal, 20)
-
-            HStack(spacing: 10) {
-                summaryTile(label: tr("review.history.entries"), value: "\(totals.count)")
-                summaryTile(label: tr("review.history.total"),
-                            value: money(totals.amount, currency: repositoryApp.aggregationCurrency))
-            }
-            .padding(.horizontal, 20)
-
-            ScrollView {
-                if history.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "archivebox")
-                            .font(.system(size: 24, weight: .semibold)).foregroundStyle(.secondary)
-                        Text(tr("review.history.empty.title")).font(.system(size: 14, weight: .semibold))
-                        Text(tr("review.history.empty.subtitle"))
-                            .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        SheetScaffold(
+            header: {
+                SheetHeader(
+                    title: projectName,
+                    subtitle: tr("review.history.subtitle"),
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 10) {
+                        summaryTile(label: tr("review.history.entries"), value: "\(totals.count)")
+                        summaryTile(label: tr("review.history.total"),
+                                    value: money(totals.amount, currency: repositoryApp.aggregationCurrency))
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 28).padding(.vertical, 36)
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(Array(history.enumerated()), id: \.element.id) { idx, expense in
-                            if idx > 0 { Divider().opacity(0.4) }
-                            Button { onOpen(expense) } label: {
-                                DomainExpenseRow(
-                                    expense: expense,
-                                    projects: repositoryApp.projects,
-                                    categories: repositoryApp.categories
-                                )
-                            }
-                            .buttonStyle(.plain)
+
+                    if history.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "archivebox")
+                                .font(.system(size: 24, weight: .semibold)).foregroundStyle(.secondary)
+                            Text(tr("review.history.empty.title")).font(.system(size: 14, weight: .semibold))
+                            Text(tr("review.history.empty.subtitle"))
+                                .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 28).padding(.vertical, 36)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(Array(history.enumerated()), id: \.element.id) { idx, expense in
+                                if idx > 0 { Divider().opacity(0.4) }
+                                Button { onOpen(expense) } label: {
+                                    DomainExpenseRow(
+                                        expense: expense,
+                                        projects: repositoryApp.projects,
+                                        categories: repositoryApp.categories
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
                     }
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-                    .padding(.horizontal, 20)
                 }
             }
-        }
+        )
     }
 
     private func summaryTile(label: String, value: String) -> some View {

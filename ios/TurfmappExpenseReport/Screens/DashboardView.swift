@@ -369,38 +369,26 @@ struct DashboardDrilldownSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(item.title).font(.system(size: 20, weight: .bold))
-                    Text(item.subtitle).font(.system(size: 12)).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-                .background(Color.primary.opacity(0.06), in: Circle())
-            }
-            .padding(.top, 24).padding(.horizontal, 20)
-
-            VStack(spacing: 0) {
-                ForEach(Array(item.expenses.enumerated()), id: \.element.id) { idx, expense in
-                    if idx > 0 { Divider().opacity(0.4) }
-                    Button {
-                        dismiss()
-                        onOpen(expense)
-                    } label: {
-                        DomainExpenseRow(expense: expense, projects: item.projects, categories: item.categories)
+        SheetScaffold(
+            header: {
+                SheetHeader(title: item.title, subtitle: item.subtitle, onClose: { dismiss() })
+            },
+            content: {
+                VStack(spacing: 0) {
+                    ForEach(Array(item.expenses.enumerated()), id: \.element.id) { idx, expense in
+                        if idx > 0 { Divider().opacity(0.4) }
+                        Button {
+                            dismiss()
+                            onOpen(expense)
+                        } label: {
+                            DomainExpenseRow(expense: expense, projects: item.projects, categories: item.categories)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             }
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-            .padding(.horizontal, 20)
-
-            Spacer()
-        }
+        )
     }
 }
 

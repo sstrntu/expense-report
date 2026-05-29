@@ -228,7 +228,7 @@
 "projects.member.add" = "เพิ่มสมาชิก";
 "projects.member.add_action" = "เพิ่มเข้าโครงการ";
 "projects.member.remove" = "นำออกจากโครงการ";
-"projects.member.empty" = "ยังไม่มีสมาชิกประจำโครงการ สมาชิกเวิร์กสเปซยังคงเข้าถึงได้ตามค่าการมองเห็นของโครงการ";
+"projects.member.empty" = "ผู้ดูแลและเจ้าของโครงการมีสิทธิ์เข้าถึงเต็มรูปแบบอยู่แล้ว เพิ่มสมาชิกที่นี่เพื่อให้สิทธิ์เฉพาะในโครงการนี้แก่ผู้อื่น";
 "projects.member.role" = "บทบาท";
 "projects.member.none_to_add" = "ทุกคนในเวิร์กสเปซมีสิทธิ์เข้าถึงแล้ว";
 "projects.archive_project" = "เก็บถาวรโครงการ";
@@ -272,6 +272,20 @@
 "projects.over_budget.block" = "บล็อก";
 "projects.categories.all" = "ทุกหมวดหมู่";
 "projects.categories.custom" = "กำหนดเอง";
+/* คำอธิบายบทบาทในโครงการ + ข้อความช่วยอธิบาย */
+"projects.role.viewer.desc" = "ดูค่าใช้จ่ายของโครงการนี้ได้ แต่ส่งไม่ได้";
+"projects.role.submitter.desc" = "ส่งค่าใช้จ่ายเข้าโครงการนี้ได้";
+"projects.role.approver.desc" = "อนุมัติหรือปฏิเสธค่าใช้จ่ายของโครงการนี้ได้";
+"projects.role.finance.desc" = "ทำเครื่องหมายว่าเบิกจ่ายค่าใช้จ่ายของโครงการนี้แล้วได้";
+"projects.role.project_admin.desc" = "ควบคุมโครงการนี้ได้ทั้งหมด รวมถึงสมาชิก";
+"projects.row.subtitle" = "%1$@ · คุณคือ%2$@";
+"projects.access.via_workspace" = "%@ (เวิร์กสเปซ)";
+"projects.section.budget" = "งบและการใช้จ่าย";
+"projects.section.approval_rules" = "กฎการอนุมัติ";
+"projects.detail.intro" = "วิธีที่ค่าใช้จ่ายในโครงการนี้ถูกส่งต่อและอนุมัติ";
+"projects.member.add.subtitle" = "เลือกสมาชิกเวิร์กสเปซ แล้วกำหนดสิทธิ์ในโครงการนี้ ซึ่งแยกจากบทบาทระดับเวิร์กสเปซ";
+"projects.member.step_member" = "1. เลือกสมาชิก";
+"projects.member.step_role" = "2. บทบาทในโครงการนี้";
 "activity.title" = "กิจกรรม";
 "activity.search.placeholder" = "ค้นหาร้านค้า หมวดหมู่ โครงการ";
 "activity.all_projects" = "ทุกโครงการ";
@@ -478,8 +492,8 @@
 "profile.nav.workspace.sub" = "ชื่อ โลโก้ และเอกลักษณ์";
 "profile.nav.manage_projects" = "จัดการโครงการ";
 "profile.nav.manage_projects.sub" = "%d โครงการ · งบ %@";
-"profile.nav.permissions" = "สิทธิ์การใช้งาน";
-"profile.nav.permissions.sub" = "%d สมาชิก · 4 บทบาท";
+"profile.nav.permissions" = "สมาชิกและบทบาท";
+"profile.nav.permissions.sub" = "%d สมาชิก · บทบาทใช้ทั่วทั้งเวิร์กสเปซ";
 "profile.nav.reimbursement_queue" = "คิวการเบิกจ่าย";
 "profile.nav.reimbursement_queue.sub" = "ทำเครื่องหมายว่าจ่ายแล้ว จัดการตรวจสอบทางการเงิน";
 "profile.nav.activity" = "กิจกรรมของฉัน";
@@ -558,8 +572,8 @@
 "workspace.saving" = "กำลังบันทึก...";
 "workspace.saved" = "อัปเดตเวิร์กสเปซแล้ว";
 "workspace.update_failed" = "อัปเดตเวิร์กสเปซไม่สำเร็จ";
-"workspace.per_project_policy" = "นโยบายต่อโครงการ";
-"workspace.per_project_policy.message" = "เกณฑ์การอนุมัติและการส่งต่อตั้งไว้ในแต่ละโครงการ — เปิดจัดการโครงการเพื่อแก้ไข";
+"workspace.per_project_policy" = "การเข้าถึงสองระดับ";
+"workspace.per_project_policy.message" = "บทบาทใน “สมาชิกและบทบาท” ใช้กับทั้งเวิร์กสเปซ ส่วนการเข้าถึงแต่ละโครงการ รวมถึงเกณฑ์การอนุมัติและการส่งต่อ ตั้งไว้ในโครงการนั้นภายใต้จัดการโครงการ";
 
 /* === Manage projects === */
 "projects.title" = "จัดการโครงการ";
@@ -575,8 +589,9 @@
 "projects.confirm_delete.message" = "การลบจะซ่อนโครงการนี้ ค่าใช้จ่ายที่มีอยู่ยังคงป้ายโครงการเดิม";
 
 /* === Permissions === */
-"permissions.title" = "สิทธิ์การใช้งาน";
+"permissions.title" = "สมาชิกและบทบาท";
 "permissions.subtitle" = "%d สมาชิก · %d คำเชิญรอตอบรับ";
+"permissions.scope_note" = "บทบาทเหล่านี้ใช้กับทั้งเวิร์กสเปซ ส่วนการเข้าถึงแต่ละโครงการจัดการภายในโครงการนั้น";
 "permissions.members" = "สมาชิก";
 "permissions.invites" = "คำเชิญรอตอบรับ";
 "permissions.invite_member" = "เชิญสมาชิก";

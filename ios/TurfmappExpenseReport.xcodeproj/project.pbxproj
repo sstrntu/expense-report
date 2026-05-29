@@ -53,6 +53,7 @@
 		D577E2515650656DF3A7B9F5 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCEF355C532DA04E3146431 /* ActivityView.swift */; };
 		D81A57A8F08D8D3AD7B5844E /* DomainDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B488DCADA8C68BFA0360E5C /* DomainDetailView.swift */; };
 		D9CB48D5495FA003F53A9239 /* SupabaseRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = E267442BEA226AA91190BCA2 /* SupabaseRepositories.swift */; };
+		E2AEB90BAA59D991DEBC2879 /* SheetScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = A837937D2F03688BEFA10820 /* SheetScaffold.swift */; };
 		E4E2E3CF2031D2A9C6B0A3CD /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C580869F5B6FF78D1128C4E /* Tokens.swift */; };
 		EB6D7FEB39BE53D706FD6259 /* CurrencyConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1318FEF50B5EA3EAB23F8E7F /* CurrencyConverter.swift */; };
 		EBDA7A1CA4F408572CA28FAB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DBA109009158416677C78BCB /* Assets.xcassets */; };
@@ -113,6 +114,7 @@
 		8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
 		9D1A529E6050B7B6F915F71D /* V1Domain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V1Domain.swift; sourceTree = "<group>"; };
 		A2E1528C7366ED9C0B1743FF /* MockRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRepositories.swift; sourceTree = "<group>"; };
+		A837937D2F03688BEFA10820 /* SheetScaffold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetScaffold.swift; sourceTree = "<group>"; };
 		BDF7A75B1F90F57756C02336 /* SocialAuthButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialAuthButtons.swift; sourceTree = "<group>"; };
 		BEE31180D60EFA1E623F42E8 /* WorkflowEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowEdgeCaseTests.swift; sourceTree = "<group>"; };
 		BFCEF355C532DA04E3146431 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
@@ -217,6 +219,7 @@
 				3CCE3D5DFB96304D91AC7BF2 /* Charts.swift */,
 				7308954FD71CE684A0764452 /* DraftsCard.swift */,
 				8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */,
+				A837937D2F03688BEFA10820 /* SheetScaffold.swift */,
 				231934AADFA8013182DE19B6 /* StatusPill.swift */,
 			);
 			path = Components;
@@ -421,6 +424,7 @@
 				7E9A53D69CC02AA267DE44B4 /* RepositoryContracts.swift in Sources */,
 				1EBDAF336E8CB243B5BF07D1 /* ReviewView.swift in Sources */,
 				5D5D8C1FC9CA7F24D41815A7 /* RootShell.swift in Sources */,
+				E2AEB90BAA59D991DEBC2879 /* SheetScaffold.swift in Sources */,
 				31D7DA90A3344E0B9C7C0A18 /* SocialAuth.swift in Sources */,
 				BFBB382222740FBED587AC44 /* SocialAuthButtons.swift in Sources */,
 				443FA1297503350D3A53D578 /* StatusPill.swift in Sources */,

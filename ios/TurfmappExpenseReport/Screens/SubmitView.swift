@@ -854,49 +854,47 @@ struct CameraPicker: UIViewControllerRepresentable {
 struct ReceiptSourceSheet: View {
     /// (image data, file name, content type)
     var onScan: (Data, String, String) -> Void
+    @Environment(\.dismiss) private var dismiss
     @State private var showCamera = false
     @State private var photosItem: PhotosPickerItem?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(tr("submit.scan.add_receipt"))
-                .font(.system(size: 20, weight: .bold))
-                .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 16)
+        SheetScaffold(
+            scrolls: false,
+            header: { SheetHeader(title: tr("submit.scan.add_receipt"), onClose: { dismiss() }) },
+            content: {
+                VStack(spacing: 0) {
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        Button { showCamera = true } label: {
+                            sourceRow(icon: "camera.fill", tint: Tokens.slate500,
+                                      title: tr("submit.scan.take_photo"),
+                                      subtitle: tr("submit.scan.take_photo.subtitle"))
+                        }
+                        .buttonStyle(.plain)
+                        Divider().opacity(0.4).padding(.leading, 56)
+                    }
 
-            VStack(spacing: 0) {
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    Button { showCamera = true } label: {
-                        sourceRow(icon: "camera.fill", tint: Tokens.slate500,
-                                  title: tr("submit.scan.take_photo"),
-                                  subtitle: tr("submit.scan.take_photo.subtitle"))
+                    PhotosPicker(selection: $photosItem, matching: .images) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "photo.fill")
+                                .foregroundStyle(.white)
+                                .frame(width: 30, height: 30)
+                                .background(Tokens.aiPurple, in: RoundedRectangle(cornerRadius: 9))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(tr("submit.scan.choose_library")).font(.system(size: 13.5, weight: .semibold))
+                                Text(tr("submit.scan.choose_library.subtitle")).font(.system(size: 11)).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 12)
                     }
                     .buttonStyle(.plain)
-                    Divider().opacity(0.4).padding(.leading, 56)
                 }
-
-                PhotosPicker(selection: $photosItem, matching: .images) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "photo.fill")
-                            .foregroundStyle(.white)
-                            .frame(width: 30, height: 30)
-                            .background(Tokens.aiPurple, in: RoundedRectangle(cornerRadius: 9))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(tr("submit.scan.choose_library")).font(.system(size: 13.5, weight: .semibold))
-                            Text(tr("submit.scan.choose_library.subtitle")).font(.system(size: 11)).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 14).padding(.vertical, 12)
-                }
-                .buttonStyle(.plain)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             }
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-            .padding(.horizontal, 20)
-
-            Spacer()
-        }
+        )
         .fullScreenCover(isPresented: $showCamera) {
             CameraPicker(isPresented: $showCamera) { data in
                 onScan(data, "receipt-\(Int(Date().timeIntervalSince1970)).jpg", "image/jpeg")
@@ -983,12 +981,12 @@ struct FormFieldRow: View {
 }
 
 extension Text {
-    func primaryActionLabel() -> some View {
+    func primaryActionLabel(tint: Color = Tokens.slate500) -> some View {
         self.font(.system(size: 15, weight: .semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 16))
+            .background(tint, in: RoundedRectangle(cornerRadius: 16))
     }
 
     func secondaryActionLabel() -> some View {

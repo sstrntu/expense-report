@@ -228,7 +228,7 @@
 "projects.member.add" = "Add member";
 "projects.member.add_action" = "Add to project";
 "projects.member.remove" = "Remove from project";
-"projects.member.empty" = "No project-specific members yet. Workspace members still have default access based on project visibility.";
+"projects.member.empty" = "Admins and the project owner already have full access. Add members here to give someone else a role on just this project.";
 "projects.member.role" = "Role";
 "projects.member.none_to_add" = "Everyone in the workspace already has access.";
 "projects.archive_project" = "Archive Project";
@@ -272,6 +272,20 @@
 "projects.over_budget.block" = "Block";
 "projects.categories.all" = "All categories";
 "projects.categories.custom" = "Custom";
+/* Project role descriptions + clarity strings */
+"projects.role.viewer.desc" = "Can see this project's expenses, but not submit";
+"projects.role.submitter.desc" = "Can submit expenses to this project";
+"projects.role.approver.desc" = "Can approve or reject this project's expenses";
+"projects.role.finance.desc" = "Can mark this project's expenses reimbursed";
+"projects.role.project_admin.desc" = "Full control of this project, including its members";
+"projects.row.subtitle" = "%1$@ · you're %2$@";
+"projects.access.via_workspace" = "%@ (workspace)";
+"projects.section.budget" = "Budget & spend";
+"projects.section.approval_rules" = "Approval rules";
+"projects.detail.intro" = "How expenses in this project get routed and approved.";
+"projects.member.add.subtitle" = "Pick a workspace member, then choose what they can do here. This is separate from their workspace-wide role.";
+"projects.member.step_member" = "1. Choose member";
+"projects.member.step_role" = "2. Role on this project";
 "activity.title" = "Activity";
 "activity.search.placeholder" = "Search merchant, category, project";
 "activity.all_projects" = "All projects";
@@ -478,8 +492,8 @@
 "profile.nav.workspace.sub" = "Name, logo, and identity";
 "profile.nav.manage_projects" = "Manage projects";
 "profile.nav.manage_projects.sub" = "%d projects · %@ budget";
-"profile.nav.permissions" = "Permissions";
-"profile.nav.permissions.sub" = "%d members · 4 roles";
+"profile.nav.permissions" = "Members & roles";
+"profile.nav.permissions.sub" = "%d members · roles apply workspace-wide";
 "profile.nav.reimbursement_queue" = "Reimbursement queue";
 "profile.nav.reimbursement_queue.sub" = "Mark expenses as paid, handle finance review";
 "profile.nav.activity" = "My activity";
@@ -558,8 +572,8 @@
 "workspace.saving" = "Saving...";
 "workspace.saved" = "Workspace updated.";
 "workspace.update_failed" = "Could not update workspace";
-"workspace.per_project_policy" = "Per-project policy";
-"workspace.per_project_policy.message" = "Approval thresholds and routing live on individual projects — open Manage projects to edit those.";
+"workspace.per_project_policy" = "Two levels of access";
+"workspace.per_project_policy.message" = "Roles in “Members & roles” apply across the whole workspace. Access to a single project — plus its approval thresholds and routing — is set inside that project under Manage projects.";
 
 /* === Manage projects === */
 "projects.title" = "Manage projects";
@@ -575,8 +589,9 @@
 "projects.confirm_delete.message" = "This will hide the project. Existing expenses keep their project tag.";
 
 /* === Permissions === */
-"permissions.title" = "Permissions";
+"permissions.title" = "Members & roles";
 "permissions.subtitle" = "%d members · %d pending invites";
+"permissions.scope_note" = "These roles apply across the entire workspace. Access to individual projects is managed inside each project.";
 "permissions.members" = "Members";
 "permissions.invites" = "Pending invites";
 "permissions.invite_member" = "Invite member";

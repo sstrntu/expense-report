@@ -80,12 +80,12 @@ struct ManageProjectsView: View {
                     )
                 }
             }
-            .presentationDetents([.height(280)])
+            .presentationDetents([.height(340)])
         }
         .sheet(item: $viewingProject) { project in
             DomainProjectDetailSheet(project: project, expenses: repositoryApp.expenses)
                 .environmentObject(app)
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
         }
     }
 
@@ -103,10 +103,21 @@ struct ManageProjectsView: View {
             } label: {
                 HStack(spacing: 10) {
                     RoundedRectangle(cornerRadius: 4).fill(Tokens.slate500).frame(width: 6, height: 32)
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(p.name).font(.system(size: 13.5, weight: .semibold))
-                        Text("\(p.currentUserProjectRole?.label ?? tr("projects.role.member")) · \(localizedVisibility(p.visibility))")
-                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                        // Visibility carries an icon so the word ("Team") reads
+                        // as access scope, and the role is spelled out as
+                        // "you're <role>" so it isn't mistaken for a second
+                        // visibility value.
+                        HStack(spacing: 5) {
+                            Image(systemName: projectVisibilityIcon(p.visibility))
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Text(tr("projects.row.subtitle",
+                                    localizedVisibility(p.visibility),
+                                    projectAccessLabel(projectRole: p.currentUserProjectRole, workspaceRole: app.role)))
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
@@ -323,6 +334,46 @@ extension ProjectRole {
         case .projectAdmin: return tr("projects.role.project_admin")
         }
     }
+
+    /// One-line plain-language description of what the role grants *inside a
+    /// project*. Surfaced under the role picker in the Add Member sheet so the
+    /// person granting access understands the choice without prior knowledge.
+    @MainActor var blurb: String {
+        switch self {
+        case .viewer: return tr("projects.role.viewer.desc")
+        case .submitter: return tr("projects.role.submitter.desc")
+        case .approver: return tr("projects.role.approver.desc")
+        case .finance: return tr("projects.role.finance.desc")
+        case .projectAdmin: return tr("projects.role.project_admin.desc")
+        }
+    }
+}
+
+/// How to describe the *current user's* standing on a project. An explicit
+/// project role wins; otherwise we name the workspace role their access flows
+/// from (e.g. "Admin (workspace)") rather than the misleading bare "Member" —
+/// admins/managers/finance reach projects through their workspace role, not a
+/// project-membership row, so they never carry a project role here.
+@MainActor func projectAccessLabel(projectRole: ProjectRole?, workspaceRole: AppRole) -> String {
+    if let projectRole { return projectRole.label }
+    switch workspaceRole {
+    case .admin, .manager, .finance:
+        return tr("projects.access.via_workspace", tr("role.\(workspaceRole.rawValue)"))
+    case .employee:
+        return tr("projects.role.member")
+    }
+}
+
+/// SF Symbol + localized label for a project's visibility token. Centralised
+/// so the project list and detail sheet render visibility identically and
+/// users learn the icon ↔ meaning mapping.
+@MainActor func projectVisibilityIcon(_ raw: String) -> String {
+    switch raw.lowercased() {
+    case "private":               return "lock.fill"
+    case "team":                  return "person.2.fill"
+    case "org-wide", "workspace": return "building.2.fill"
+    default:                      return "person.2.fill"
+    }
 }
 
 struct DomainThresholdEditorSheet: View {
@@ -351,38 +402,40 @@ struct DomainThresholdEditorSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(tr("projects.auto_approve_threshold")).font(.system(size: 18, weight: .bold))
-                Text(project.name).font(.system(size: 13)).foregroundStyle(.secondary)
+        SheetScaffold(
+            scrolls: false,
+            header: {
+                SheetHeader(
+                    title: tr("projects.auto_approve_threshold"),
+                    subtitle: project.name,
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(tr("projects.auto_approve_threshold.subtitle"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack {
+                        Text(currencyPrefix).font(.system(size: 28, weight: .bold)).foregroundStyle(.secondary)
+                        TextField("0", text: $amountText)
+                            .font(.system(size: 36, weight: .bold))
+                            .keyboardType(.numberPad)
+                    }
+                }
+            },
+            footer: {
+                Button {
+                    if let v = Double(amountText), v >= 0 { onSave(v) }
+                    dismiss()
+                } label: {
+                    Text(tr("common.save")).primaryActionLabel()
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.top, 24).padding(.horizontal, 20)
-
-            Text(tr("projects.auto_approve_threshold.subtitle"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-
-            HStack {
-                Text(currencyPrefix).font(.system(size: 28, weight: .bold)).foregroundStyle(.secondary)
-                TextField("0", text: $amountText)
-                    .font(.system(size: 36, weight: .bold))
-                    .keyboardType(.numberPad)
-            }
-            .padding(.horizontal, 20)
-
-            Spacer()
-
-            Button {
-                if let v = Double(amountText), v >= 0 { onSave(v) }
-                dismiss()
-            } label: {
-                Text(tr("common.save")).primaryActionLabel()
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 24)
-        }
+        )
     }
 }
 
@@ -418,11 +471,14 @@ struct DomainProjectDetailSheet: View {
     }
 
     /// Workspace members not yet in the project — the candidate pool for
-    /// the Add Member sheet. Filters out the current project's members so
-    /// the picker only shows newly-addable people.
+    /// the Add Member sheet. Filters out the project's existing members and
+    /// workspace admins: admins already have blanket access to every project
+    /// via their workspace role, so a project-membership row would grant them
+    /// nothing — listing them (including the creator) just invites the
+    /// confusing "add yourself to your own project" action.
     private var addableMembers: [DomainWorkspaceMember] {
         let assigned = Set(projectMembers.map(\.workspaceMembershipId))
-        return repositoryApp.members.filter { !assigned.contains($0.id) }
+        return repositoryApp.members.filter { !assigned.contains($0.id) && $0.role != .admin }
     }
 
     private var categories: [(id: String, label: String)] {
@@ -438,73 +494,20 @@ struct DomainProjectDetailSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(project.name).font(.system(size: 20, weight: .bold))
-                    Text("\(project.currentUserProjectRole?.label ?? tr("projects.role.member")) · \(localizedVisibilityFree(project.visibility))").font(.system(size: 12)).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button {
-                    isEditing.toggle()
-                } label: {
-                    Image(systemName: isEditing ? "checkmark" : "pencil")
-                        .font(.system(size: 13, weight: .bold))
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-                .background(Color.primary.opacity(0.06), in: Circle())
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-                .background(Color.primary.opacity(0.06), in: Circle())
-            }
-            .padding(.top, 24).padding(.horizontal, 20)
-
-            if isEditing {
-                policyEditor
-            } else {
-                policySummary
-            }
-
-            membersSection
-                .padding(.horizontal, 20)
-
-            HStack(spacing: 10) {
-                Button {
-                    Task {
-                        await repositoryApp.archiveProject(id: project.id)
-                        await MainActor.run { dismiss() }
+        SheetScaffold(
+            header: { detailHeader },
+            content: {
+                VStack(alignment: .leading, spacing: 16) {
+                    if isEditing {
+                        policyEditor
+                    } else {
+                        policySummary
                     }
-                } label: {
-                    Label(tr("projects.archive_project"), systemImage: "archivebox")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Tokens.rejected)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                    membersSection
                 }
-                .buttonStyle(.plain)
-                .background(Tokens.rejected.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
-
-                if isEditing {
-                    Button {
-                        savePolicy()
-                    } label: {
-                        Text(tr("projects.save_policy"))
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                    .buttonStyle(.plain)
-                    .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 12))
-                }
-            }
-            .padding(.horizontal, 20)
-
-            Spacer()
-        }
+            },
+            footer: { detailFooter }
+        )
         .onAppear(perform: seedEditor)
         .task { await loadProjectMembers() }
         .sheet(isPresented: $showAddMemberSheet) {
@@ -515,7 +518,69 @@ struct DomainProjectDetailSheet: View {
                 }
             )
             .environmentObject(repositoryApp)
-            .presentationDetents([.medium])
+            .presentationDetents([.large])
+        }
+    }
+
+    /// Custom header: title + visibility/role subtitle, an inline edit toggle,
+    /// and the standard ✕. Richer than `SheetHeader`, so it's built inline and
+    /// handed to the scaffold's header slot.
+    private var detailHeader: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(project.name).font(.system(size: 20, weight: .bold))
+                HStack(spacing: 5) {
+                    Image(systemName: projectVisibilityIcon(project.visibility))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text(tr("projects.row.subtitle",
+                            localizedVisibilityFree(project.visibility),
+                            projectAccessLabel(projectRole: project.currentUserProjectRole, workspaceRole: app.role)))
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 8)
+            Button { isEditing.toggle() } label: {
+                Image(systemName: isEditing ? "checkmark" : "pencil")
+                    .font(.system(size: 13, weight: .bold))
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .background(Color.primary.opacity(0.06), in: Circle())
+            SheetCloseButton { dismiss() }
+        }
+    }
+
+    private var detailFooter: some View {
+        HStack(spacing: 10) {
+            Button {
+                Task {
+                    await repositoryApp.archiveProject(id: project.id)
+                    await MainActor.run { dismiss() }
+                }
+            } label: {
+                Label(tr("projects.archive_project"), systemImage: "archivebox")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Tokens.rejected)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
+            .background(Tokens.rejected.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+
+            if isEditing {
+                Button {
+                    savePolicy()
+                } label: {
+                    Text(tr("projects.save_policy"))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 12))
+            }
         }
     }
 
@@ -640,26 +705,47 @@ struct DomainProjectDetailSheet: View {
     }
 
     private var policySummary: some View {
-        VStack(spacing: 0) {
-            FormFieldRow(label: tr("projects.field.budget"), value: project.budget.formatted, showChevron: false)
-            Divider().opacity(0.4)
-            FormFieldRow(label: tr("projects.budget_period"), value: localizedBudgetPeriod(project.budgetPeriod), showChevron: false)
-            Divider().opacity(0.4)
-            FormFieldRow(label: tr("projects.field.spent"), value: MoneyAmount.format(amount: spent, currency: project.budget.currency), showChevron: false)
-            Divider().opacity(0.4)
-            FormFieldRow(label: tr("projects.auto_approve_under"), value: project.approvalThreshold.formatted, showChevron: false)
-            Divider().opacity(0.4)
-            FormFieldRow(label: tr("projects.field.receipt_required_over"), value: project.receiptRequiredThreshold.formatted, showChevron: false)
-            Divider().opacity(0.4)
-            FormFieldRow(label: tr("projects.routing"), value: project.routingMode.label, showChevron: false)
-            Divider().opacity(0.4)
-            FormFieldRow(label: tr("projects.over_budget"), value: localizedOverBudget(project.overBudgetBehavior), showChevron: false)
-            Divider().opacity(0.4)
-            FormFieldRow(label: tr("projects.allowed_categories"), value: allowedCategoryLabel(project.allowedCategoryIds), showChevron: false)
+        VStack(alignment: .leading, spacing: 14) {
+            Text(tr("projects.detail.intro"))
+                .font(.system(size: 12)).foregroundStyle(.secondary)
+
+            summaryCard(tr("projects.section.budget")) {
+                FormFieldRow(label: tr("projects.field.budget"), value: project.budget.formatted, showChevron: false)
+                Divider().opacity(0.4)
+                FormFieldRow(label: tr("projects.budget_period"), value: localizedBudgetPeriod(project.budgetPeriod), showChevron: false)
+                Divider().opacity(0.4)
+                FormFieldRow(label: tr("projects.field.spent"), value: MoneyAmount.format(amount: spent, currency: project.budget.currency), showChevron: false)
+            }
+
+            summaryCard(tr("projects.section.approval_rules")) {
+                FormFieldRow(label: tr("projects.auto_approve_under"), value: project.approvalThreshold.formatted, showChevron: false)
+                Divider().opacity(0.4)
+                FormFieldRow(label: tr("projects.field.receipt_required_over"), value: project.receiptRequiredThreshold.formatted, showChevron: false)
+                Divider().opacity(0.4)
+                FormFieldRow(label: tr("projects.routing"), value: project.routingMode.label, showChevron: false)
+                Divider().opacity(0.4)
+                FormFieldRow(label: tr("projects.over_budget"), value: localizedOverBudget(project.overBudgetBehavior), showChevron: false)
+                Divider().opacity(0.4)
+                FormFieldRow(label: tr("projects.allowed_categories"), value: allowedCategoryLabel(project.allowedCategoryIds), showChevron: false)
+            }
         }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-        .padding(.horizontal, 20)
+    }
+
+    /// A titled group of read-only policy rows. Splitting the previously flat
+    /// nine-row list into "Budget & spend" and "Approval rules" gives the sheet
+    /// scannable structure instead of one undifferentiated wall of values.
+    @ViewBuilder
+    private func summaryCard<Rows: View>(_ title: String, @ViewBuilder rows: () -> Rows) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.5)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+            VStack(spacing: 0) { rows() }
+                .padding(16)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        }
     }
 
     private var policyEditor: some View {
@@ -682,7 +768,6 @@ struct DomainProjectDetailSheet: View {
         }
         .padding(16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-        .padding(.horizontal, 20)
     }
 
     private func editTextRow(_ label: String, text: Binding<String>, prefix: String = "") -> some View {
@@ -889,84 +974,109 @@ struct AddProjectMemberSheet: View {
     @State private var pickedRole: ProjectRole = .submitter
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(tr("projects.member.add"))
-                .font(.system(size: 20, weight: .bold))
-                .padding(.horizontal, 20).padding(.top, 24)
-
-            // Role picker first — most users already know who they're adding;
-            // they're really choosing what permission to grant.
-            VStack(alignment: .leading, spacing: 8) {
-                Text(tr("projects.member.role"))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 4)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(ProjectRole.allCases, id: \.self) { role in
-                            Button { pickedRole = role } label: {
-                                Text(role.label)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(pickedRole == role ? .white : Color.primary)
-                                    .padding(.horizontal, 10).padding(.vertical, 6)
-                                    .background(
-                                        pickedRole == role ? Tokens.slate500 : Color.primary.opacity(0.06),
-                                        in: Capsule()
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-
-            // Member list — tap to select. Single-select with a checkmark.
-            VStack(alignment: .leading, spacing: 0) {
-                if addableMembers.isEmpty {
-                    Text(tr("projects.member.none_to_add"))
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 16).padding(.vertical, 20)
-                } else {
-                    ForEach(Array(addableMembers.enumerated()), id: \.element.id) { idx, member in
-                        if idx > 0 { Divider().opacity(0.4) }
-                        Button { pickedMembershipId = member.id } label: {
-                            HStack(spacing: 10) {
-                                Avatar(color: member.avatarColor, size: 30, label: member.initials)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(member.displayName).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.primary)
-                                    Text(member.email).font(.system(size: 11)).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if pickedMembershipId == member.id {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(Tokens.approved)
+        SheetScaffold(
+            header: {
+                SheetHeader(
+                    title: tr("projects.member.add"),
+                    subtitle: tr("projects.member.add.subtitle"),
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
+                VStack(alignment: .leading, spacing: 18) {
+                    // Step 1 — who. Pick first; choosing what they can do only
+                    // matters once there's a person to grant it to.
+                    VStack(alignment: .leading, spacing: 8) {
+                        stepLabel(tr("projects.member.step_member"))
+                        if addableMembers.isEmpty {
+                            Text(tr("projects.member.none_to_add"))
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 16).padding(.vertical, 20)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        } else {
+                            VStack(spacing: 0) {
+                                ForEach(Array(addableMembers.enumerated()), id: \.element.id) { idx, member in
+                                    if idx > 0 { Divider().opacity(0.4) }
+                                    Button { pickedMembershipId = member.id } label: {
+                                        HStack(spacing: 10) {
+                                            Avatar(color: member.avatarColor, size: 30, label: member.initials)
+                                            VStack(alignment: .leading, spacing: 1) {
+                                                Text(member.displayName).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.primary)
+                                                Text(member.email).font(.system(size: 11)).foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Image(systemName: pickedMembershipId == member.id ? "checkmark.circle.fill" : "circle")
+                                                .font(.system(size: 18))
+                                                .foregroundStyle(pickedMembershipId == member.id ? Tokens.approved : Color.secondary.opacity(0.4))
+                                        }
+                                        .padding(.horizontal, 14).padding(.vertical, 10)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
-                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                         }
-                        .buttonStyle(.plain)
+                    }
+
+                    // Step 2 — what. The selected role's plain-language blurb
+                    // sits right below the chips so the choice is legible to
+                    // someone who doesn't already know the role taxonomy.
+                    VStack(alignment: .leading, spacing: 8) {
+                        stepLabel(tr("projects.member.step_role"))
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(ProjectRole.allCases, id: \.self) { role in
+                                    Button { pickedRole = role } label: {
+                                        Text(role.label)
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(pickedRole == role ? .white : Color.primary)
+                                            .padding(.horizontal, 12).padding(.vertical, 7)
+                                            .background(
+                                                pickedRole == role ? Tokens.slate500 : Color.primary.opacity(0.06),
+                                                in: Capsule()
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 2)
+                        }
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Tokens.slate500)
+                            Text(pickedRole.blurb)
+                                .font(.system(size: 12)).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(12)
+                        .background(Tokens.slate500.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
+            },
+            footer: {
+                Button {
+                    guard let id = pickedMembershipId else { return }
+                    onAdd(id, pickedRole)
+                    dismiss()
+                } label: {
+                    Text(tr("projects.member.add_action")).primaryActionLabel()
+                }
+                .buttonStyle(.plain)
+                .disabled(pickedMembershipId == nil)
+                .opacity(pickedMembershipId == nil ? 0.5 : 1)
             }
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, 20)
+        )
+    }
 
-            Spacer()
-
-            Button {
-                guard let id = pickedMembershipId else { return }
-                onAdd(id, pickedRole)
-                dismiss()
-            } label: {
-                Text(tr("projects.member.add_action")).primaryActionLabel()
-            }
-            .buttonStyle(.plain)
-            .disabled(pickedMembershipId == nil)
-            .opacity(pickedMembershipId == nil ? 0.5 : 1)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 24)
-        }
+    private func stepLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(Color.primary)
+            .padding(.horizontal, 4)
     }
 }

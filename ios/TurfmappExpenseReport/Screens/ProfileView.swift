@@ -431,15 +431,13 @@ struct NotificationDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 12) {
-                Circle().fill(notification.tint)
-                    .frame(width: 10, height: 10)
-                    .padding(.top, 8)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(notification.title).font(.system(size: 20, weight: .bold))
+        SheetScaffold(
+            scrolls: false,
+            header: { SheetHeader(title: notification.title, onClose: { dismiss() }) },
+            content: {
+                VStack(alignment: .leading, spacing: 10) {
                     Text(notification.subtitle)
-                        .font(.system(size: 13))
+                        .font(.system(size: 14))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 6) {
@@ -452,19 +450,9 @@ struct NotificationDetailSheet: View {
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
-                    .padding(.top, 2)
                 }
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-                .background(Color.primary.opacity(0.06), in: Circle())
             }
-            .padding(.top, 24).padding(.horizontal, 20)
-
-            Spacer()
-        }
+        )
     }
 }
 
@@ -682,54 +670,52 @@ struct ChangePasswordSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(tr("security.change_password")).font(.system(size: 20, weight: .bold))
-                .padding(.horizontal, 20).padding(.top, 24)
+        SheetScaffold(
+            scrolls: false,
+            header: { SheetHeader(title: tr("security.change_password"), onClose: { dismiss() }) },
+            content: {
+                VStack(alignment: .leading, spacing: 16) {
+                    GlassCard(padding: Tokens.padCard) {
+                        VStack(spacing: 0) {
+                            HStack {
+                                Text(tr("security.password.new")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                                Spacer()
+                                SecureField(tr("security.password.hint"), text: $newPassword)
+                                    .font(.system(size: 13.5, weight: .medium))
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(maxWidth: 220)
+                            }
+                            .padding(.vertical, 11)
+                            Divider().opacity(0.4)
+                            HStack {
+                                Text(tr("security.password.confirm")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                                Spacer()
+                                SecureField(tr("security.password.reenter"), text: $confirm)
+                                    .font(.system(size: 13.5, weight: .medium))
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(maxWidth: 220)
+                            }
+                            .padding(.vertical, 11)
+                        }
+                    }
 
-            GlassCard(padding: Tokens.padCard) {
-                VStack(spacing: 0) {
-                    HStack {
-                        Text(tr("security.password.new")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                        Spacer()
-                        SecureField(tr("security.password.hint"), text: $newPassword)
-                            .font(.system(size: 13.5, weight: .medium))
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 220)
+                    if !confirm.isEmpty && newPassword != confirm {
+                        Text(tr("security.password.mismatch"))
+                            .font(.system(size: 12)).foregroundStyle(Tokens.rejected)
                     }
-                    .padding(.vertical, 11)
-                    Divider().opacity(0.4)
-                    HStack {
-                        Text(tr("security.password.confirm")).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                        Spacer()
-                        SecureField(tr("security.password.reenter"), text: $confirm)
-                            .font(.system(size: 13.5, weight: .medium))
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 220)
-                    }
-                    .padding(.vertical, 11)
                 }
+            },
+            footer: {
+                Button {
+                    onSubmit(newPassword)
+                } label: {
+                    Text(tr("common.save")).primaryActionLabel()
+                }
+                .buttonStyle(.plain)
+                .opacity(canSubmit ? 1 : 0.5)
+                .disabled(!canSubmit)
             }
-            .padding(.horizontal, 20)
-
-            if !confirm.isEmpty && newPassword != confirm {
-                Text(tr("security.password.mismatch"))
-                    .font(.system(size: 12)).foregroundStyle(Tokens.rejected)
-                    .padding(.horizontal, 20)
-            }
-
-            Spacer()
-
-            Button {
-                onSubmit(newPassword)
-            } label: {
-                Text(tr("common.save")).primaryActionLabel()
-            }
-            .buttonStyle(.plain)
-            .opacity(canSubmit ? 1 : 0.5)
-            .disabled(!canSubmit)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 24)
-        }
+        )
     }
 }
 
