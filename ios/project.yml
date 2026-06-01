@@ -36,7 +36,7 @@ targets:
         # App Store / TestFlight submissions. Bump CURRENT_PROJECT_VERSION
         # for every new TestFlight upload (Apple requires it to be strictly
         # increasing within a marketing version).
-        MARKETING_VERSION: "1.6"
+        MARKETING_VERSION: "1.7"
         CURRENT_PROJECT_VERSION: "2"
 
   TurfmappExpenseReportTests:
