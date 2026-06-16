@@ -23,6 +23,35 @@ Done via the Supabase MCP on 2026-05-16:
 - ✅ `Info.plist` uses the project's modern publishable key; `config.toml`
   `project_id` corrected to `pwxhgvuyaxgavommtqpr`.
 
+### Pending migrations (2026-06-12 permission hardening — not yet applied)
+
+Apply in order via the Supabase MCP or `supabase db push`:
+
+- `20260612090000_protect_last_admin.sql` — trigger refusing to demote,
+  suspend, remove, or delete a workspace's last active admin (prevents
+  permanent admin lockout; the Permissions UI locks the row too).
+- `20260612090100_submitters_can_cancel_pending.sql` — widens the submitter
+  UPDATE policy's USING set so "Cancel submission" works on in-flight
+  expenses (target statuses unchanged — still no path into approval states).
+- `20260612090200_reviewer_project_visibility.sql` — `can_access_project`
+  now includes workspace manager/finance, so reviewers can see the name and
+  budget of private/team projects whose expenses they could already act on.
+- `20260612090300_clear_project_roles_on_reinvite.sql` — accept-invite RPC
+  clears previous-tenure `project_memberships` when reactivating a removed
+  member, so old project roles don't silently come back.
+- `20260612090400_mark_reimbursed_records_payment.sql` — `mark_expense_reimbursed`
+  RPC writes the `payment_records` audit row (method, amount, proof, paid_at)
+  and flips status to `reimbursed` in one transaction. Pairs with the iOS
+  client change routing reimbursement through the RPC instead of a bare
+  status PATCH.
+
+The iOS gating changes that pair with these ship in the same commit; the app
+fails safe against an un-migrated DB (actions are hidden or rejected by the
+old policies), with two exceptions that need their migration applied to work
+at all: "Cancel submission" on pending expenses (`…090100`), and "Mark
+reimbursed" (`…090400`) — the latter calls an RPC that doesn't exist until
+the migration runs, so reimbursement will error until then.
+
 ### TWO things still required from you (dashboard — no API/MCP for these)
 
 1. **Expose the new schema to the Data API** (the app/edge cannot reach

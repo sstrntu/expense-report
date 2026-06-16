@@ -29,25 +29,30 @@ struct ManageProjectsView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .frame(width: 34, height: 34)
                 }
-                .buttonStyle(.plain).glassSurface(corner: 999)
+                .buttonStyle(.pressable).glassSurface(corner: 999)
 
                 Text(tr("projects.title")).font(.system(size: 18, weight: .bold))
                 Spacer()
-                Button {
-                    projectName = ""
-                    projectBudget = ""
-                    projectOwner = app.userName
-                    projectThreshold = "100"
-                    projectVisibility = "Team"
-                    showCreate.toggle()
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 15, weight: .bold))
-                        .frame(width: 34, height: 34)
-                        .foregroundStyle(.white)
+                // Project creation is admin-only server-side ("admins can
+                // manage projects" RLS) — showing the button to managers gave
+                // them a form whose submit was always rejected.
+                if app.role == .admin {
+                    Button {
+                        projectName = ""
+                        projectBudget = ""
+                        projectOwner = app.userName
+                        projectThreshold = "100"
+                        projectVisibility = "Team"
+                        showCreate.toggle()
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 15, weight: .bold))
+                            .frame(width: 34, height: 34)
+                            .foregroundStyle(.white)
+                    }
+                    .buttonStyle(.pressable)
+                    .background(Tokens.slate500, in: Circle())
                 }
-                .buttonStyle(.plain)
-                .background(Tokens.slate500, in: Circle())
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
@@ -125,7 +130,7 @@ struct ManageProjectsView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             HStack {
                 Text(tr("projects.spent.label", MoneyAmount.format(amount: spent, currency: p.budget.currency)))
@@ -154,7 +159,7 @@ struct ManageProjectsView: View {
                 .padding(10)
                 .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(14)
     }
@@ -200,7 +205,7 @@ struct ManageProjectsView: View {
                         }
                         .padding(.vertical, 8)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
 
                 Button {
@@ -232,7 +237,7 @@ struct ManageProjectsView: View {
                         .font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 12)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 12))
                 .padding(.top, 10)
             }
@@ -433,7 +438,7 @@ struct DomainThresholdEditorSheet: View {
                 } label: {
                     Text(tr("common.save")).primaryActionLabel()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         )
     }
@@ -545,7 +550,7 @@ struct DomainProjectDetailSheet: View {
                     .font(.system(size: 13, weight: .bold))
                     .frame(width: 32, height: 32)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .background(Color.primary.opacity(0.06), in: Circle())
             SheetCloseButton { dismiss() }
         }
@@ -565,7 +570,7 @@ struct DomainProjectDetailSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .background(Tokens.rejected.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
 
             if isEditing {
@@ -578,7 +583,7 @@ struct DomainProjectDetailSheet: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 12))
             }
         }
@@ -602,7 +607,7 @@ struct DomainProjectDetailSheet: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Tokens.slate500)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
 
@@ -1014,7 +1019,7 @@ struct AddProjectMemberSheet: View {
                                         .padding(.horizontal, 14).padding(.vertical, 10)
                                         .contentShape(Rectangle())
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.pressable)
                                 }
                             }
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
@@ -1039,7 +1044,7 @@ struct AddProjectMemberSheet: View {
                                                 in: Capsule()
                                             )
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.pressable)
                                 }
                             }
                             .padding(.horizontal, 2)
@@ -1066,7 +1071,7 @@ struct AddProjectMemberSheet: View {
                 } label: {
                     Text(tr("projects.member.add_action")).primaryActionLabel()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(pickedMembershipId == nil)
                 .opacity(pickedMembershipId == nil ? 0.5 : 1)
             }

@@ -67,6 +67,16 @@ enum ExpenseWorkflow {
         expense.status == .rejected
     }
 
+    /// Authorization-aware overload: only the submitter can resubmit their
+    /// rejected expense. The submit RPC enforces this server-side; the UI
+    /// previously gated on workspace role == employee, which both hid the
+    /// action from reviewer-role submitters and showed it to teammates.
+    static func canResubmit(_ expense: DomainExpense, currentMembershipId: String?) -> Bool {
+        guard canResubmit(expense) else { return false }
+        guard let me = currentMembershipId else { return false }
+        return expense.submittedByMembershipId == me
+    }
+
     static func canCancel(_ expense: DomainExpense) -> Bool {
         switch expense.status {
         case .submitted, .scanProcessing, .pendingManagerApproval, .pendingFinanceReview, .approved:
@@ -74,6 +84,14 @@ enum ExpenseWorkflow {
         default:
             return false
         }
+    }
+
+    /// Authorization-aware overload: only the submitter can cancel. Matches
+    /// the "submitters can update own expenses" RLS policy.
+    static func canCancel(_ expense: DomainExpense, currentMembershipId: String?) -> Bool {
+        guard canCancel(expense) else { return false }
+        guard let me = currentMembershipId else { return false }
+        return expense.submittedByMembershipId == me
     }
 
     static func canReject(_ expense: DomainExpense, role: WorkspaceRole) -> Bool {

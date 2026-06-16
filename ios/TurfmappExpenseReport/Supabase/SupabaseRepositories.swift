@@ -1469,7 +1469,33 @@ struct SupabaseExpenseRepository: ExpenseRepository {
     }
 
     func markReimbursed(id: String, input: ReimbursementInput) async throws -> DomainExpense {
-        try await updateStatus(id: id, status: .reimbursed)
+        // Atomic on the server: the RPC inserts the payment_records audit row
+        // (method, amount, proof, paid_at) AND flips status to 'reimbursed' in
+        // one transaction. Amount + currency are taken from the expense row
+        // server-side, so the input's amount is advisory only. The status
+        // change still fires log_expense_transition (reimbursement_sent event
+        // + submitter notification) exactly as the old plain PATCH did.
+        let _: EmptyResponse = try await client.rpc(
+            "mark_expense_reimbursed",
+            body: MarkReimbursedArgs(
+                pExpenseId: id,
+                pPaymentMethod: input.paymentMethod,
+                pPaidAt: input.paidAt,
+                pReference: input.reference,
+                pProofAttachmentId: input.proofAttachmentId
+            )
+        )
+        // Re-read so the caller sees the reimbursed row.
+        let rows: [SupabaseExpenseRow] = try await client.get(
+            "expenses",
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "id", value: "eq.\(id)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
+        guard let row = rows.first else { throw SupabaseRepositoryError.invalidResponse }
+        return row.domainExpense
     }
 
     func archiveExpense(id: String) async throws -> DomainExpense {
@@ -2043,6 +2069,20 @@ private struct ExpenseDraftUpdate: Encodable {
 /// server side without tripping the submitter UPDATE policy's WITH CHECK.
 private struct SubmitExpenseArgs: Encodable {
     let expenseId: String
+}
+
+/// Arguments to the `turfmapp_expenses.mark_expense_reimbursed` SECURITY
+/// DEFINER RPC. The `p`-prefixed property names map to the function's
+/// `p_*` parameters via JSONEncoder.supabase's snake_case conversion
+/// (`pExpenseId` ↔ `p_expense_id`). Nil optionals are omitted by the
+/// synthesized encoder, so the function's DEFAULT null applies for an
+/// absent reference / proof attachment.
+private struct MarkReimbursedArgs: Encodable {
+    let pExpenseId: String
+    let pPaymentMethod: ReimbursementPaymentMethod
+    let pPaidAt: Date
+    let pReference: String?
+    let pProofAttachmentId: String?
 }
 
 /// Arguments to the `turfmapp_expenses.backfill_expense_fx` SECURITY DEFINER

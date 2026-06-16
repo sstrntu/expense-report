@@ -11,10 +11,19 @@ struct PermissionsView: View {
 
     private let roles = WorkspaceRole.allCases
     private var members: [DomainWorkspaceMember] { repositoryApp.members }
-    private var canEditRoles: Bool { app.role == .manager || app.role == .admin }
+    /// Role editing is admin-only — this must match the server's
+    /// "admins can manage memberships" RLS policy. Managers previously saw
+    /// an editor whose writes RLS silently rejected.
+    private var canEditRoles: Bool { app.role == .admin }
     private var canInviteOrRemove: Bool { app.role == .admin }
-    private var editableRoles: [WorkspaceRole] {
-        app.role == .admin ? [.employee, .manager, .finance, .admin] : [.employee, .manager]
+    private var editableRoles: [WorkspaceRole] { [.employee, .manager, .finance, .admin] }
+
+    /// True when this member is the only active admin. Demoting or removing
+    /// them would leave the workspace unmanageable (memberships, invites,
+    /// projects are all admin-gated), so the UI locks the row; the server
+    /// trigger enforces the same rule against direct API calls.
+    private func isLastActiveAdmin(_ m: DomainWorkspaceMember) -> Bool {
+        m.role == .admin && members.filter { $0.role == .admin && $0.status == "active" }.count <= 1
     }
 
     var body: some View {
@@ -25,7 +34,7 @@ struct PermissionsView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .frame(width: 34, height: 34)
                 }
-                .buttonStyle(.plain).glassSurface(corner: 999)
+                .buttonStyle(.pressable).glassSurface(corner: 999)
                 Text(tr("permissions.title")).font(.system(size: 18, weight: .bold))
                 Spacer()
                 if canInviteOrRemove {
@@ -35,7 +44,7 @@ struct PermissionsView: View {
                             .frame(width: 34, height: 34)
                             .foregroundStyle(.white)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .background(Tokens.slate500, in: Circle())
                 }
             }
@@ -191,7 +200,7 @@ struct PermissionsView: View {
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.horizontal, 14).padding(.vertical, 12)
     }
@@ -221,7 +230,7 @@ struct PermissionsView: View {
                     Text(m.email).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer()
-                if canEditRoles {
+                if canEditRoles && !isLastActiveAdmin(m) {
                     Button {
                         editingID = editingID == m.id ? nil : m.id
                     } label: {
@@ -231,15 +240,22 @@ struct PermissionsView: View {
                             .background(Color.primary.opacity(0.07), in: Capsule())
                             .overlay(Capsule().strokeBorder(Color.primary.opacity(0.1)))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 } else {
-                    Text(tr("role.\(m.role.rawValue)"))
-                        .font(.system(size: 11, weight: .semibold))
-                        .padding(.horizontal, 11).padding(.vertical, 5)
-                        .background(Color.primary.opacity(0.07), in: Capsule())
-                        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.1)))
+                    HStack(spacing: 4) {
+                        if isLastActiveAdmin(m) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        Text(tr("role.\(m.role.rawValue)"))
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .padding(.horizontal, 11).padding(.vertical, 5)
+                    .background(Color.primary.opacity(0.07), in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.primary.opacity(0.1)))
                 }
-                if canInviteOrRemove {
+                if canInviteOrRemove && !isLastActiveAdmin(m) {
                     Button {
                         memberToRemove = m
                         showRemoveConfirm = true
@@ -247,12 +263,12 @@ struct PermissionsView: View {
                         Image(systemName: "minus.circle.fill")
                             .foregroundStyle(Tokens.rejected)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
             .padding(.horizontal, 12).padding(.vertical, 12)
 
-            if editingID == m.id, canEditRoles {
+            if editingID == m.id, canEditRoles, !isLastActiveAdmin(m) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(editableRoles, id: \.self) { r in
@@ -265,7 +281,7 @@ struct PermissionsView: View {
                                     .foregroundStyle(m.role == r ? .white : .primary)
                                     .padding(.horizontal, 10).padding(.vertical, 6)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                             .background(
                                 m.role == r ? Tokens.slate500 : Color.clear,
                                 in: Capsule()
@@ -384,8 +400,7 @@ struct InviteMemberSheet: View {
                 } label: {
                     Text(tr("permissions.invite.send")).primaryActionLabel()
                 }
-                .buttonStyle(.plain)
-                .opacity(canSend ? 1 : 0.5)
+                .buttonStyle(.pressable)
                 .disabled(!canSend)
             }
         )

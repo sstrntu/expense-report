@@ -92,7 +92,7 @@ struct DomainDetailView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .frame(width: 34, height: 34)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .glassSurface(corner: 999)
 
             Text(tr("detail.title"))
@@ -234,7 +234,7 @@ struct DomainDetailView: View {
                     }
                     .padding(.horizontal, 14).padding(.vertical, 12)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
     }
@@ -267,7 +267,7 @@ struct DomainDetailView: View {
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(!hasFile)
     }
 
@@ -358,7 +358,7 @@ struct DomainDetailView: View {
                             .foregroundStyle(Tokens.rejected)
                             .frame(maxWidth: .infinity).padding(15)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .background(Tokens.rejected.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Tokens.rejected.opacity(0.4)))
 
@@ -368,20 +368,25 @@ struct DomainDetailView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity).padding(15)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .background(Tokens.approved, in: RoundedRectangle(cornerRadius: 14))
                 }
             } else {
                 VStack(spacing: 10) {
                     statusInfoCard(icon: "clock", tint: Tokens.pending, title: tr("detail.info.awaiting_approval.title"), message: tr("detail.info.awaiting_approval.message"))
-                    Button(action: onCancel) {
-                        Label(tr("detail.action.cancel_submission"), systemImage: "xmark.circle")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Tokens.rejected)
-                            .frame(maxWidth: .infinity).padding(15)
+                    // Cancel is a submitter-only action (matches the
+                    // "submitters can update own expenses" RLS policy) —
+                    // other viewers used to see a button that always failed.
+                    if ExpenseWorkflow.canCancel(expense, currentMembershipId: repositoryApp.currentMembershipId) {
+                        Button(action: onCancel) {
+                            Label(tr("detail.action.cancel_submission"), systemImage: "xmark.circle")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Tokens.rejected)
+                                .frame(maxWidth: .infinity).padding(15)
+                        }
+                        .buttonStyle(.pressable)
+                        .background(Tokens.rejected.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
                     }
-                    .buttonStyle(.plain)
-                    .background(Tokens.rejected.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
                 }
             }
         case .approved:
@@ -397,7 +402,7 @@ struct DomainDetailView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(16)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .background(Tokens.purchased, in: RoundedRectangle(cornerRadius: 14))
             } else if canReimburseThis && expense.kind != .preApproval {
                 Button { showReimbursedSheet = true } label: {
@@ -406,35 +411,55 @@ struct DomainDetailView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(16)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .background(Tokens.reimbursed, in: RoundedRectangle(cornerRadius: 14))
             } else {
                 statusInfoCard(icon: "clock", tint: Tokens.approved, title: tr("detail.info.approved.title"), message: tr("detail.info.approved.message"))
             }
         case .pendingFinanceReview, .purchaseConfirmed, .readyForReimbursement:
             if canReimburseThis {
-                Button { showReimbursedSheet = true } label: {
-                    Label(tr("detail.action.mark_reimbursed"), systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity).padding(16)
+                HStack(spacing: 10) {
+                    // Finance can bounce a claim during review — the workflow
+                    // model and the finance RLS policy both allow → rejected,
+                    // but the UI previously offered no reject path here.
+                    if ExpenseWorkflow.canReject(expense) {
+                        Button { showRejectSheet = true } label: {
+                            Label(tr("detail.action.reject"), systemImage: "xmark")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Tokens.rejected)
+                                .frame(maxWidth: .infinity).padding(16)
+                        }
+                        .buttonStyle(.pressable)
+                        .background(Tokens.rejected.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Tokens.rejected.opacity(0.4)))
+                    }
+
+                    Button { showReimbursedSheet = true } label: {
+                        Label(tr("detail.action.mark_reimbursed"), systemImage: "checkmark.circle.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity).padding(16)
+                    }
+                    .buttonStyle(.pressable)
+                    .background(Tokens.reimbursed, in: RoundedRectangle(cornerRadius: 14))
                 }
-                .buttonStyle(.plain)
-                .background(Tokens.reimbursed, in: RoundedRectangle(cornerRadius: 14))
             } else {
                 statusInfoCard(icon: "clock", tint: Tokens.purchased, title: tr("detail.info.awaiting_reimbursement.title"), message: tr("detail.info.awaiting_reimbursement.message"))
             }
         case .rejected:
             VStack(spacing: 10) {
                 statusInfoCard(icon: "xmark.circle", tint: Tokens.rejected, title: tr("detail.info.not_approved.title"), message: tr("detail.info.not_approved.message"))
-                if role == .employee {
+                // Submitter-gated, not role-gated: a manager resubmitting
+                // their own expense is fine; a teammate resubmitting someone
+                // else's is not (and the server would reject it anyway).
+                if ExpenseWorkflow.canResubmit(expense, currentMembershipId: repositoryApp.currentMembershipId) {
                     Button(action: onResubmit) {
                         Label(tr("detail.action.resubmit"), systemImage: "arrow.clockwise")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity).padding(16)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 14))
                 }
             }
