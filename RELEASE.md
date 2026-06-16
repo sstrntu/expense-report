@@ -23,34 +23,38 @@ Done via the Supabase MCP on 2026-05-16:
 - ✅ `Info.plist` uses the project's modern publishable key; `config.toml`
   `project_id` corrected to `pwxhgvuyaxgavommtqpr`.
 
-### Pending migrations (2026-06-12 permission hardening — not yet applied)
+### Permission hardening migrations — ✅ applied 2026-06-15 (via Supabase MCP)
 
-Apply in order via the Supabase MCP or `supabase db push`:
+Applied to `pwxhgvuyaxgavommtqpr` in order; verified objects in place and the
+security advisor clean (no new findings). The Supabase MCP stamps its own
+apply-time version, so the local filenames were renamed to match the
+recorded versions (`20260616050530`–`…050701`).
 
-- `20260612090000_protect_last_admin.sql` — trigger refusing to demote,
+- `20260616050530_protect_last_admin.sql` — trigger refusing to demote,
   suspend, remove, or delete a workspace's last active admin (prevents
   permanent admin lockout; the Permissions UI locks the row too).
-- `20260612090100_submitters_can_cancel_pending.sql` — widens the submitter
+- `20260616050548_submitters_can_cancel_pending.sql` — widens the submitter
   UPDATE policy's USING set so "Cancel submission" works on in-flight
   expenses (target statuses unchanged — still no path into approval states).
-- `20260612090200_reviewer_project_visibility.sql` — `can_access_project`
+- `20260616050611_reviewer_project_visibility.sql` — `can_access_project`
   now includes workspace manager/finance, so reviewers can see the name and
   budget of private/team projects whose expenses they could already act on.
-- `20260612090300_clear_project_roles_on_reinvite.sql` — accept-invite RPC
+  Side effect (by design): managers/finance can now also *submit* to private
+  projects, since expense INSERT keys off the same function. Revisit with a
+  separate INSERT predicate if private projects should stay submit-closed.
+- `20260616050637_clear_project_roles_on_reinvite.sql` — accept-invite RPC
   clears previous-tenure `project_memberships` when reactivating a removed
   member, so old project roles don't silently come back.
-- `20260612090400_mark_reimbursed_records_payment.sql` — `mark_expense_reimbursed`
+- `20260616050701_mark_reimbursed_records_payment.sql` — `mark_expense_reimbursed`
   RPC writes the `payment_records` audit row (method, amount, proof, paid_at)
   and flips status to `reimbursed` in one transaction. Pairs with the iOS
   client change routing reimbursement through the RPC instead of a bare
   status PATCH.
 
-The iOS gating changes that pair with these ship in the same commit; the app
-fails safe against an un-migrated DB (actions are hidden or rejected by the
-old policies), with two exceptions that need their migration applied to work
-at all: "Cancel submission" on pending expenses (`…090100`), and "Mark
-reimbursed" (`…090400`) — the latter calls an RPC that doesn't exist until
-the migration runs, so reimbursement will error until then.
+Not yet smoke-tested end-to-end: the reimbursement happy path needs the app
+with a real finance login (the RPC's authz check rejects the service-role
+context the MCP runs under), so confirm a `payment_records` row appears with
+the right method/amount/proof during the device smoke test.
 
 ### TWO things still required from you (dashboard — no API/MCP for these)
 
