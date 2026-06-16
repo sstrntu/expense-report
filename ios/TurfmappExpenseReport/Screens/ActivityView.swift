@@ -72,7 +72,7 @@ struct ActivityView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .frame(width: 34, height: 34)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .glassSurface(corner: 999)
                 }
                 // Smaller header when pushed onto a stack (matches the
@@ -220,7 +220,7 @@ struct ActivityView: View {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, e in
                         if idx > 0 { Divider().opacity(0.4) }
                         Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects, categories: repositoryApp.categories) }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                             .contextMenu {
                                 Button {
                                     Task { await repositoryApp.archiveExpense(id: e.id) }
@@ -258,5 +258,7 @@ struct FilterChipStyle: ButtonStyle {
                 }
             )
             .overlay(Capsule().strokeBorder(Color.white.opacity(0.4), lineWidth: 0.5))
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }

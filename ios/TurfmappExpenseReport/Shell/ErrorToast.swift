@@ -22,6 +22,7 @@ struct ErrorToast: ViewModifier {
                         .padding(.horizontal, 16)
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .zIndex(99)
+                        .sensoryFeedback(.warning, trigger: visible)
                 }
             }
             // React to lastError changes from any caller. Two patterns we
@@ -59,16 +60,16 @@ struct ErrorToast: ViewModifier {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .glassSurface(corner: 18)
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 18)
                 .strokeBorder(Tokens.rejected.opacity(0.25), lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+        .shadow(color: .black.opacity(0.14), radius: 18, y: 8)
         .onTapGesture { dismiss() }
     }
 

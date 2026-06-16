@@ -36,7 +36,7 @@ struct DraftsCard: View {
                         Button { onOpen(draft.id) } label: {
                             row(draft)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
             }

@@ -58,10 +58,9 @@ struct SocialAuthButtons: View {
                         .foregroundStyle(Color.primary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 50)
-                .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
+                .glassSurface(corner: 14)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             // Apple's official button. The label verb tracks `mode` so it
             // stays aligned with the segmented control above. The native

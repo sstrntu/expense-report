@@ -304,7 +304,7 @@ struct FeatureTour: View {
                 Button(tr("tour.skip")) { coordinator.stop() }
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Tokens.slate500)
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -335,7 +335,7 @@ struct FeatureTour: View {
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
                             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.4), lineWidth: 0.5))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
 
                 Button { coordinator.next() } label: {
@@ -345,7 +345,7 @@ struct FeatureTour: View {
                         .frame(maxWidth: .infinity).padding(.vertical, 12)
                         .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(18)

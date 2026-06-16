@@ -38,7 +38,7 @@ struct ProfileView: View {
                     }
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .tourTarget(.profileWorkspace)
 
             // Workspace admin entry. Single nav row that opens
@@ -198,7 +198,7 @@ struct ProfileView: View {
             .opacity(comingSoon ? 0.55 : 1)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(comingSoon)
     }
 }
@@ -268,7 +268,7 @@ struct NotificationsView: View {
                             .font(.system(size: 12.5, weight: .semibold))
                             .foregroundStyle(Tokens.pending)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         ) {
@@ -369,7 +369,7 @@ struct NotificationsView: View {
             }
             .padding(.horizontal, 14).padding(.vertical, 13)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func filterChip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
@@ -381,7 +381,7 @@ struct NotificationsView: View {
                 .padding(.vertical, 7)
                 .background(selected ? Tokens.slate500 : Color.primary.opacity(0.06), in: Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
 }
@@ -495,7 +495,7 @@ struct AccountSettingsView: View {
                             }
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(displayName.isEmpty ? tr("profile.add_name") : displayName)
                             .font(.system(size: 17, weight: .bold))
@@ -543,7 +543,7 @@ struct AccountSettingsView: View {
             } label: {
                 Text(tr("account.save")).primaryActionLabel()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .onAppear {
             name = app.userName
@@ -583,7 +583,7 @@ struct SecuritySettingsView: View {
                     Button { showPasswordSheet = true } label: {
                         securityRow(tr("security.change_password"), tr("security.change_password.sub"), "key.fill", chevron: true)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     Divider().opacity(0.4)
                     Button {
                         Task {
@@ -594,7 +594,7 @@ struct SecuritySettingsView: View {
                     } label: {
                         securityRow(tr("security.reset_email"), tr("security.reset_email.sub", app.userEmail), "envelope.fill", chevron: true)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     Divider().opacity(0.4)
                     Button {
                         Task {
@@ -609,7 +609,7 @@ struct SecuritySettingsView: View {
                     } label: {
                         securityRow(tr("security.signout_all"), tr("security.signout_all.sub"), "rectangle.portrait.and.arrow.right.fill", chevron: true, tint: Tokens.rejected)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
 
@@ -711,8 +711,7 @@ struct ChangePasswordSheet: View {
                 } label: {
                     Text(tr("common.save")).primaryActionLabel()
                 }
-                .buttonStyle(.plain)
-                .opacity(canSubmit ? 1 : 0.5)
+                .buttonStyle(.pressable)
                 .disabled(!canSubmit)
             }
         )
@@ -870,7 +869,7 @@ struct ReportsExportView: View {
                         Button { searchText = "" } label: {
                             Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
 
@@ -915,7 +914,7 @@ struct ReportsExportView: View {
                                 .font(.system(size: 11.5, weight: .semibold))
                                 .foregroundStyle(Tokens.slate500)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
             }
@@ -1023,7 +1022,7 @@ struct ReportsExportView: View {
                 .frame(maxWidth: .infinity).padding(14)
                 .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 14))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(filteredExpenses.isEmpty || isExporting)
             .opacity(filteredExpenses.isEmpty ? 0.5 : 1)
 
@@ -1038,7 +1037,7 @@ struct ReportsExportView: View {
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                 .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.white.opacity(0.4), lineWidth: 0.5))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(filteredExpenses.isEmpty)
             .opacity(filteredExpenses.isEmpty ? 0.5 : 1)
         }
@@ -1228,7 +1227,7 @@ struct HelpSupportView: View {
                     }
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
     }
 }
@@ -1346,7 +1345,7 @@ struct WorkspaceSettingsView: View {
                             }
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(workspace?.name ?? app.company.name)
                             .font(.system(size: 17, weight: .bold))
@@ -1426,7 +1425,7 @@ struct WorkspaceSettingsView: View {
             } label: {
                 Text(savingDetails ? tr("workspace.saving") : tr("workspace.save_changes")).primaryActionLabel()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .opacity((nameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                       (nameDraft == (workspace?.name ?? "") && currencyDraft == (workspace?.defaultCurrency ?? "USD")) ||
                       savingDetails) ? 0.5 : 1)
@@ -1454,7 +1453,7 @@ struct WorkspaceSettingsView: View {
                             subtitle: tr("profile.nav.manage_projects.sub", repositoryApp.projects.count, budget)
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     Divider().opacity(0.4)
                     Button { onNav("permissions") } label: {
                         workspaceLinkRow(
@@ -1463,7 +1462,7 @@ struct WorkspaceSettingsView: View {
                             subtitle: tr("profile.nav.permissions.sub", repositoryApp.members.count)
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
 
@@ -1523,7 +1522,7 @@ func settingsContainer<Trailing: View, Content: View>(
                     .font(.system(size: 14, weight: .semibold))
                     .frame(width: 34, height: 34)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .glassSurface(corner: 999)
             Text(title).font(.system(size: 18, weight: .bold))
             Spacer()
@@ -1579,7 +1578,7 @@ struct SwipeToDelete<Content: View>: View {
                 .frame(maxHeight: .infinity)
                 .background(Color.red)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .opacity(min(1, -offset / actionWidth))
 
             content

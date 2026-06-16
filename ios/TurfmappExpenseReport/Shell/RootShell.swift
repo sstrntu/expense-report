@@ -57,10 +57,13 @@ struct RootShell: View {
             switch launchState {
             case .restoring:
                 launchSplash
+                    .transition(.opacity)
             case .ready:
                 routedBody
+                    .transition(.opacity)
             }
         }
+        .animation(Motion.gentle, value: launchState)
         .task {
             await restoreSession()
         }
@@ -218,6 +221,27 @@ struct RootShell: View {
         navStack.isEmpty && selectedTab != .add
     }
 
+    /// Identity for the visible screen. Changing it tears down the ScrollView
+    /// (fresh scroll offset) and lets the transition below run.
+    private var contentKey: String {
+        if let route = navStack.last {
+            return "route-\(navStack.count)-\(route.hashValue)"
+        }
+        return "tab-\(selectedTab.rawValue)"
+    }
+
+    /// Tab roots cross-fade into each other; pushed routes slide in from the
+    /// trailing edge (and back out when popped) like a navigation push.
+    private var contentTransition: AnyTransition {
+        if navStack.isEmpty {
+            return .opacity
+        }
+        return .asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .trailing).combined(with: .opacity)
+        )
+    }
+
     private var appShell: some View {
         ZStack(alignment: .bottom) {
             // Background with decorative blobs
@@ -230,9 +254,12 @@ struct RootShell: View {
                     Spacer()
                 }
                 .zIndex(10)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            // Content
+            // Content. Keyed by screen so tab switches cross-fade, pushed
+            // routes slide in from the trailing edge, and the scroll offset
+            // resets instead of leaking from the previous screen.
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     // Clearance for the floating top bar at tab roots; pushed
@@ -243,15 +270,20 @@ struct RootShell: View {
                 }
             }
             .refreshable { await repositoryApp.refresh() }
+            .id(contentKey)
+            .transition(contentTransition)
             .zIndex(5)
 
             // Bottom tab bar (hidden when on add/stack screens)
             if isAtTabRoot {
                 BottomTabBar(selected: $selectedTab, role: app.role, canReview: repositoryApp.canReviewExpenses, badgeCounts: tabBadges)
-                    .padding(.bottom, 28)
+                    .padding(.bottom, 12)
                     .zIndex(20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(Motion.snappy, value: selectedTab)
+        .animation(Motion.snappy, value: navStack)
         .onChange(of: app.role) { _, _ in
             selectedTab = .home
             navStack = []
@@ -355,7 +387,8 @@ struct RootShell: View {
                     onOpenDraft: { id in
                         pendingDraftId = id
                         selectedTab = .add
-                    }
+                    },
+                    onOpenExpense: { e in navStack.append(.domainDetail(e)) }
                 )
                     .environmentObject(app)
             } else {
@@ -590,7 +623,10 @@ struct RootShell: View {
         let workspaceName = selectedWorkspace?.name ?? app.company.name
         let hasUnread = repositoryApp.notifications.contains { !$0.isRead }
 
-        return HStack {
+        // One glass container so the workspace pill and the bell read as a
+        // single floating layer (their glass shapes blend when adjacent).
+        return GlassEffectContainer(spacing: 12) {
+            HStack {
             // Workspace picker — opens a dropdown menu
             Menu {
                 ForEach(repositoryApp.workspaces, id: \.id) { workspace in
@@ -662,13 +698,13 @@ struct RootShell: View {
                                 .offset(x: -4, y: 4)
                         }
                     }
+                    .glassSurface(corner: 999)
             }
-            .buttonStyle(.plain)
-            .glassSurface(corner: 999)
+            .buttonStyle(.pressable)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
-        .background(.ultraThinMaterial.opacity(0))
     }
 
     // Mirrors the adaptive `.appBackground()` extension so the main app shell
@@ -823,7 +859,7 @@ struct AuthView: View {
             } label: {
                 Text(tr(mode.actionKey)).primaryActionLabel()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(email.isEmpty || password.isEmpty)
 
             HStack {
@@ -1025,7 +1061,7 @@ struct WorkspaceSetupView: View {
             } label: {
                 Text(mode == .create ? tr("setup.workspace.create_action") : tr("setup.workspace.join_action")).primaryActionLabel()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(
                 (mode == .create && workspaceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
                 (mode == .join && inviteCode.count != 6)

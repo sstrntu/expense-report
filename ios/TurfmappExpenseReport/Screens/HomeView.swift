@@ -131,7 +131,7 @@ struct HomeView: View {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .glassSurface(corner: 18)
     }
 
@@ -148,7 +148,7 @@ struct HomeView: View {
                     ForEach(Array(repositoryApp.expenses.prefix(4).enumerated()), id: \.element.id) { idx, e in
                         if idx > 0 { Divider().opacity(0.4) }
                         Button { onOpen(e) } label: { DomainExpenseRow(expense: e, projects: repositoryApp.projects, categories: repositoryApp.categories) }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                     }
                 }
             }

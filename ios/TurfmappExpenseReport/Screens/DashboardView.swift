@@ -298,7 +298,7 @@ struct DashboardView: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                 }
@@ -337,7 +337,7 @@ struct DashboardView: View {
                         }
                         .padding(.horizontal, 16).padding(.vertical, 11)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }
@@ -383,7 +383,7 @@ struct DashboardDrilldownSheet: View {
                         } label: {
                             DomainExpenseRow(expense: expense, projects: item.projects, categories: item.categories)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))

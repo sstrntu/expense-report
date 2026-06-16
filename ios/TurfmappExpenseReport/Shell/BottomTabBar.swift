@@ -21,6 +21,8 @@ struct BottomTabBar: View {
     var badgeCounts: [TabID: Int] = [:]
     // Subscribe so labels re-render immediately when the user switches language.
     @ObservedObject private var localization = LocalizationManager.shared
+    /// Drives the morphing highlight pill that slides between tabs.
+    @Namespace private var activePill
 
     private var showsReviewerTabs: Bool {
         role != .employee || canReview
@@ -46,79 +48,82 @@ struct BottomTabBar: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(tabs, id: \.id) { tab in
-                if tab.isCenter {
-                    centerButton
-                } else {
-                    tabButton(tab)
+        // GlassEffectContainer lets the bar and the raised center button render
+        // as one liquid surface — the shapes blend where they come close
+        // instead of stacking two independent blurs.
+        GlassEffectContainer(spacing: 18) {
+            HStack(spacing: 0) {
+                ForEach(tabs, id: \.id) { tab in
+                    if tab.isCenter {
+                        centerButton
+                    } else {
+                        tabButton(tab)
+                    }
                 }
             }
+            .padding(.horizontal, 8)
+            .frame(height: 64)
+            .liquidGlassBar(corner: 32)
         }
-        .padding(.horizontal, 8)
-        .frame(height: 64)
-        .liquidGlassBar(corner: 32)
         .padding(.horizontal, 16)
+        .sensoryFeedback(.selection, trigger: selected)
     }
 
     private func tabButton(_ tab: TabItem) -> some View {
         let badgeCount = badgeCounts[tab.id] ?? 0
+        let isActive = selected == tab.id
         return Button {
-            selected = tab.id
+            withAnimation(Motion.snappy) { selected = tab.id }
         } label: {
             VStack(spacing: 3) {
-                ZStack(alignment: .top) {
-                    // Active dot
-                    if selected == tab.id {
-                        Circle()
-                            .fill(Color.primary)
-                            .frame(width: 4, height: 4)
-                            .offset(y: -8)
-                    }
-                    Image(systemName: tab.icon)
-                        .font(.system(size: 20, weight: selected == tab.id ? .semibold : .regular))
-                        .foregroundStyle(selected == tab.id ? Color.primary : Color.secondary)
-                        .overlay(alignment: .topTrailing) {
-                            if badgeCount > 0 {
-                                Text(badgeCount < 100 ? "\(badgeCount)" : "99+")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, badgeCount < 10 ? 4 : 5)
-                                    .padding(.vertical, 2)
-                                    .background(Tokens.rejected, in: Capsule())
-                                    .offset(x: 10, y: -6)
-                            }
+                Image(systemName: tab.icon)
+                    .font(.system(size: 20, weight: isActive ? .semibold : .regular))
+                    .foregroundStyle(isActive ? Color.primary : Color.secondary)
+                    .symbolEffect(.bounce, options: .speed(1.4), value: isActive)
+                    .overlay(alignment: .topTrailing) {
+                        if badgeCount > 0 {
+                            Text(badgeCount < 100 ? "\(badgeCount)" : "99+")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, badgeCount < 10 ? 4 : 5)
+                                .padding(.vertical, 2)
+                                .background(Tokens.rejected, in: Capsule())
+                                .offset(x: 10, y: -6)
                         }
-                }
-                .frame(height: 26)
+                    }
+                    .frame(height: 26)
 
                 Text(tab.label)
                     .font(.system(size: 9.5, weight: .semibold))
-                    .foregroundStyle(selected == tab.id ? Color.primary : Color.secondary)
+                    .foregroundStyle(isActive ? Color.primary : Color.secondary)
             }
             .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background {
+                // Soft pill that slides between tabs as the selection moves.
+                if isActive {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.primary.opacity(0.07))
+                        .matchedGeometryEffect(id: "activePill", in: activePill)
+                }
+            }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private var centerButton: some View {
-        Button { selected = .add } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Tokens.slate500)
-                    .frame(width: 44, height: 44)
-                    .shadow(color: Tokens.slate500.opacity(0.4), radius: 10, y: 4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5)
-                    )
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.white)
-            }
+        Button {
+            withAnimation(Motion.bouncy) { selected = .add }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .prominentGlassSurface(tint: Tokens.slate500, corner: 24)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .frame(maxWidth: .infinity)
+        .sensoryFeedback(.impact(weight: .medium), trigger: selected == .add)
     }
 }

@@ -112,7 +112,7 @@ struct SubmitView: View {
                     Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
                         .frame(width: 34, height: 34)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .glassSurface(corner: 999)
             }
             .padding(.horizontal, 4).padding(.top, 4)
@@ -170,8 +170,7 @@ struct SubmitView: View {
             } label: {
                 Text(isSubmitting ? tr("submit.action.save_draft.saving") : submitLabel).primaryActionLabel()
             }
-            .buttonStyle(.plain)
-            .opacity(canSubmit && !isSubmitting ? 1 : 0.5)
+            .buttonStyle(.pressable)
             .disabled(!canSubmit || isSubmitting)
 
             if let saveDraftError {
@@ -188,8 +187,7 @@ struct SubmitView: View {
             } label: {
                 Text(isSavingDraft ? tr("submit.action.save_draft.saving") : tr("submit.action.save_draft")).secondaryActionLabel()
             }
-            .buttonStyle(.plain)
-            .opacity((vendor.isEmpty && amountText.isEmpty && purpose.isEmpty) || isSavingDraft ? 0.5 : 1)
+            .buttonStyle(.pressable)
             .disabled((vendor.isEmpty && amountText.isEmpty && purpose.isEmpty) || isSavingDraft)
         }
         .padding(.horizontal, 16)
@@ -286,7 +284,7 @@ struct SubmitView: View {
                             }
                             .padding(.horizontal, 14).padding(.vertical, 10)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
             }
@@ -324,7 +322,7 @@ struct SubmitView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .background(Tokens.aiPurple.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
             }
         } else if hasScanned {
@@ -378,7 +376,7 @@ struct SubmitView: View {
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .glassSurface(corner: 18)
         }
     }
@@ -870,7 +868,7 @@ struct ReceiptSourceSheet: View {
                                       title: tr("submit.scan.take_photo"),
                                       subtitle: tr("submit.scan.take_photo.subtitle"))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                         Divider().opacity(0.4).padding(.leading, 56)
                     }
 
@@ -890,7 +888,7 @@ struct ReceiptSourceSheet: View {
                         }
                         .padding(.horizontal, 14).padding(.vertical, 12)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             }
@@ -981,12 +979,13 @@ struct FormFieldRow: View {
 }
 
 extension Text {
+    @MainActor
     func primaryActionLabel(tint: Color = Tokens.slate500) -> some View {
         self.font(.system(size: 15, weight: .semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .background(tint, in: RoundedRectangle(cornerRadius: 16))
+            .prominentGlassSurface(tint: tint, corner: 16)
     }
 
     func secondaryActionLabel() -> some View {

@@ -53,6 +53,7 @@
 		D577E2515650656DF3A7B9F5 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCEF355C532DA04E3146431 /* ActivityView.swift */; };
 		D81A57A8F08D8D3AD7B5844E /* DomainDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B488DCADA8C68BFA0360E5C /* DomainDetailView.swift */; };
 		D9CB48D5495FA003F53A9239 /* SupabaseRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = E267442BEA226AA91190BCA2 /* SupabaseRepositories.swift */; };
+		DA8EB3B06B79C7AD7D3049F3 /* Interaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FF94DEA0A17FA2CE5BDABB /* Interaction.swift */; };
 		E2AEB90BAA59D991DEBC2879 /* SheetScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = A837937D2F03688BEFA10820 /* SheetScaffold.swift */; };
 		E4E2E3CF2031D2A9C6B0A3CD /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C580869F5B6FF78D1128C4E /* Tokens.swift */; };
 		EB6D7FEB39BE53D706FD6259 /* CurrencyConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1318FEF50B5EA3EAB23F8E7F /* CurrencyConverter.swift */; };
@@ -118,6 +119,7 @@
 		BDF7A75B1F90F57756C02336 /* SocialAuthButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialAuthButtons.swift; sourceTree = "<group>"; };
 		BEE31180D60EFA1E623F42E8 /* WorkflowEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowEdgeCaseTests.swift; sourceTree = "<group>"; };
 		BFCEF355C532DA04E3146431 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		C4FF94DEA0A17FA2CE5BDABB /* Interaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Interaction.swift; sourceTree = "<group>"; };
 		CA4CB3A46FA47E4715A510B1 /* Avatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Avatar.swift; sourceTree = "<group>"; };
 		D246FB0AA3C57CF36D9B46F7 /* RepositoryContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryContracts.swift; sourceTree = "<group>"; };
 		D53DEF6879D81BC1B1ED4918 /* ManagerOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagerOverviewView.swift; sourceTree = "<group>"; };
@@ -219,6 +221,7 @@
 				3CCE3D5DFB96304D91AC7BF2 /* Charts.swift */,
 				7308954FD71CE684A0764452 /* DraftsCard.swift */,
 				8AD5CF1776B4AC4DC5CEF654 /* GlassCard.swift */,
+				C4FF94DEA0A17FA2CE5BDABB /* Interaction.swift */,
 				A837937D2F03688BEFA10820 /* SheetScaffold.swift */,
 				231934AADFA8013182DE19B6 /* StatusPill.swift */,
 			);
@@ -410,6 +413,7 @@
 				569C68CB4BF98A9C5E3B84D5 /* FeatureTour.swift in Sources */,
 				40834B5A7CB85792D6B041B7 /* GlassCard.swift in Sources */,
 				2493E01868B610DD3193D13D /* HomeView.swift in Sources */,
+				DA8EB3B06B79C7AD7D3049F3 /* Interaction.swift in Sources */,
 				916271724F6586B58CC7D66C /* LocalizationManager.swift in Sources */,
 				2A38DBEAE2ACA435E822BB54 /* ManageProjectsView.swift in Sources */,
 				16AFC42C4F44934D90CD8C68 /* ManagerOverviewView.swift in Sources */,
@@ -481,14 +485,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TurfmappExpenseReport/TurfmappExpenseReport.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = TurfmappExpenseReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.turfmapp.expense-report";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -644,14 +648,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TurfmappExpenseReport/TurfmappExpenseReport.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = TurfmappExpenseReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.turfmapp.expense-report";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";

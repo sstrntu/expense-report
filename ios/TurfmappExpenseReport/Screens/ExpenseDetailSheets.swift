@@ -167,7 +167,7 @@ struct PurchaseConfirmSheet: View {
                                 lineWidth: 0.5
                             ))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                         .confirmationDialog("Add Receipt", isPresented: $showPickerOptions, titleVisibility: .visible) {
                             Button("Photo Library") { showImagePicker = true }
                             Button("Files") { showFilePicker = true }
@@ -205,7 +205,7 @@ struct PurchaseConfirmSheet: View {
                 } label: {
                     Text(tr("detail.purchase_sheet.title")).primaryActionLabel(tint: Tokens.purchased)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(finalAmount <= 0)
                 .opacity(finalAmount > 0 ? 1 : 0.5)
             }
@@ -246,7 +246,7 @@ struct RejectReasonSheet: View {
                 } label: {
                     Text(tr("sheet.reject.title")).primaryActionLabel(tint: Tokens.rejected)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(trimmedReason.isEmpty)
                 .opacity(trimmedReason.isEmpty ? 0.5 : 1)
             }
@@ -325,7 +325,7 @@ struct MarkAsPaidSheet: View {
                                 lineWidth: 0.5
                             ))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                         .confirmationDialog("Add Receipt", isPresented: $showPickerOptions, titleVisibility: .visible) {
                             Button("Photo Library") { showImagePicker = true }
                             Button("Files") { showFilePicker = true }
@@ -365,7 +365,7 @@ struct MarkAsPaidSheet: View {
                     Text(selectedMethod == nil ? "Select a payment method" : "Confirm Reimbursement")
                         .primaryActionLabel(tint: selectedMethod != nil ? Tokens.reimbursed : Tokens.slate300)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(selectedMethod == nil)
             }
         )
@@ -394,6 +394,6 @@ struct MarkAsPaidSheet: View {
                     .strokeBorder(selected ? Tokens.reimbursed : Color.white.opacity(0.4), lineWidth: selected ? 0 : 0.5)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }

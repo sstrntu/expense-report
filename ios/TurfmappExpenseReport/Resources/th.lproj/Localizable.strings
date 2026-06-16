@@ -349,12 +349,25 @@
 "overview.budget.over" = "เกินงบ";
 "overview.budget.paid" = "จ่ายแล้ว";
 "overview.budget.pending" = "ค้างชำระ";
+"overview.action_needed" = "รอดำเนินการจากคุณ";
+"overview.pipeline" = "ขั้นตอนค่าใช้จ่ายทั้งเวิร์กสเปซ";
+"overview.pipeline.approval" = "รออนุมัติ";
+"overview.pipeline.purchasing" = "อนุมัติแล้ว · กำลังจัดซื้อ";
+"overview.pipeline.finance" = "รอการเงินตรวจสอบ";
+"overview.pipeline.paid_mtd" = "จ่ายแล้วเดือนนี้";
+"overview.pipeline.drilldown" = "ค่าใช้จ่ายในขั้นตอนนี้";
+"overview.paid_mtd" = "จ่ายแล้วเดือนนี้";
+"overview.payments.count" = "%d รายการ";
+"overview.payments.count.plural" = "%d รายการ";
 
 /* === Review === */
 "review.title" = "ตรวจสอบ";
 "review.summary" = "%d รออนุมัติ · %d รอเบิกจ่าย · %d รอซื้อ";
 "review.summary.plural" = "%d รออนุมัติ · %d รอเบิกจ่าย · %d รอซื้อ";
 "review.approve_all" = "อนุมัติทั้งหมดที่เห็น";
+"review.approve_all_amount" = "อนุมัติทั้งหมด %d รายการ · %@";
+"review.quick_approve.title" = "อนุมัติ %@ ให้ %@ หรือไม่?";
+"review.quick_approve.action" = "อนุมัติ";
 "review.empty.title" = "ไม่มีค้างคา";
 "review.empty.subtitle" = "ไม่มีรายการอนุมัติหรือเบิกจ่ายรออยู่";
 "review.section.manager" = "การอนุมัติของผู้จัดการ";

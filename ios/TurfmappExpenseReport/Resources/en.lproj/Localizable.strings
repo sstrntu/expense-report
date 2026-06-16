@@ -349,12 +349,25 @@
 "overview.budget.over" = "Over budget";
 "overview.budget.paid" = "Paid";
 "overview.budget.pending" = "Pending";
+"overview.action_needed" = "NEEDS YOUR ACTION";
+"overview.pipeline" = "Workspace pipeline";
+"overview.pipeline.approval" = "Awaiting approval";
+"overview.pipeline.purchasing" = "Approved · purchasing";
+"overview.pipeline.finance" = "In finance review";
+"overview.pipeline.paid_mtd" = "Paid this month";
+"overview.pipeline.drilldown" = "Expenses in this stage";
+"overview.paid_mtd" = "PAID THIS MONTH";
+"overview.payments.count" = "%d payment";
+"overview.payments.count.plural" = "%d payments";
 
 /* === Review === */
 "review.title" = "Review";
 "review.summary" = "%d approval · %d reimbursement · %d awaiting purchase";
 "review.summary.plural" = "%d approvals · %d reimbursements · %d awaiting purchase";
 "review.approve_all" = "Approve all visible";
+"review.approve_all_amount" = "Approve all %d · %@";
+"review.quick_approve.title" = "Approve %@ for %@?";
+"review.quick_approve.action" = "Approve";
 "review.empty.title" = "All caught up";
 "review.empty.subtitle" = "No approvals or reimbursements waiting";
 "review.section.manager" = "Manager approval";

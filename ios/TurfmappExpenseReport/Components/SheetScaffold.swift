@@ -119,8 +119,8 @@ struct SheetCloseButton: View {
             Image(systemName: "xmark")
                 .font(.system(size: 13, weight: .bold))
                 .frame(width: 32, height: 32)
+                .background(Color.primary.opacity(0.06), in: Circle())
         }
-        .buttonStyle(.plain)
-        .background(Color.primary.opacity(0.06), in: Circle())
+        .buttonStyle(.pressable)
     }
 }

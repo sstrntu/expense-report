@@ -5,6 +5,9 @@ struct ReviewView: View {
     @EnvironmentObject var repositoryApp: RepositoryAppState
     var onOpen: (DomainExpense) -> Void
     @State private var projectHistory: ProjectHistoryContext? = nil
+    /// Expense pending inline approval — drives the confirmation dialog so a
+    /// stray tap on the quick-approve button can't move money silently.
+    @State private var confirmApprove: DomainExpense? = nil
 
     // managerQueue / financeQueue / awaitingPurchaseQueue on RepositoryAppState
     // are now project-aware — they only include expenses the current user can
@@ -17,6 +20,21 @@ struct ReviewView: View {
     /// Visible to anyone who can approve OR reimburse the project — same gate
     /// as the role-aware repository helper. Surfaced as "Watching", read-only.
     private var awaitingPurchase: [DomainExpense] { repositoryApp.awaitingPurchaseQueue }
+
+    /// Queue total in the workspace currency via the FX-snapshot projection,
+    /// so foreign-currency expenses count instead of being dropped.
+    private func total(of queue: [DomainExpense]) -> Double {
+        let ids = Set(queue.map(\.id))
+        return repositoryApp.expensesInDefaultCurrency
+            .filter { ids.contains($0.id) }
+            .reduce(0) { $0 + $1.amount.decimalValue }
+    }
+
+    /// Submitter display name for a queue row. Reviewers approve people, not
+    /// merchants — the name is often the deciding context.
+    private func submitterName(_ e: DomainExpense) -> String? {
+        repositoryApp.members.first { $0.id == e.submittedByMembershipId }?.displayName
+    }
 
     /// Projects that have any past/archived expenses (reimbursed, cancelled, rejected, archived).
     /// Used to build the always-visible history browser at the bottom of Review.
@@ -45,7 +63,10 @@ struct ReviewView: View {
             }
             .padding(.horizontal, 4).padding(.top, 4)
 
-            if app.role.canApproveExpenses && pending.count > 1 {
+            // No workspace-role gate: managerQueue is already filtered to
+            // items this user can approve (workspace OR project role), so a
+            // project-scoped approver gets the same bulk action as a manager.
+            if pending.count > 1 {
                 Button {
                     Task {
                         for item in pending {
@@ -53,13 +74,17 @@ struct ReviewView: View {
                         }
                     }
                 } label: {
-                    Label(tr("review.approve_all"), systemImage: "checkmark.circle.fill")
+                    Label(
+                        tr("review.approve_all_amount", pending.count,
+                           money(total(of: pending), currency: repositoryApp.aggregationCurrency)),
+                        systemImage: "checkmark.circle.fill"
+                    )
                         .font(.system(size: 13.5, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(14)
-                        .background(Tokens.approved, in: RoundedRectangle(cornerRadius: 14))
+                        .prominentGlassSurface(tint: Tokens.approved, corner: 14)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             queueStack
@@ -71,6 +96,23 @@ struct ReviewView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 100)
+        // Inline approval safety net: states the amount + merchant before the
+        // money moves, then approves without leaving the queue.
+        .confirmationDialog(
+            confirmApprove.map { tr("review.quick_approve.title", $0.amount.formatted, $0.merchant) } ?? "",
+            isPresented: Binding(
+                get: { confirmApprove != nil },
+                set: { if !$0 { confirmApprove = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: confirmApprove
+        ) { e in
+            Button(tr("review.quick_approve.action")) {
+                Task { await repositoryApp.approveExpense(id: e.id) }
+                confirmApprove = nil
+            }
+            Button(tr("common.cancel"), role: .cancel) { confirmApprove = nil }
+        }
         .sheet(item: $projectHistory) { ctx in
             ProjectHistorySheet(
                 projectId: ctx.projectId,
@@ -108,7 +150,8 @@ struct ReviewView: View {
                     roleIcon: "person.badge.shield.checkmark.fill",
                     roleLabel: tr("review.role.manager"),
                     actionLabel: tr("review.action.to_approve"),
-                    items: pending, tint: Tokens.pending
+                    items: pending, tint: Tokens.pending,
+                    quickApprove: true
                 )
             }
             if !financeQueue.isEmpty {
@@ -166,7 +209,7 @@ struct ReviewView: View {
                             }
                             .padding(.horizontal, 14).padding(.vertical, 12)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
             }
@@ -178,7 +221,7 @@ struct ReviewView: View {
     /// project history sheet without the outer row swallowing the gesture.
     /// Replaces the previous structure that nested three overlapping
     /// `.onTapGesture` calls on one HStack.
-    private func queueRow(_ e: DomainExpense, tint: Color) -> some View {
+    private func queueRow(_ e: DomainExpense, tint: Color, quickApprove: Bool = false) -> some View {
         Button { onOpen(e) } label: {
             HStack(spacing: 12) {
                 Text(e.icon)
@@ -188,8 +231,13 @@ struct ReviewView: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(e.merchant).font(.system(size: 13.5, weight: .semibold))
-                    Text("\(repositoryApp.displayCategoryName(forId: e.categoryId)) · \(e.displayDate)")
+                    // Lead with who submitted — that's the deciding context
+                    // for a reviewer; category + date follow.
+                    Text([submitterName(e),
+                          repositoryApp.displayCategoryName(forId: e.categoryId),
+                          e.displayDate].compactMap { $0 }.joined(separator: " · "))
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        .lineLimit(1)
                     StatusPill(text: localizedStatusLabel(e.status), tint: tint)
                 }
 
@@ -208,13 +256,25 @@ struct ReviewView: View {
                         }
                         .foregroundStyle(Tokens.slate500)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
+                }
+
+                if quickApprove {
+                    Button { confirmApprove = e } label: {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Tokens.approved)
+                            .frame(width: 36, height: 36)
+                            .background(Tokens.approved.opacity(0.12), in: Circle())
+                            .overlay(Circle().strokeBorder(Tokens.approved.opacity(0.25), lineWidth: 0.5))
+                    }
+                    .buttonStyle(.pressable)
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     /// Header is now two parts: a coloured role badge ("AS MANAGER") to show
@@ -225,7 +285,8 @@ struct ReviewView: View {
         roleLabel: String,
         actionLabel: String,
         items: [DomainExpense],
-        tint: Color
+        tint: Color,
+        quickApprove: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -242,7 +303,12 @@ struct ReviewView: View {
                     .font(.system(size: 11, weight: .semibold)).tracking(0.3)
                     .foregroundStyle(.secondary)
                 Spacer()
-                StatusPill(text: "\(items.count)", tint: tint)
+                // Count + running total so the section's financial weight is
+                // visible without opening every row.
+                StatusPill(
+                    text: "\(items.count) · \(money(total(of: items), currency: repositoryApp.aggregationCurrency))",
+                    tint: tint
+                )
             }
             .padding(.horizontal, 4)
 
@@ -250,7 +316,7 @@ struct ReviewView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, e in
                         if idx > 0 { Divider().opacity(0.4) }
-                        queueRow(e, tint: tint)
+                        queueRow(e, tint: tint, quickApprove: quickApprove)
                     }
                 }
             }
@@ -326,7 +392,7 @@ struct ProjectHistorySheet: View {
                                         categories: repositoryApp.categories
                                     )
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                             }
                         }
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))

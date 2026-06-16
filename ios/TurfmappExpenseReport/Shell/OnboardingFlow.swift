@@ -28,7 +28,7 @@ struct OnboardingProgress: View {
                             .frame(width: 30, height: 30)
                             .background(Color.primary.opacity(0.06), in: Circle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 Text(tr("onboarding.step.label", current, total))
                     .font(.system(size: 10.5, weight: .bold))
@@ -132,14 +132,14 @@ struct WelcomeView: View {
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 Button(action: onSignIn) {
                     Text(tr("onboarding.welcome.have_account"))
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Tokens.slate500)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
             .padding(.bottom, 32)
         }
@@ -206,7 +206,7 @@ struct ProfileSetupView: View {
                             PhotosPicker(selection: $avatarPick, matching: .images) {
                                 avatarPreview
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(tr("setup.profile.avatar.title"))
@@ -242,7 +242,7 @@ struct ProfileSetupView: View {
                         .frame(maxWidth: .infinity).padding(16)
                         .background(Tokens.slate500, in: RoundedRectangle(cornerRadius: 16))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
                     .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.55 : 1)
 
@@ -410,7 +410,7 @@ struct OnboardingCompletionView: View {
             Button(action: onGoHome) {
                 Text(tr("onboarding.done.go_home")).primaryActionLabel()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .padding(.bottom, 32)
         }
         .padding(.horizontal, 22)
@@ -446,6 +446,6 @@ struct OnboardingCompletionView: View {
             }
             .padding(14)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
