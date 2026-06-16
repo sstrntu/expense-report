@@ -125,10 +125,11 @@ final class RepositoryAppState: ObservableObject {
         if let role = project.currentUserProjectRole {
             return role.canSubmitExpenses
         }
-        // No explicit project role — workspace visibility decides. Anything
-        // visible (i.e. in `projects`) is submittable for workspace roles
-        // other than the future read-only roles we haven't added.
-        return true
+        // No explicit project role: only a workspace-visible project is open to
+        // every member. A manager/finance user can now SEE private/team projects
+        // (read visibility) without being a member, but seeing is not
+        // submitting — mirrors the server's can_submit_to_project predicate.
+        return project.visibility == "workspace"
     }
 
     var draftExpenses: [DomainExpense] {

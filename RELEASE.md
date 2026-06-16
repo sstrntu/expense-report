@@ -28,7 +28,7 @@ Done via the Supabase MCP on 2026-05-16:
 Applied to `pwxhgvuyaxgavommtqpr` in order; verified objects in place and the
 security advisor clean (no new findings). The Supabase MCP stamps its own
 apply-time version, so the local filenames were renamed to match the
-recorded versions (`20260616050530`–`…050701`).
+recorded versions (`20260616050530`–`…055219`).
 
 - `20260616050530_protect_last_admin.sql` — trigger refusing to demote,
   suspend, remove, or delete a workspace's last active admin (prevents
@@ -39,9 +39,7 @@ recorded versions (`20260616050530`–`…050701`).
 - `20260616050611_reviewer_project_visibility.sql` — `can_access_project`
   now includes workspace manager/finance, so reviewers can see the name and
   budget of private/team projects whose expenses they could already act on.
-  Side effect (by design): managers/finance can now also *submit* to private
-  projects, since expense INSERT keys off the same function. Revisit with a
-  separate INSERT predicate if private projects should stay submit-closed.
+  (Its submit side effect is closed by `…055219` below.)
 - `20260616050637_clear_project_roles_on_reinvite.sql` — accept-invite RPC
   clears previous-tenure `project_memberships` when reactivating a removed
   member, so old project roles don't silently come back.
@@ -50,6 +48,14 @@ recorded versions (`20260616050530`–`…050701`).
   and flips status to `reimbursed` in one transaction. Pairs with the iOS
   client change routing reimbursement through the RPC instead of a bare
   status PATCH.
+- `20260616055219_restrict_submit_to_project_participants.sql` — gives expense
+  INSERT its own `can_submit_to_project` predicate so the read-visibility
+  widening above no longer leaks into write access: managers/finance can
+  review private/team projects but can only *submit* where they participate
+  (admin, a submit-capable project role, or a workspace-visible project).
+  Also tightens the server to match the client by excluding project viewers
+  from submitting. Paired with the matching `canCurrentUserSubmit` client
+  change.
 
 Not yet smoke-tested end-to-end: the reimbursement happy path needs the app
 with a real finance login (the RPC's authz check rejects the service-role
